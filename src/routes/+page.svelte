@@ -1,7 +1,15 @@
 <script>
-	import Modal from './Modal.svelte';
+    import VulnerabilityReportForm from '$lib/components/vulnerabilityFinding.svelte';
 
-	let showModal = false;
+    let showModal = false;
+
+    function openVulnerabilityReportForm() {
+        showModal = true;
+    }
+
+    function closeModal() {
+        showModal = false;
+    }
 
     import { pageMeta } from '$lib/stores/pageMeta';
   import { onMount } from 'svelte';
@@ -27,7 +35,7 @@
 							<a
 								href="#"
 								class="btn btn-primary d-none d-sm-inline-block"
-								on:click={() => (showModal = true)}
+								on:click={openVulnerabilityReportForm}
 							>
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
@@ -76,4 +84,5 @@
 			</div>
 		</div>
 
-<Modal bind:showModal />
+
+<VulnerabilityReportForm bind:showModal on:close={closeModal} />
