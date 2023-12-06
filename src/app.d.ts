@@ -10,3 +10,6 @@ declare global {
 }
 
 export {};
+
+import { theme } from '$lib/stores/themeStore';
+
