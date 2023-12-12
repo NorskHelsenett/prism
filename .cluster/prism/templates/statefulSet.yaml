@@ -1,0 +1,81 @@
+{{- range $key, $value := .Values }}
+{{- if eq $value.deployment "statefulSet" }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $key }}
+  labels:
+    app: {{ $key }}
+spec:
+  serviceName: "{{ $key }}"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ $key }}
+  template:
+    metadata:
+      labels:
+        app: {{ $key }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+      - name: {{ $key }}
+        image: {{ $value.repository }}:{{ $value.tag | default "latest" }}
+        imagePullPolicy: {{ $value.pullPolicy }}
+        ports:
+        {{- range $value.services }}
+        - name: {{ .name }}
+          containerPort: {{ .port }}
+        {{- end }}
+        env:
+        {{- range $value.env }}
+        - name: {{ .name }}
+          value: {{ .value }}
+        {{- end }}
+        volumeMounts:
+        {{- range $value.mounts }}
+        - name: {{ .name }}
+          mountPath: {{ .mountPath }}
+          readOnly: {{ .readOnly | default false }}
+        {{- end }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+              - ALL
+      volumes:
+      {{- range $value.mounts }}
+      {{- if or .fromSecret .inMemory .config }}
+      - name: {{ .name }}
+        {{- if .fromSecret }}
+        secret:
+          secretName: {{ .fromSecret }}
+        {{- else if .inMemory }}
+        emptyDir:
+          medium: Memory
+          sizeLimit: {{ .storage | default "64Mi" }}
+        {{- else if .config }}
+        configMap:
+          name: {{ .name }}
+        {{- end }}
+      {{- end }}
+      {{- end }}
+  volumeClaimTemplates:
+  {{- range $value.mounts }}
+  {{- if not (or .fromSecret .inMemory .config) }}
+  - metadata:
+      name: {{ .name }}
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .storage | default "1Gi" }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- end }}

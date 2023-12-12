@@ -1,0 +1,13 @@
+{{- if .Values.web.mounts }}
+{{- range .Values.web.mounts }}
+{{- if and .config .config.data }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .name }}
+data:
+  {{ .config.fileName }}: |-
+{{ .config.data | nindent 4 }}
+{{- end }}
+{{- end }}
+{{- end }}

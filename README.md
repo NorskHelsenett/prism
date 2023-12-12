@@ -1,38 +1,76 @@
-# create-svelte
+# PRISM Pentest Report Information Security Management 🛡️💻
 
-Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/master/packages/create-svelte).
+Welcome to PRISM Pentest Report Information Security Management (PRISM) – your go-to solution for managing and analyzing pentesting reports with efficiency and security at its core. 🌟
 
-## Creating a project
+## Overview 🌐
 
-If you're seeing this, you've probably already done this step. Congrats!
+PRISM is a robust tool designed to assist security engineers and pentesters in managing and interpreting pentest reports. It consists of two main components:
 
-```bash
-# create a new project in the current directory
-npm create svelte@latest
+1. **API**: Built with GoLang for speed and reliability. 🚀
+2. **Web**: Utilizing SvelteKit for a responsive and interactive user interface. 🖥️
 
-# create a new project in my-app
-npm create svelte@latest my-app
-```
+## Folder Structure 📁
 
-## Developing
+PRISM's repository is organized as follows:
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+- 📂 `.cluster`: Contains Helm charts for Kubernetes deployments.
+- 📂 `.git`: Git version control directory.
+- 📂 `.gitignore`: Specifies intentionally untracked files to ignore.
+- 📂 `.gitlab`: GitLab build configuration files.
+- 📂 `api`: Source code for the API component.
+- 📂 `web`: Source code for the Web interface.
 
-```bash
-npm run dev
+## Getting Started 🚀
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
+### Prerequisites
 
-## Building
+- GoLang installed for running the API.
+- Node.js and Bun (or npm) for the web interface.
 
-To create a production version of your app:
+### Running the API
 
-```bash
-npm run build
-```
+Navigate to the `api` directory:
 
-You can preview the production build with `npm run preview`.
+\`\`\`bash
+cd api
+\`\`\`
 
-> To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
+Run the API using Go:
+
+\`\`\`bash
+go run *.go
+\`\`\`
+
+### Running the Web Interface
+
+Navigate to the `web` directory:
+
+\`\`\`bash
+cd web
+\`\`\`
+
+Run the web interface using Bun (or npm):
+
+\`\`\`bash
+bun run dev -- --host 0.0.0.0
+
+# or
+
+npm run dev -- --host 0.0.0.0
+\`\`\`
+
+## Contributing 🤝
+
+Contributions to PRISM are welcome! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests.
+
+## Security 🛡️
+
+We take security seriously. If you discover any security-related issues, please email the maintainers or report it in the issues section.
+
+## License 📄
+
+Distributed under the MIT License. See [LICENSE](LICENSE) for more information.
+
+---
+
+Happy Securing! 🔐🚀

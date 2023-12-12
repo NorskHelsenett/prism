@@ -1,0 +1,54 @@
+# Default values for prism.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+api:
+  repository: registry-helse.nhn.no/jonasbg/prism/api
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+  deployment: statefulSet
+  host: api.prism.t-jonas-001.trd1-sky-test.sky.nhn.no
+  mounts:
+  - name: config
+    mountPath: /config
+    fromSecret: api-config-secret
+    readOnly: true
+  - name: data #create a PVC and PV when fromSecret, or fromConfig or inMemory is not present
+    mountPath: /data
+    readOnly: false
+    storage: 10Gi
+  env:
+  - name: CONFIG_PATH
+    value: "/config/config.yaml"
+  services:
+  - name: api
+    port: 8080
+  - name: healthz
+    port: 8888
+
+web:
+  repository: registry-helse.nhn.no/jonasbg/prism/web
+  pullPolicy: Always
+  deployment: deployment
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+  host: prism.t-jonas-001.trd1-sky-test.sky.nhn.no
+  mounts:
+  - name: temp
+    mountPath: /tmp
+    inMemory: true
+    readOnly: false
+    storage: 64Mi
+  - name: config-web
+    mountPath: /usr/share/nginx/html/.well-known/
+    readOnly: true
+    config:
+      fileName: config.json
+      data: |
+        {
+          "apiEndpoint": "https://prism.t-jonas-001.trd1-sky-test.sky.nhn.no"
+        }
+  services:
+  - name: web
+    port: 8080
