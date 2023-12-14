@@ -9,6 +9,7 @@
 	import Avatar from '$lib/components/Avatar.svelte';
 	import Vulnerability from '$lib/components/Lists/Vulnerability.svelte';
 	import Assessments from '$lib/components/dashboard/Assessments.svelte';
+	import Dropdown from '$lib/components/Dropdown.svelte';
 
   export let data;
 
@@ -58,7 +59,16 @@ let severityData = {
     });
   }
 
+  async function deleteProject(id){
+    showDeleteModal = true
+    await Fetch(`/api/project/${id}`, {method: "DELETE"})
+    window.location.href ="/project"
+  }
+
   let assessments = 0;
+  let showDropdown = false
+  let showDeleteModal = false
+
 </script>
 
 <style>
@@ -83,6 +93,30 @@ let severityData = {
               {/if}
             </h2>
 					</div>
+
+          <div class="col-auto ms-auto d-print-non">
+						<div class="btn-list">
+							<a
+								href="#"
+								class="d-none d-sm-inline-block"
+								on:click={() => showDropdown = !showDropdown}
+							>
+								<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-dots-vertical" width="36" height="36" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M12 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M12 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>
+                  </a
+                  >
+                </div>
+
+                <Dropdown bind:show={showDropdown}>
+                  <a class="dropdown-item" href="#">Edit</a>
+                  <div class="dropdown-divider"></div>
+                  <a class="dropdown-item text-warning" href="#" on:click={() => showDeleteModal = true}>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-trash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
+                    Delete
+                  </a>
+                </Dropdown>
+
+					</div>
+
               <div class="page-body">
 						<div class="container-xl">
 						</div>
@@ -170,6 +204,26 @@ let severityData = {
         </div>
       </div>
     </div>
+
+{#if showDeleteModal}
+<div class="modal modal-blur fade show" id="modal-small" tabindex="-1" role="dialog" style="display: block;" aria-modal="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-body">
+        <div class="modal-title">Are you sure?</div>
+        <div>If you proceed, all data related to this project will be permanently lost. This action is irreversible.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link link-secondary me-auto" data-bs-dismiss="modal" on:click={showDeleteModal = false}>Cancel</button>
+        <button type="button" class="btn btn-danger" data-bs-dismiss="modal" on:click={deleteProject(project.ID)}>Yes, delete the project</button>
+      </div>
+    </div>
+  </div>
+</div>
+{/if}
+
 {:else}
   <p>Loading project details...</p>
 {/if}
+
+

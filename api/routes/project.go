@@ -94,3 +94,25 @@ func GetProjectVulnerabilitiesTotal(c *gin.Context) {
 
     c.JSON(http.StatusOK, gin.H{"total_vulnerabilities": total})
 }
+
+func DeleteProject(c *gin.Context){
+    projectIDStr := c.Param("projectID")
+    if projectIDStr == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Project ID is required"})
+        return
+    }
+
+    projectID, err := strconv.ParseUint(projectIDStr, 10, strconv.IntSize)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Project ID"})
+        return
+    }
+
+    err = database.DeleteProjectAndAssets(uint(projectID))
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{})
+}

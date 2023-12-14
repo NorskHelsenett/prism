@@ -81,12 +81,12 @@ let severityData;
                   Create new vulnerability</a
                   >
                 </div>
-              </div>
-              <div class="page-body">
-						<div class="container-xl">
-						</div>
 					</div>
+					<div class="page-body">
+					<div class="container-xl">
 				</div>
+			</div>
+		</div>
 
 <div class="row-deck row-cards" >
 	<Criticality {severityData}/>

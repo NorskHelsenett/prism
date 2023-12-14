@@ -57,6 +57,8 @@ func main() {
         // Admin users
         apiRoutes.Use(auth.AdminMiddleware())
 
+        apiRoutes.DELETE("/vulnerability/:id", routes.DeleteVulnerability)
+        apiRoutes.DELETE("/project/:projectID", routes.DeleteProject)
         apiRoutes.GET("/project", routes.GetProjects)
         apiRoutes.POST("/project", routes.HandleProjectPost)
         apiRoutes.POST("/blob/upload", routes.HandleBlobUpload)
