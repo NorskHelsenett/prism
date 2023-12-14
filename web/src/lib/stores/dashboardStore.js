@@ -1,5 +1,6 @@
 // src/stores/dashboardStore.js
 import { writable } from 'svelte/store';
+import { Fetch } from '$lib/fetchUtil'; // Import customFetch
 
 function createDashboardStore() {
   const { subscribe, set } = writable(0);
@@ -8,10 +9,13 @@ function createDashboardStore() {
 
   async function fetchData() {
     try {
+      // Fetching local configuration file
       const endpointResponse = await fetch('/.well-known/config.json');
-      const config = await endpointResponse.json()
-      const response = await fetch(`${config.apiEndpoint}/api/dashboard`, { credentials: 'include' });
-      const data = await response.json();
+      const config = await endpointResponse.json();
+
+      // Use customFetch for API call
+      const data = await Fetch(`/api/dashboard`);
+
       set(data);
     } catch (error) {
       console.error('Error fetching data:', error);

@@ -1,16 +1,8 @@
 <script>
-	import { onMount, onDestroy } from 'svelte';
-	import { dashboardStore } from '$lib/stores/dashboardStore';
 
-	onMount(() => {
-		dashboardStore.startPolling(); // Start polling when component mounts
-	});
+export let data = 0;
 
-	onDestroy(() => {
-		dashboardStore.stopPolling(); // Stop polling when component is destroyed
-	});
 </script>
-
 <div class="card-body">
 	<div class="row align-items-center">
 		<div class="col-auto">
@@ -37,7 +29,7 @@
 		</div>
 		<div class="col">
 			<div class="font-weight-medium">
-				{$dashboardStore.total}
+				{data}
 			</div>
 			<div class="text-secondary">Vulnerabilities</div>
 		</div>

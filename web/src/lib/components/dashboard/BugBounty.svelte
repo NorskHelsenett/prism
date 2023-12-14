@@ -1,14 +1,5 @@
 <script>
-	import { onMount, onDestroy } from 'svelte';
-	import { dashboardStore } from '$lib/stores/dashboardStore';
-
-	onMount(() => {
-		dashboardStore.startPolling(); // Start polling when component mounts
-	});
-
-	onDestroy(() => {
-		dashboardStore.stopPolling(); // Stop polling when component is destroyed
-	});
+export let data = 0
 </script>
 
 <div class="card-body">
@@ -21,7 +12,7 @@
 		</div>
 		<div class="col">
 			<div class="font-weight-medium">
-				{$dashboardStore.bugBounties}
+				{data}
 			</div>
 			<div class="text-secondary">Bug bounties</div>
 		</div>

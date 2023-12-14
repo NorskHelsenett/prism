@@ -2,7 +2,7 @@
       <div class="container container-slim py-4">
         <div class="text-center">
           <div class="mb-3">
-            <a href="." class="navbar-brand navbar-brand-autodark"><img src="./favicon.png" height="36" alt=""></a>
+            <a href="." class="navbar-brand navbar-brand-autodark"><img src="/favicon.png" height="36" alt=""></a>
           </div>
           <div class="text-secondary mb-3">Preparing application</div>
           <div class="progress progress-sm">

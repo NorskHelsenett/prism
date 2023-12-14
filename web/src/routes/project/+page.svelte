@@ -1,9 +1,24 @@
 
 <script>
+  import CreateProject from '$lib/components/project/Create.svelte'
+	import List from '$lib/components/project/List.svelte';
+  let listComponent;
   const title = "Project"
   const pretitle = "Project"
 
-  function createNewProject(){}
+  let showModal = false;
+
+  $: if (!showModal) {
+    listComponent?.refreshList();
+  }
+
+  function createNewProject() {
+      showModal = true;
+  }
+
+    function closeModal() {
+      showModal = false;
+    }
 </script>
 
 <div class="row g-2 align-items-center">
@@ -39,3 +54,9 @@
         </div>
       </div>
 </div>
+
+<List bind:this={listComponent}/>
+
+{#if showModal}
+  <CreateProject bind:showModal on:close={closeModal} />
+{/if}

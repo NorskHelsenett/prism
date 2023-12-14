@@ -10,5 +10,6 @@ import (
 func GetUserInfo(c *gin.Context){
 	email := c.Param("email")
 	user,_ := database.GetUserDataByEmail(email)
+	c.Header("Cache-Control", "public, max-age=3600")
 	c.JSON(http.StatusOK, user)
 }
