@@ -17,6 +17,7 @@ spec:
       labels:
         app: {{ $key }}
     spec:
+      automountServiceToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
