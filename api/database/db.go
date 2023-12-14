@@ -245,17 +245,17 @@ func GetProjectVulnerabilities(projectID uint) ([]JSONData, error) {
 	return jsonData, err
 }
 
-func deleteVulnerabilitiesAndImages(tx *gorm.DB, projectID uint, ID uint) error {
+func deleteVulnerabilitiesAndImages(tx *gorm.DB, projectID *uint, ID *uint) error {
     var jsonData []JSONData
 
     // Determine the query based on the provided IDs
     var err error
-    if ID != 0 {
+    if ID != nil {
         // Find specific jsonData entry by ID
-        err = tx.Where("id = ?", ID).Find(&jsonData).Error
-    } else {
+        err = tx.Where("id = ?", *ID).Find(&jsonData).Error
+    } else if projectID != nil {
         // Find all jsonData entries for a project
-        err = tx.Where("project_id = ?", projectID).Find(&jsonData).Error
+        err = tx.Where("project_id = ?", *projectID).Find(&jsonData).Error
     }
 
     if err != nil {
@@ -263,12 +263,12 @@ func deleteVulnerabilitiesAndImages(tx *gorm.DB, projectID uint, ID uint) error 
     }
 
     // Delete jsonData based on the provided IDs
-    if ID != 0 {
+    if ID != nil {
         // Delete specific jsonData entry by ID
-        err = tx.Where("id = ?", ID).Delete(&JSONData{}).Error
+        err = tx.Where("id = ?", *ID).Delete(&JSONData{}).Error
     } else {
         // Delete all jsonData entries for a project
-        err = tx.Where("project_id = ?", projectID).Delete(&JSONData{}).Error
+        err = tx.Where("project_id = ?", *projectID).Delete(&JSONData{}).Error
     }
 
     if err != nil {
@@ -297,11 +297,12 @@ func deleteVulnerabilitiesAndImages(tx *gorm.DB, projectID uint, ID uint) error 
 }
 
 
+
 func DeleteProjectAndAssets(projectID uint) error {
     // Start a transaction
     tx := db.Begin()
 
-    if err := deleteVulnerabilitiesAndImages(tx, projectID, 0); err != nil {
+    if err := deleteVulnerabilitiesAndImages(tx, &projectID, nil); err != nil {
         tx.Rollback()
         return err
     }
@@ -320,7 +321,7 @@ func DeleteVulnerability(vulnerabilityID uint) error {
     // Start a transaction
     tx := db.Begin()
 
-    if err := deleteVulnerabilitiesAndImages(tx, 0, vulnerabilityID); err != nil {
+    if err := deleteVulnerabilitiesAndImages(tx, nil, &vulnerabilityID); err != nil {
         tx.Rollback()
         return err
     }
