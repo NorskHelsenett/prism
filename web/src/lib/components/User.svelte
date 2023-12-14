@@ -1,7 +1,6 @@
 <script>
-	import { apiEndpoint } from '$lib/stores/configStore';
+	import { Fetch } from '$lib/fetchUtil.js';
 	import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
 
 	let isHidden = true;
 
@@ -13,26 +12,10 @@
 	let image = '';
 
 	onMount(async () => {
-		try {
-			const response = await fetch(`${$apiEndpoint}/api/user`,{ credentials: 'include' });
-			if (response.status === 401) {
-				// Redirect to your login page or handle the 401 error as needed
-				goto('/login');
-				return;
-			}
-
-			if (!response.ok) {
-        goto('/login');
-				throw new Error(`Error: ${response.status}`);
-			}
-
-			const data = await response.json();
+			const data = await Fetch(`/api/user`);
 			name = data.name;
 			image = data.picture;
-		} catch (error) {
-			console.error('Error fetching data:', error);
-			goto('/login');
-		}
+
 	});
 </script>
 

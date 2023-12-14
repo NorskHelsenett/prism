@@ -11,8 +11,8 @@ func HandleDashboard(c *gin.Context){
 	total,_ := database.CountJSONData()
 	criticalities, _ := database.CountCriticalities()
 	owasp,_ := database.CountOWASPCategories()
-	projects := 10
-	bugBounties := 5
-	unresolvedTasks := 3
+	projects,_ := database.CountProjects()
+	bugBounties,_ := database.CountBugBounties()
+	unresolvedTasks := 0
 	c.JSON(http.StatusOK, gin.H{"total": total,"projects": projects,"bugBounties": bugBounties, "unresolved": unresolvedTasks, "criticalities": criticalities, "owasp": owasp})
 }

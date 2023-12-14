@@ -1,6 +1,6 @@
 <script>
 	export const ssr = false;
-	  import { onMount } from 'svelte';
+	import { onMount } from 'svelte';
   import { initializeApiEndpoint, isLoading } from '$lib/stores/configStore';
 	import '@tabler/core/dist/css/tabler.min.css';
 	import { theme } from '$lib/stores/themeStore';
@@ -9,11 +9,11 @@
   import { derived } from 'svelte/store';
 	import User from '$lib/components/User.svelte';
 	import Loader from '$lib/components/Loader.svelte';
-	  import { goto } from '$app/navigation';
+	import { goto } from '$app/navigation';
 
   function goHome(event) {
     event.preventDefault(); // Prevent default anchor behavior
-    goto('./'); // Navigate to the specified path
+    goto('/'); // Navigate to the specified path
   }
 
 	function toggleTheme() {
@@ -124,7 +124,7 @@
 		<div class="container-xl">
 			<h1 class="navbar-brand navbar-brand-autodark d-none-navbar-horizontal pe-0 pe-md-3">
 				<a href="#">
-					<img src="favicon.png" width="110" height="32" alt="Tabler" class="navbar-brand-image" />
+					<img src="/favicon.png" width="110" height="32" alt="PRISM" class="navbar-brand-image" />
 				</a>
 			</h1>
 
@@ -344,7 +344,7 @@
 				>
 					<ul class="navbar-nav">
 						<li class="nav-item">
-							<a class="nav-link" href="./" on:click={goHome}>
+							<a class="nav-link" href="/" on:click={goHome}>
 								<span class="nav-link-icon d-md-none d-lg-inline-block"
 									><!-- Download SVG icon from http://tabler-icons.io/i/home -->
 									<svg

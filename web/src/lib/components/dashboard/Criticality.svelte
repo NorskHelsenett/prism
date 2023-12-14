@@ -1,27 +1,26 @@
 <script>
-    import { dashboardStore } from '$lib/stores/dashboardStore';
+  export let severityData = { critical: 0, high: 0, medium: 0, low: 0, information: 0 };
+	let progressData = [];
 
-    let progressData = [];
-
-    $: if ($dashboardStore && $dashboardStore.criticalities) {
-        const total = ($dashboardStore.criticalities.information || 0) +
-                      ($dashboardStore.criticalities.low || 0) +
-                      ($dashboardStore.criticalities.medium || 0) +
-                      ($dashboardStore.criticalities.high || 0) +
-                      ($dashboardStore.criticalities.critical || 0);
+	$: if (severityData) {
+        const total = (severityData.information || 0) +
+                      (severityData.low || 0) +
+                      (severityData.medium || 0) +
+                      (severityData.high || 0) +
+                      (severityData.critical || 0);
 
         const toPercentage = (value) => total > 0 ? (value / total * 100).toFixed(2) : 0;
 
         progressData = [
-            { label: 'Information', value: toPercentage($dashboardStore.criticalities.information || 0), class: 'bg-info' },
-            { label: 'Low', value: toPercentage($dashboardStore.criticalities.low || 0), class: 'bg-primary' },
-            { label: 'Medium', value: toPercentage($dashboardStore.criticalities.medium || 0), class: 'bg-yellow' },
-            { label: 'High', value: toPercentage($dashboardStore.criticalities.high || 0), class: 'bg-warning' },
-            { label: 'Critical', value: toPercentage($dashboardStore.criticalities.critical || 0), class: 'bg-danger' }
+            { label: 'Information', value: toPercentage(severityData.information || 0), class: 'bg-info' },
+            { label: 'Low', value: toPercentage(severityData.low || 0), class: 'bg-primary' },
+            { label: 'Medium', value: toPercentage(severityData.medium || 0), class: 'bg-yellow' },
+            { label: 'High', value: toPercentage(severityData.high || 0), class: 'bg-warning' },
+            { label: 'Critical', value: toPercentage(severityData.critical || 0), class: 'bg-danger' }
         ];
     }
 
-    let tooltipVisible = false;
+	let tooltipVisible = false;
 	let tooltipX = 0;
 	let tooltipY = 0;
 
@@ -80,23 +79,23 @@
 				<h3 class="card-title">Vulnerabilities</h3>
 				<div class="d-flex justify-content-between mb-1 text-secondary">
 					<span>Critical:</span>
-					<span>{$dashboardStore.criticalities.critical || 0}</span>
+					<span>{severityData.critical || 0}</span>
 				</div>
 				<div class="d-flex justify-content-between mb-1 text-secondary">
 					<span>High:</span>
-					<span>{$dashboardStore.criticalities.high || 0}</span>
+					<span>{severityData.high || 0}</span>
 				</div>
 				<div class="d-flex justify-content-between mb-1 text-secondary">
 					<span>Medium:</span>
-					<span>{$dashboardStore.criticalities.medium || 0}</span>
+					<span>{severityData.medium || 0}</span>
 				</div>
 				<div class="d-flex justify-content-between mb-1 text-secondary">
 					<span>Low:</span>
-					<span>{$dashboardStore.criticalities.low || 0}</span>
+					<span>{severityData.low || 0}</span>
 				</div>
 				<div class="d-flex justify-content-between mb-1 text-secondary">
 					<span>Information:</span>
-					<span>{$dashboardStore.criticalities.information || 0}</span>
+					<span>{severityData.information || 0}</span>
 				</div>
 			</div>
 		</div>

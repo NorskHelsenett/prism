@@ -2,18 +2,95 @@ package routes
 
 import (
 	"net/http"
-
 	"github.com/gin-gonic/gin"
-	"prism/auth"
-	"fmt"
+
+    "prism/database"
+    "strconv"
 )
 
-func HandleProjectPost(c *gin.Context){
-    email, exists := c.Request.Context().Value(auth.EmailContextKey).(string)
-    if !exists {
-        // Handle missing email
-        c.AbortWithStatus(http.StatusInternalServerError)
+func GetProjects(c *gin.Context){
+    // Get the query parameter
+    query := c.Query("query")
+
+    projects, err := database.GetProjects(query)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
         return
     }
-    fmt.Println(email)
+
+    c.JSON(http.StatusOK, projects)
+}
+
+func HandleProjectPost(c *gin.Context){
+    var projectData database.ProjectData
+    if err := c.ShouldBindJSON(&projectData); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
+    database.CreateProject(&projectData)
+    c.JSON(http.StatusCreated, gin.H{"id": projectData.ID})
+}
+
+func GetProject(c *gin.Context) {
+    projectIDStr := c.Param("projectID")
+    if projectIDStr == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Project ID is required"})
+        return
+    }
+
+    projectID, err := strconv.ParseUint(projectIDStr, 10, strconv.IntSize)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Project ID"})
+        return
+    }
+
+    id := uint(projectID)
+
+    project,_ := database.GetProject(id)
+    c.JSON(http.StatusOK, project)
+}
+
+func GetProjectVulnerabilitiesForProject(c *gin.Context) {
+    projectIDStr := c.Param("projectID")
+    if projectIDStr == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Project ID is required"})
+        return
+    }
+
+    projectID, err := strconv.ParseUint(projectIDStr, 10, strconv.IntSize)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Project ID"})
+        return
+    }
+
+    vulnerabilites, err := database.GetProjectVulnerabilities(uint(projectID))
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, vulnerabilites)
+}
+
+func GetProjectVulnerabilitiesTotal(c *gin.Context) {
+    projectIDStr := c.Param("projectID")
+    if projectIDStr == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Project ID is required"})
+        return
+    }
+
+    projectID, err := strconv.ParseUint(projectIDStr, 10, strconv.IntSize)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Project ID"})
+        return
+    }
+
+    total, err := database.CountProjectVulnerabilities(uint(projectID))
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"total_vulnerabilities": total})
 }

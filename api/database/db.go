@@ -10,11 +10,31 @@ import (
     "prism/config"
 )
 
+type ProjectData struct {
+    gorm.Model
+    ProjectName   string `gorm:"not null" binding:"required"`
+    SlackChannel  string
+    Description   string
+    ClientEmail   string
+    HackerName    string
+    IsBugBounty   bool
+}
+
+func CreateProject(project *ProjectData) {
+    result := db.Create(project) // Create a new record
+    if result.Error != nil {
+        // Handle error here, for example:
+        panic(result.Error)
+    }
+}
+
 // JSONData is a simple model for storing JSON data
 type JSONData struct {
     gorm.Model
     Vulnerability datatypes.JSON
     FoundBy string
+    ProjectID     *uint        // Foreign key for ProjectData
+    Project       *ProjectData // The associated project
 }
 
 type UserData struct {
@@ -27,6 +47,7 @@ type UserData struct {
 type Vulnerability struct {
     Criticality string `json:"criticality"`
     Category string `json:"category"`
+    ProjectID uint `json:"projectID"`
 }
 
 var db *gorm.DB
@@ -43,6 +64,7 @@ func InitDB() {
     // Migrate the schema
     db.AutoMigrate(&JSONData{})
     db.AutoMigrate(&UserData{})
+    db.AutoMigrate(&ProjectData{})
 }
 
 func SaveOrUpdateUserData(name string, email string, picture string) error {
@@ -87,9 +109,9 @@ func CreateJSONData(jsonData *JSONData) {
     db.Create(jsonData)
 }
 
-func AllVulnerabilities() ([]JSONData, error){
+func AllVulnerabilities() ([]JSONData, error) {
     var jsonData []JSONData
-    result := db.Find(&jsonData)
+    result := db.Preload("Project").Find(&jsonData) // Preload Project data
     return jsonData, result.Error
 }
 
@@ -154,4 +176,67 @@ func CountJSONData() (int64, error) {
     var count int64
     result := db.Model(&JSONData{}).Count(&count)
     return count, result.Error
+}
+
+func CountProjects() (int64, error) {
+    var count int64
+    result := db.Model(&ProjectData{}).Count(&count)
+    return count, result.Error
+}
+
+func CountBugBounties() (int64, error) {
+    var count int64
+    var bugBountyProjectIDs []uint
+
+    // Fetch IDs of projects with bug bounties
+    err := db.Model(&ProjectData{}).Where("is_bug_bounty = ?", true).Pluck("id", &bugBountyProjectIDs).Error
+    if err != nil {
+        return 0, err
+    }
+
+    // Count vulnerabilities associated with those projects
+    err = db.Model(&JSONData{}).Where("project_id IN (?)", bugBountyProjectIDs).Count(&count).Error
+    if err != nil {
+        return 0, err
+    }
+
+    return count, nil
+}
+
+func GetProject(id uint) (ProjectData, error) {
+    var project ProjectData
+    result := db.First(&project, id)
+    return project, result.Error
+}
+
+func GetProjects(query string) ([]ProjectData, error){
+    var projects []ProjectData
+
+    // Perform a search if a query is provided
+    if query != "" {
+        result := db.Where("project_name LIKE ?", "%" + query + "%").Find(&projects)
+        return projects, result.Error
+    }
+
+    // Return all projects if no query is provided
+    result := db.Find(&projects)
+
+    return projects, result.Error
+}
+
+func CountProjectVulnerabilities(projectID uint) (int64, error) {
+    var count int64
+    err := db.Model(&JSONData{}).Where("project_id = ?", projectID).Count(&count).Error
+    if err != nil {
+        return 0, err // handle the error appropriately
+    }
+
+    return count, nil
+}
+
+func GetProjectVulnerabilities(projectID uint) ([]JSONData, error) {
+    var jsonData []JSONData
+    err := db.Where("project_id = ?", projectID).Find(&jsonData).Error
+
+    return jsonData, err
 }

@@ -30,17 +30,11 @@ func main() {
         apiRoutes.GET("/user", auth.HandleUserRequest)
         apiRoutes.GET("/userinfo/:email", routes.GetUserInfo)
         apiRoutes.GET("/logout", auth.HandleLogout)
-        apiRoutes.POST("/project", routes.HandleProjectPost)
         apiRoutes.GET("/dashboard", routes.HandleDashboard)
 
-        // Admin users
-        apiRoutes.Use(auth.AdminMiddleware())
-
-        apiRoutes.POST("/blob/upload", routes.HandleBlobUpload)
-        apiRoutes.DELETE("/blob/:filename", routes.HandleBlobDelete)
-
-        apiRoutes.POST("/vulnerabilityfinding", routes.PostVulnerability )
-        apiRoutes.GET("/vulnerabilityfinding/all", routes.GetAllVulnerabilities)
+        // ACL Routes
+        apiRoutes.GET("/blob/:filename", routes.GetBlob)
+        apiRoutes.GET("/project/:projectID", routes.GetProject)
         apiRoutes.GET("/vulnerabilityfinding/:id", func(c *gin.Context) {
             idStr := c.Param("id")
             id, err := strconv.ParseUint(idStr, 10, 32)
@@ -57,6 +51,19 @@ func main() {
 
             c.JSON(http.StatusOK, gin.H{"data": data})
         })
+        apiRoutes.GET("/project/:projectID/vulnerabilities/total", routes.GetProjectVulnerabilitiesTotal)
+        apiRoutes.GET("/project/:projectID/vulnerabilities", routes.GetProjectVulnerabilitiesForProject)
+
+        // Admin users
+        apiRoutes.Use(auth.AdminMiddleware())
+
+        apiRoutes.GET("/project", routes.GetProjects)
+        apiRoutes.POST("/project", routes.HandleProjectPost)
+        apiRoutes.POST("/blob/upload", routes.HandleBlobUpload)
+        apiRoutes.DELETE("/blob/:filename", routes.HandleBlobDelete)
+
+        apiRoutes.POST("/vulnerabilityfinding", routes.PostVulnerability )
+        apiRoutes.GET("/vulnerabilityfinding/all", routes.GetAllVulnerabilities)
     }
 
     // Run the main application in a separate goroutine
