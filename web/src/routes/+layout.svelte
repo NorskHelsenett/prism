@@ -123,7 +123,7 @@
 	<header class="navbar navbar-expand-sm navbar-light navbar-overlap d-print-none">
 		<div class="container-xl">
 			<h1 class="navbar-brand navbar-brand-autodark d-none-navbar-horizontal pe-0 pe-md-3">
-				<a href="#">
+				<a href="/">
 					<img src="/favicon.png" width="110" height="32" alt="PRISM" class="navbar-brand-image" />
 				</a>
 			</h1>

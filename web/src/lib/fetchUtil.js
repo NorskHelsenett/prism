@@ -28,3 +28,29 @@ export async function Fetch(endpoint, options = {}) {
     return null;
   }
 }
+
+export async function FetchFile(endpoint, filename = "") {
+  const apiUrl = get(apiEndpoint);
+  const url = `${apiUrl}${endpoint}`;
+
+  try {
+    const response = await fetch(url, { credentials: 'include' });
+
+    if (!response.ok) {
+      console.error(`Error: ${response.status}`);
+      return;
+    }
+
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = filename || endpoint.split('/').pop();
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(downloadUrl);
+    document.body.removeChild(a);
+  } catch (error) {
+    console.error('Error downloading file:', error);
+  }
+}
