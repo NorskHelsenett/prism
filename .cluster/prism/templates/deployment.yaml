@@ -16,7 +16,7 @@ spec:
       labels:
         app: {{ $key }}
     spec:
-      automountServiceToken: false
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -29,6 +29,7 @@ spec:
         - name: {{ .name }}
           containerPort: {{ .port }}
         {{- end }}
+        resources: {}
         env:
         {{- range $value.env }}
         - name: {{ .name }}
