@@ -70,6 +70,8 @@
 	}
   .card-body {
     padding: 3px;
-    padding-left: 30px;
+    margin-left: 0.5em;
+    margin-right: 0.5em;
+    width: 100%
   }
 </style>
