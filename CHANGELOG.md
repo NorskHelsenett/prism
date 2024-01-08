@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.0.1] - 2024-01-08
+## [0.0.2] - 2024-01-08
+
+### Added
+
+- Export/Import functionality
+- Settings panel
+- Profile settings panel (view-only)
+
+## [0.0.1] - 2023-12-12
 
 ### Added
 

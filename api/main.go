@@ -66,6 +66,9 @@ func main() {
 
         apiRoutes.POST("/vulnerabilityfinding", routes.PostVulnerability )
         apiRoutes.GET("/vulnerabilityfinding/all", routes.GetAllVulnerabilities)
+
+        apiRoutes.GET("/settings/export", routes.ExportAllData)
+        apiRoutes.POST("/settings/import", routes.ImportData)
     }
 
     // Run the main application in a separate goroutine

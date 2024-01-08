@@ -296,8 +296,6 @@ func deleteVulnerabilitiesAndImages(tx *gorm.DB, projectID *uint, ID *uint) erro
     return nil
 }
 
-
-
 func DeleteProjectAndAssets(projectID uint) error {
     // Start a transaction
     tx := db.Begin()

@@ -94,7 +94,7 @@ helm-push:
     CURRENT_VERSION=$(echo $file | sed 's/prism-\([0-9]\+\.[0-9]\+\.[0-9]\+\).tgz/\1/')
     export NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. '{print $1"."$2"."$3+1}')
     echo "NEW VERSION" $NEW_VERSION
-    yq e -i '.version = strenv(NEW_VERSION),.appVersion = strenv(APP_VERSION)' $CHART_DIR/Chart.yaml
+    yq e -i '.version = strenv(NEW_VERSION)' $CHART_DIR/Chart.yaml
 
     export API_TAG="$(date '+%Y%m%d')@$API_DIGEST"
     yq e -i '.api.tag = strenv(API_TAG)' $CHART_DIR/values.yaml
@@ -107,7 +107,6 @@ helm-push:
   variables:
     CHART_NAME: "prism"
     CHART_DIR: ".cluster/prism"
-    APP_VERSION: "0.0.1"
   dependencies:
     - deploy-web
     - deploy-api
