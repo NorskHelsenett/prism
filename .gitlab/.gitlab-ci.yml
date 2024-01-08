@@ -46,7 +46,6 @@ stages:
     reports:
       dotenv: build.env
 
-
 build-api:
   <<: *build_template
   variables:
@@ -61,18 +60,59 @@ build-web:
 
 deploy-api:
   stage: deploy
-  variables:
-    GIT_STRATEGY: none
   script:
     - echo "Deploying using API image digest $DIGEST"
+    - echo "API_DIGEST=$DIGEST" >> build.env
+  artifacts:
+    reports:
+      dotenv: build.env
+  needs:
+    - build-api
   dependencies:
     - build-api
 
 deploy-web:
   stage: deploy
-  variables:
-    GIT_STRATEGY: none
   script:
     - echo "Deploying using API image digest $DIGEST"
+    - echo "WEB_DIGEST=$DIGEST" >> build.env
+  artifacts:
+    reports:
+      dotenv: build.env
+  needs:
+    - build-web
   dependencies:
     - build-web
+
+helm-push:
+  stage: deploy
+  image: ncr.sky.nhn.no/nhn/ci-deploy:0.0.2
+  script: |
+    echo $CI_REGISTRY_PASSWORD | helm registry login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
+    helm pull oci://$CI_REGISTRY/jonasbg/prism/helm/prism
+    file=$(ls prism-*.tgz)
+    CURRENT_VERSION=$(echo $file | sed 's/prism-\([0-9]\+\.[0-9]\+\.[0-9]\+\).tgz/\1/')
+    export NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. '{print $1"."$2"."$3+1}')
+    echo "NEW VERSION" $NEW_VERSION
+    yq e -i '.version = strenv(NEW_VERSION),.appVersion = strenv(APP_VERSION)' $CHART_DIR/Chart.yaml
+
+    export API_TAG="$(date '+%Y%m%d')@$API_DIGEST"
+    yq e -i '.api.tag = strenv(API_TAG)' $CHART_DIR/values.yaml
+
+    export WEB_TAG="$(date '+%Y%m%d')@$WEB_DIGEST"
+    yq e -i '.web.tag = strenv(WEB_TAG)' $CHART_DIR/values.yaml
+
+    helm package $CHART_DIR
+    helm push "${CHART_NAME}-${NEW_VERSION}.tgz" oci://$CI_REGISTRY/jonasbg/prism/helm
+  variables:
+    CHART_NAME: "prism"
+    CHART_DIR: ".cluster/prism"
+    APP_VERSION: "0.0.1"
+  dependencies:
+    - deploy-web
+    - deploy-api
+  needs:
+    - deploy-web
+    - deploy-api
+  rules:
+  - if: $CI_COMMIT_BRANCH == "main"
