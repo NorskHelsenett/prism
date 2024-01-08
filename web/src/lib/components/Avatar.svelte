@@ -25,8 +25,7 @@
 </script>
 
 {#if email}
- <!-- on:mouseleave={hideTooltip} -->
-<span>
+<span on:mouseleave={hideTooltip}>
   {#if user}
     <img src={user.Picture} alt={user.Name} class="avatar avatar-xs me-2 rounded" on:mousemove={showTooltip} />
     {#if option.showName}
