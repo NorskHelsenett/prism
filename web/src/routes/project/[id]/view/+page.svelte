@@ -171,16 +171,11 @@ let severityData = {
                 <Avatar email={project.HackerName} option={{ showName: false }}/>
               </div>
             </div>
-
             </div>
             <div class="row mt-3">
-        <div class="col-2">
-          <div class="datagrid-title">Description</div>
-        </div>
-        <div class="col-10">
-          <div class="datagrid-content">{project.Description || 'N/A'}</div>
-        </div>
-      </div>
+                <div class="datagrid-title">Description</div>
+                <div class="datagrid-content">{project.Description || 'N/A'}</div>
+            </div>
 					</div>
 				</div>
 			</div>
