@@ -12,19 +12,22 @@ export async function Fetch(endpoint, options = {}) {
 
     if (!response.ok) {
       console.error(`Error: ${response.status}`);
+
+      const errorResponse = await response.json();
+      const errorMessage = errorResponse.error || 'Unknown error occurred';
+
       if (response.status === 401) {
         window.location.href = '/login';
-        // goto('/login');
-        // Return a resolved promise to prevent throwing an error
         return Promise.resolve(null);
       }
-      return null;
+
+      // Return the error message instead of null
+      return { error: errorMessage };
     }
 
     return await response.json();
   } catch (error) {
     console.error('Error fetching data:', error);
-    // Optionally, handle network errors differently here
     return null;
   }
 }

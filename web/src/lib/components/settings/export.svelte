@@ -39,17 +39,17 @@
           body: formData,
         });
 
-        if (response?.message == "File uploaded successfully") {
+        if (response.message) {
           notification.addAlert({
             type: 'success',
-            title: 'Importing',
-            message: 'Imported database successfully'
+            title: 'Imported successfully',
+            message: response.message
           });
         } else {
           notification.addAlert({
             type: 'warning',
-            title: 'Importing',
-            message: 'Database did not import successfully'
+            title: 'The import failed',
+            message: response.error
           });
         }
       } catch (error) {
@@ -57,7 +57,7 @@
           notification.addAlert({
             type: 'danger',
             title: 'Importing',
-            message: 'Database did not upload correctly'
+            message: error
           });
       }
     }

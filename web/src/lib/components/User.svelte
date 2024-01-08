@@ -33,12 +33,10 @@
     use:clickOutside on:outsideClick={closeDropdown}
     hidden={isHidden}
     class="dropdown-menu dropdown-menu-end dropdown-menu-arrow show"
-    data-bs-theme="dark"
     data-bs-popper="static"
 >
     <a href="/" class="dropdown-item" on:click={closeDropdown}>Status</a>
-    <a href="/profile" class="dropdown-item" on:click={closeDropdown}>Profile</a>
-    <div class="dropdown-divider"></div>
     <a href="/settings" class="dropdown-item" on:click={closeDropdown}>Settings</a>
+    <div class="dropdown-divider"></div>
     <a href="/api/logout" class="dropdown-item">Logout</a>
 </div>
