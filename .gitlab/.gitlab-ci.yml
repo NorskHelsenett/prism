@@ -94,7 +94,7 @@ helm-push:
     CURRENT_VERSION=$(echo $file | sed 's/prism-\([0-9]\+\.[0-9]\+\.[0-9]\+\).tgz/\1/')
     export NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. '{print $1"."$2"."$3+1}')
     echo "NEW CHART VERSION" $NEW_VERSION
-    APP_VERSION=$(awk '/## \[.+\]/{i++} i==2{print; exit}' CHANGELOG.md | sed 's/## \[\(.*\)\].*/\1/')
+    export APP_VERSION=$(awk '/## \[.+\]/{i++} i==2{print; exit}' CHANGELOG.md | sed 's/## \[\(.*\)\].*/\1/')
     echo "APP VERSION" $APP_VERSION
     yq e -i '.version = strenv(NEW_VERSION), .appVersion = strenv(APP_VERSION)' $CHART_DIR/Chart.yaml
 
