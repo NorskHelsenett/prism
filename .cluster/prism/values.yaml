@@ -41,6 +41,8 @@ web:
     datascripts:
       - expose-nhn-office-client
       - expose-nhn-office-devops
+      - expose-nhn-office-nat
+      - expose-nhn-office-isp
       - bottom-deny-rule
   mounts:
   - name: temp
