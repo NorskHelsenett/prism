@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"io"
 	"os"
+	"log"
 	"bytes"
 
 	"prism/config"
