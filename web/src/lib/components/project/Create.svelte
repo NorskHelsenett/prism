@@ -228,13 +228,16 @@ try {
 										<label for="clientEmail" class="form-label required">Client emails</label>
 										<input type="email" class="form-control" name="clientEmail" bind:value={clientEmail} hidden/>
 										<UserSearch on:selection={handleClientSearchChange}/>
+										<small class="form-hint">
+											This refers to the individual or team accountable for overseeing this project. They will serve as the primary point of contact for all project-related matters.
+										</small>
 									</div>
 									<div class="mb-3">
 										<label for="hackername" class="form-label required">Responsible hackers</label>
 										<input type="email" class="form-control" name="hackername" bind:value={hackerName} hidden/>
 										<UserSearch on:selection={handleUserSearchChange}/>
 										<small class="form-hint">
-											Comma separated list of emails. There will be no verification that an email is valid, but you can search for an existing user.
+											This denotes the individual(s) tasked with carrying out and following up on the testing phase of this project. Please provide a list of their email addresses, separated by commas. Note that while the system allows for searching existing users, it does not verify the validity of the provided email addresses.
 										</small>
 									</div>
 							</div>
