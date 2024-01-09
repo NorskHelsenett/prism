@@ -115,7 +115,7 @@ func CreateJSONData(jsonData *JSONData) {
 
 func AllVulnerabilities() ([]JSONData, error) {
 	var jsonData []JSONData
-	result := db.Preload("Project").Find(&jsonData) // Preload Project data
+	result := db.Preload("Project").Order("created_at desc").Find(&jsonData) // Preload Project data
 	return jsonData, result.Error
 }
 
@@ -240,7 +240,7 @@ func CountProjectVulnerabilities(projectID uint) (int64, error) {
 
 func GetProjectVulnerabilities(projectID uint) ([]JSONData, error) {
 	var jsonData []JSONData
-	err := db.Where("project_id = ?", projectID).Find(&jsonData).Error
+	err := db.Where("project_id = ?", projectID).Order("created_at desc").Find(&jsonData).Error
 
 	return jsonData, err
 }
