@@ -7,9 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- HostRule to restrict access to our fqdn by IP whitelist
+
 ### Fixed
 
 - Vulnerability views are now sorted by newest first
+- Importing not working as expected
 
 ## [0.0.2] - 2024-01-08
 

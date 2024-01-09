@@ -93,8 +93,10 @@ helm-push:
     file=$(ls prism-*.tgz)
     CURRENT_VERSION=$(echo $file | sed 's/prism-\([0-9]\+\.[0-9]\+\.[0-9]\+\).tgz/\1/')
     export NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. '{print $1"."$2"."$3+1}')
-    echo "NEW VERSION" $NEW_VERSION
-    yq e -i '.version = strenv(NEW_VERSION)' $CHART_DIR/Chart.yaml
+    echo "NEW CHART VERSION" $NEW_VERSION
+    APP_VERSION=$(awk '/## \[.+\]/{i++} i==2{print; exit}' CHANGELOG.md | sed 's/## \[\(.*\)\].*/\1/')
+    echo "APP VERSION" $APP_VERSION
+    yq e -i '.version = strenv(NEW_VERSION), .appVersion = strenv(APP_VERSION)' $CHART_DIR/Chart.yaml
 
     export API_TAG="$(date '+%Y%m%d')@$API_DIGEST"
     yq e -i '.api.tag = strenv(API_TAG)' $CHART_DIR/values.yaml
