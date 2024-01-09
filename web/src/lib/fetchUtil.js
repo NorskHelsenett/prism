@@ -13,14 +13,13 @@ export async function Fetch(endpoint, options = {}) {
     if (!response.ok) {
       console.error(`Error: ${response.status}`);
 
-      const errorResponse = await response.json();
-      const errorMessage = errorResponse.error || 'Unknown error occurred';
-
       if (response.status === 401) {
         window.location.href = '/login';
         return Promise.resolve(null);
       }
 
+      const errorResponse = await response.json();
+      const errorMessage = errorResponse.error || 'Unknown error occurred';
       // Return the error message instead of null
       return { error: errorMessage };
     }
