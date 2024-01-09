@@ -55,7 +55,8 @@ func ImportData(c *gin.Context) {
 // Create a temporary file
 	tempFile, err := os.CreateTemp("", "upload-*.db")
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create a temporary file"})
+    log.Printf("Failed to create a temporary file: %v\n", err)
+    c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create a temporary file", "detail": err.Error()})
 		return
 	}
 	defer os.Remove(tempFile.Name()) // Clean up
