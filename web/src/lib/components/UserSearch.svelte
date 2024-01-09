@@ -20,6 +20,8 @@
       let tomSelect = new TomSelect(selectElement, {
         plugins: ['remove_button'],
         persist: false,
+        createOnBlur: true,
+        createFilter: /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/,
         create: true, // Change to 'false' if you do not want users to add new entries
         onItemAdd: function() {
           // update your value binding here if necessary
@@ -56,6 +58,16 @@
 </select>
 
 <style>
+  :global(.item) {
+    background: var(--tblr-modal-bg);
+    color: var(--tblr-body-color);
+  }
+
+  :global(input) {
+    background: var(--tblr-modal-bg);
+    color: var(--tblr-body-color);
+  }
+
   :global(.ts-dropdown-content) {
     background: var(--tblr-modal-bg);
     color: var(--tblr-body-color);
