@@ -7,8 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3] - 2024-01-09
+
 ### Added
 
+- Usersearch component to search and add multiple users to projects or other use-cases.
 - HostRule to restrict access to our fqdn by IP whitelist
 
 ### Fixed

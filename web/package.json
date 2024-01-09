@@ -30,6 +30,7 @@
     "@tabler/core": "^1.0.0-beta20",
     "@tabler/icons-svelte": "^2.42.0",
     "chart.js": "^4.4.1",
-    "svelte-chartjs": "^3.1.2"
+    "svelte-chartjs": "^3.1.2",
+    "tom-select": "^2.3.1"
   }
 }

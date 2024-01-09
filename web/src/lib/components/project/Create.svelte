@@ -2,6 +2,7 @@
 	import { notification } from '$lib/stores/notificationStore';
 	import { Fetch } from '$lib/fetchUtil.js';
 	import Modal from '../Modal.svelte';
+	import UserSearch from '../UserSearch.svelte';
 	export let showModal = false;
 
 	// Declare local state for form inputs
@@ -20,6 +21,14 @@
     function openFileUploadDialog() {
         document.getElementById("fileInput").click();
     }
+
+	function handleUserSearchChange(event) {
+    hackerName = event.detail.selectedEmails.join(',');
+  }
+
+	function handleClientSearchChange(event) {
+    clientEmail = event.detail.selectedEmails.join(',');
+  }
 
 let errorMessage = '';
 
@@ -216,12 +225,17 @@ try {
 						<div class="row g-3">
 							<div class="col-xl-12">
 									<div class="mb-3">
-										<label for="clientEmail" class="form-label required">Client email</label>
-										<input type="email" class="form-control" name="clientEmail" bind:value={clientEmail} />
+										<label for="clientEmail" class="form-label required">Client emails</label>
+										<input type="email" class="form-control" name="clientEmail" bind:value={clientEmail} hidden/>
+										<UserSearch on:selection={handleClientSearchChange}/>
 									</div>
 									<div class="mb-3">
-										<label for="hackername" class="form-label required">Responsible hacker</label>
-										<input type="email" class="form-control" name="hackername" bind:value={hackerName}/>
+										<label for="hackername" class="form-label required">Responsible hackers</label>
+										<input type="email" class="form-control" name="hackername" bind:value={hackerName} hidden/>
+										<UserSearch on:selection={handleUserSearchChange}/>
+										<small class="form-hint">
+											Comma separated list of emails. There will be no verification that an email is valid, but you can search for an existing user.
+										</small>
 									</div>
 							</div>
 						</div>

@@ -2,7 +2,6 @@ package main
 
 import (
     "net/http"
-    "strconv"
 
     "github.com/gin-gonic/gin"
     "prism/auth"
@@ -35,28 +34,14 @@ func main() {
         // ACL Routes
         apiRoutes.GET("/blob/:filename", routes.GetBlob)
         apiRoutes.GET("/project/:projectID", routes.GetProject)
-        apiRoutes.GET("/vulnerabilityfinding/:id", func(c *gin.Context) {
-            idStr := c.Param("id")
-            id, err := strconv.ParseUint(idStr, 10, 32)
-            if err != nil {
-                c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
-                return
-            }
-
-            data, err := database.GetJSONData(uint(id))
-            if err != nil {
-                c.JSON(http.StatusNotFound, gin.H{"error": "Data not found"})
-                return
-            }
-
-            c.JSON(http.StatusOK, gin.H{"data": data})
-        })
+        apiRoutes.GET("/vulnerabilityfinding/:id", routes.GetVulnerability)
         apiRoutes.GET("/project/:projectID/vulnerabilities/total", routes.GetProjectVulnerabilitiesTotal)
         apiRoutes.GET("/project/:projectID/vulnerabilities", routes.GetProjectVulnerabilitiesForProject)
 
         // Admin users
         apiRoutes.Use(auth.AdminMiddleware())
 
+        apiRoutes.GET("/user/all", routes.GetAllUsers)
         apiRoutes.DELETE("/vulnerability/:id", routes.DeleteVulnerability)
         apiRoutes.DELETE("/project/:projectID", routes.DeleteProject)
         apiRoutes.GET("/project", routes.GetProjects)

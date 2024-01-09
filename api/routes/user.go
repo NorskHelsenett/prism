@@ -13,3 +13,8 @@ func GetUserInfo(c *gin.Context){
 	c.Header("Cache-Control", "public, max-age=3600")
 	c.JSON(http.StatusOK, user)
 }
+
+func GetAllUsers(c *gin.Context) {
+	users,_ := database.GetAllUsers()
+	c.JSON(http.StatusOK, users)
+}

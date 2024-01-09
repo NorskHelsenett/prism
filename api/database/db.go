@@ -46,6 +46,7 @@ type UserData struct {
 	Email   string
 	Name    string
 	Picture string
+	Role    string
 }
 
 type Vulnerability struct {
@@ -100,6 +101,17 @@ func SaveOrUpdateUserData(name string, email string, picture string) error {
 func GetUserDataByEmail(email string) (*UserData, error) {
 	var userData UserData
 	result := db.Where("email = ?", email).First(&userData)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &userData, nil
+}
+
+func GetAllUsers() (*[]UserData, error){
+	var userData []UserData
+	result := db.Find(&userData)
 
 	if result.Error != nil {
 		return nil, result.Error
