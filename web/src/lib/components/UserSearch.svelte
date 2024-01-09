@@ -6,8 +6,6 @@
   import { createEventDispatcher } from 'svelte';
 
   const dispatch = createEventDispatcher();
-  let selectedUserEmails = []; // this should hold the selected emails
-
 
   let selectElement;
 
@@ -25,6 +23,7 @@
         create: true, // Change to 'false' if you do not want users to add new entries
         onItemAdd: function() {
           // update your value binding here if necessary
+          this.setTextboxValue('');
         },
         onItemRemove: function() {
           // update your value binding here if necessary
@@ -46,7 +45,6 @@
     const selectedValues = Array.from(event.target.selectedOptions).map(o => o.value);
     dispatch('selection', { selectedEmails: selectedValues });
   }
-
 </script>
 
 <select
@@ -60,5 +58,17 @@
 <style>
   :global(.ts-dropdown-content) {
     background: var(--tblr-modal-bg);
+    color: var(--tblr-body-color);
   }
+
+  :global(.ts-wrapper.multi .ts-control > div) {
+    background: var(--tblr-bg-surface-secondary);
+    border: 1px solid var(--tblr-border-color);
+    color: var(--tblr-body-color);
+  }
+
+  :global(.ts-wrapper.plugin-remove_button:not(.rtl) .item .remove) {
+    border-left: 1px solid var(--tblr-border-color);
+  }
+
 </style>

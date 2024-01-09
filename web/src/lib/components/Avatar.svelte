@@ -1,7 +1,7 @@
 <script>
   import { Fetch } from '$lib/fetchUtil'
   export let email = '';
-  export let option = { showName: true, size: "xs"}
+  export let option = { showName: true, size: "xs", emptyFields: false}
 
   let user = null;
 
@@ -67,7 +67,9 @@
   {/if}
 </span>
 {:else}
+  {#if !option.emptyFields}
   N/A
+  {/if}
 {/if}
 
 <style>
