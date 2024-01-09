@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"io"
+	"os"
 	"bytes"
 
 	"prism/config"
@@ -51,8 +52,27 @@ func ImportData(c *gin.Context) {
 
 	src.Seek(0, 0) // Reset the read pointer to the beginning
 
-	// For testing: Try to open the uploaded file directly with GORM
-	db, err := gorm.Open(sqlite.Open(file.Filename), &gorm.Config{})
+// Create a temporary file
+	tempFile, err := os.CreateTemp("", "upload-*.db")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create a temporary file"})
+		return
+	}
+	defer os.Remove(tempFile.Name()) // Clean up
+	defer tempFile.Close()
+
+	// Copy to temp file and reset pointer
+	if _, err = io.Copy(tempFile, src); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to copy to temporary file"})
+		return
+	}
+	if _, err = tempFile.Seek(0, 0); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset file read pointer"})
+		return
+	}
+
+	// Open temporary SQLite file with GORM to verify
+	db, err := gorm.Open(sqlite.Open(tempFile.Name()), &gorm.Config{})
 	if err != nil {
 		c.JSON(http.StatusMethodNotAllowed, gin.H{
 			"error": "Failed to open uploaded SQLite database directly with GORM",
