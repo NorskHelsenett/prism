@@ -259,6 +259,7 @@ func GetProjectVulnerabilities(projectID uint) ([]JSONData, error) {
 
 func deleteVulnerabilitiesAndImages(tx *gorm.DB, projectID *uint, ID *uint) error {
     var jsonData []JSONData
+		appConfig, _ := config.LoadConfig()
 
     // Determine the query based on the provided IDs
     var err error
@@ -296,7 +297,7 @@ func deleteVulnerabilitiesAndImages(tx *gorm.DB, projectID *uint, ID *uint) erro
         if images, ok := vulnerability["images"].([]interface{}); ok {
             for _, img := range images {
                 if imageName, ok := img.(string); ok {
-                    imagePath := filepath.Join("./tmp/images/", imageName)
+                    imagePath := filepath.Join(appConfig.Database.Path, "/images", imageName)
                     if err := os.Remove(imagePath); err != nil {
                         return err
                     }
