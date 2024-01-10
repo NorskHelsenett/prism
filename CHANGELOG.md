@@ -7,8 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.4] - 2024-01-10
+
 ### Added
 
+- About page with some curious info
 - Vulnerability status
 - Edit your projects
 - Edit your vulnerability findings (not for images yet)
