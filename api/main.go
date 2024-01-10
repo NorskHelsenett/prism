@@ -44,6 +44,7 @@ func main() {
         apiRoutes.GET("/user/all", routes.GetAllUsers)
         apiRoutes.DELETE("/vulnerability/:id", routes.DeleteVulnerability)
         apiRoutes.DELETE("/project/:projectID", routes.DeleteProject)
+        apiRoutes.PUT("/project/:projectID", routes.HandleProjectPut)
         apiRoutes.GET("/project", routes.GetProjects)
         apiRoutes.POST("/project", routes.HandleProjectPost)
         apiRoutes.POST("/blob/upload", routes.HandleBlobUpload)

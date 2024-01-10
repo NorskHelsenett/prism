@@ -8,6 +8,7 @@
   const dispatch = createEventDispatcher();
 
   let selectElement;
+  export let selectedValues;
 
   let users = [];
 
@@ -38,6 +39,7 @@
       });
 
       // Refresh the TomSelect instance to show the new options
+      tomSelect.setValue(selectedValues.split(","));
       tomSelect.refreshOptions(false);
     }
   });

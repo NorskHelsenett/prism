@@ -14,6 +14,11 @@ import (
 	"prism/config"
 )
 
+var (
+    ErrNotFound = errors.New("record not found")
+    // Other custom errors can be defined here
+)
+
 type ProjectData struct {
 	gorm.Model
 	ProjectName  string `gorm:"not null" binding:"required"`
@@ -30,6 +35,33 @@ func CreateProject(project *ProjectData) {
 		// Handle error here, for example:
 		panic(result.Error)
 	}
+}
+
+func UpdateProject(project *ProjectData) error {
+    // Begin a transaction
+    tx := db.Begin()
+    if tx.Error != nil {
+        return tx.Error
+    }
+
+    // Step 1: Update regular fields, excluding the boolean field
+    if err := tx.Model(&ProjectData{}).Where("id = ?", project.ID).
+        Omit("IsBugBounty").Updates(project).Error; err != nil {
+        tx.Rollback() // Rollback the transaction in case of error
+        return err
+    }
+
+    // Step 2: Update the boolean field alone
+    if err := tx.Model(&ProjectData{}).Where("id = ?", project.ID).
+        Select("IsBugBounty").Updates(map[string]interface{}{
+            "IsBugBounty": project.IsBugBounty,
+        }).Error; err != nil {
+        tx.Rollback() // Rollback the transaction in case of error
+        return err
+    }
+
+    // Commit the transaction
+    return tx.Commit().Error
 }
 
 // JSONData is a simple model for storing JSON data

@@ -1,5 +1,4 @@
 <script>
-  import { onMount } from 'svelte';
   import { Fetch } from '$lib/fetchUtil'
 	import { formatDateToYYYYMMDD } from '$lib/utils';
 	import CriticalityPie from '$lib/components/charts/CriticalityPie.svelte';
@@ -10,24 +9,33 @@
 	import Vulnerability from '$lib/components/Lists/Vulnerability.svelte';
 	import Assessments from '$lib/components/dashboard/Assessments.svelte';
 	import Dropdown from '$lib/components/Dropdown.svelte';
+	import Create from '$lib/components/project/Create.svelte';
 
   export let data;
+
+  let showEditModal = false
 
   let project
   let vulnerabilitiesTotal
   let vulnerabilities = []
 
-  onMount(async () => {
-    const response = await Fetch(`/api/project/${data.id}`);
-    project = response
-    const total = await Fetch(`/api/project/${project.ID}/vulnerabilities/total`)
-    vulnerabilitiesTotal = total.total_vulnerabilities
+  async function fetchProjectData() {
+    try {
+      const response = await Fetch(`/api/project/${data.id}`);
+      project = response;
 
-    vulnerabilities = await Fetch(`/api/project/${project.ID}/vulnerabilities`)
-  });
+      const totalResponse = await Fetch(`/api/project/${project.ID}/vulnerabilities/total`);
+      vulnerabilitiesTotal = totalResponse.total_vulnerabilities;
 
-  async function fetchUserData(email) {
-    return await Fetch(`/api/userinfo/${email}`);
+      const vulnerabilitiesResponse = await Fetch(`/api/project/${project.ID}/vulnerabilities`);
+      vulnerabilities = vulnerabilitiesResponse;
+    } catch (error) {
+      console.error("Error fetching project data:", error);
+    }
+  }
+
+  $: if (showEditModal === false) {
+    fetchProjectData();
   }
 
 let severityData = {
@@ -71,16 +79,6 @@ let severityData = {
 
 </script>
 
-<style>
-  .fs-xx-small {
-    font-size: xx-small;
-    vertical-align: super;
-  }
-  .ml-10px {
-    margin-left: 10px;
-  }
-</style>
-
 {#if project}
 
 				<div class="row g-2 align-items-center">
@@ -107,7 +105,7 @@ let severityData = {
                 </div>
 
                 <Dropdown bind:show={showDropdown}>
-                  <a class="dropdown-item" href="#">Edit</a>
+                  <a class="dropdown-item" href="#" on:click={()=> showEditModal = !showEditModal}>Edit</a>
                   <div class="dropdown-divider"></div>
                   <a class="dropdown-item text-warning" href="#" on:click={() => showDeleteModal = true}>
                     <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-trash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
@@ -149,8 +147,8 @@ let severityData = {
 					</div>
 
 			<div class="col-8">
-				<div class="card">
-					<div class="card-body" style="height: 10rem">
+				<div class="card card h-100">
+					<div class="card-body" style="min-height: 10rem">
             <div class="datagrid">
 
             <div class="datagrid-item">
@@ -184,12 +182,10 @@ let severityData = {
 				</div>
 			</div>
 
-			<div class="col-4">
-				<div class="card">
-					<div class="card-body" style="height: 10rem">
+			<div class="col-4 card h-100">
+					<div class="card-body " style="min-height: 10rem">
             <CriticalityPie {severityData} />
 					</div>
-				</div>
 			</div>
 
 			<div class="col-12">
@@ -225,4 +221,19 @@ let severityData = {
   <p>Loading project details...</p>
 {/if}
 
+{#if showEditModal}
+  <Create model={project} bind:showModal={showEditModal}/>
+{/if}
 
+<style>
+  .datagrid-content {
+    white-space: pre-line;
+  }
+  .fs-xx-small {
+    font-size: xx-small;
+    vertical-align: super;
+  }
+  .ml-10px {
+    margin-left: 10px;
+  }
+</style>

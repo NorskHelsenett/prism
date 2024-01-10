@@ -3,6 +3,7 @@ package routes
 import (
 	"net/http"
 	"github.com/gin-gonic/gin"
+    "errors"
 
     "prism/database"
     "strconv"
@@ -19,6 +20,44 @@ func GetProjects(c *gin.Context){
     }
 
     c.JSON(http.StatusOK, projects)
+}
+
+func HandleProjectPut(c *gin.Context) {
+    projectIDStr := c.Param("projectID")
+    if projectIDStr == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Project ID is required"})
+        return
+    }
+
+    projectID, err := strconv.ParseUint(projectIDStr, 10, strconv.IntSize)
+    if err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Project ID"})
+        return
+    }
+
+    var updatedProjectData database.ProjectData
+    // Step 2: Bind incoming JSON data to the struct.
+    if err := c.ShouldBindJSON(&updatedProjectData); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+
+    // Check that projectID matches updatedProjectData.ID
+    if uint(projectID) != updatedProjectData.ID {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Project ID mismatch"})
+        return
+    }
+
+    err = database.UpdateProject(&updatedProjectData)
+    if err != nil {
+        if errors.Is(err, database.ErrNotFound) {
+            c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
+            return
+        }
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+    c.JSON(http.StatusOK, gin.H{"message": "Project updated successfully"})
 }
 
 func HandleProjectPost(c *gin.Context){
