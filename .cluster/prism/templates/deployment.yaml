@@ -39,6 +39,9 @@ spec:
         {{- range $value.mounts }}
         - name: {{ .name }}
           mountPath: {{ .mountPath }}
+          {{- if .subPath }}
+          subPath: {{ .subPath }}
+          {{- end }}
           readOnly: {{ .readOnly | default false }}
         {{- end }}
         securityContext:
