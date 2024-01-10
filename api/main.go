@@ -51,6 +51,7 @@ func main() {
         apiRoutes.DELETE("/blob/:filename", routes.HandleBlobDelete)
 
         apiRoutes.POST("/vulnerabilityfinding", routes.PostVulnerability )
+        apiRoutes.PUT("/vulnerabilityfinding/:id", routes.PutVulnerability)
         apiRoutes.GET("/vulnerabilityfinding/all", routes.GetAllVulnerabilities)
 
         apiRoutes.GET("/settings/export", routes.ExportAllData)

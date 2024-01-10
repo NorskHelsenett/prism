@@ -157,6 +157,25 @@ func CreateJSONData(jsonData *JSONData) {
 	db.Create(jsonData)
 }
 
+func UpdateVulnerability(jsonData *JSONData) error {
+    // Assuming `db` is your *gorm.DB instance
+
+    // Directly attempt to update the model using the primary key (ID)
+    result := db.Model(&JSONData{}).Where("id = ?", jsonData.ID).Updates(jsonData)
+    if result.Error != nil {
+        // Handle the error, could be record not found or any other DB related error
+        return result.Error
+    }
+
+    // RowsAffected can tell you how many records were updated
+    if result.RowsAffected == 0 {
+        // No records updated, which can indicate that the record wasn't found
+        return errors.New("no records updated, record may not exist")
+    }
+
+    return nil // Return nil if no error occurred
+}
+
 func AllVulnerabilities() ([]JSONData, error) {
 	var jsonData []JSONData
 	result := db.Preload("Project").Order("created_at desc").Find(&jsonData) // Preload Project data

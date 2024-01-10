@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Edit your projects
+- Edit your vulnerability findings (not for images yet)
 
 ### Removed
 
