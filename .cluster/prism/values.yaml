@@ -55,6 +55,7 @@ web:
     readOnly: true
     subPath: config.json
     config:
+      fileName: config.json
       data: |
         {
           "apiEndpoint": "https://prism.t-jonas-001.trd1-sky-test.sky.nhn.no"
