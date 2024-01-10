@@ -34,7 +34,6 @@
 
       // Add options to TomSelect
       users.forEach(user => {
-        console.log(user)
         tomSelect.addOption({ value: user.Email, text: user.Name });
       });
 
