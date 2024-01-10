@@ -8,22 +8,6 @@ stages:
   - build
   - deploy
 
-pre-build:
-  stage: build
-  image: ncr.sky.nhn.no/dockerhub/alpine/git
-  script: |
-    GIT_AUTHOR=$(git log -1 --pretty=format:"%an")
-    BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-    cat << EOF > web/static/.well-known/buildinfo.json
-    {
-      "user": "$GIT_AUTHOR",
-      "branch": "$CI_COMMIT_BRANCH",
-      "date": "$BUILD_DATE",
-      "digest": "$CI_COMMIT_SHA"
-    }
-    EOF
-    cp CHANGELOG.md web/static/.well-known/CHANGELOG.md
-
 .template: &build_template
   stage: build
   image:
@@ -34,6 +18,17 @@ pre-build:
     - mkdir -p $PWD/.kaniko/
     - echo "{\"auths\":{\"$CI_REGISTRY\":{\"auth\":\"$(echo -n $CI_REGISTRY_USER:$CI_REGISTRY_PASSWORD | base64)\"}}}" > $PWD/.kaniko/config.json
   script: |
+      BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    cat << EOF > web/static/.well-known/buildinfo.json
+    {
+      "user": "Jonas Bo Grimsgaard",
+      "branch": "$CI_COMMIT_BRANCH",
+      "date": "$BUILD_DATE",
+      "digest": "$CI_COMMIT_SHA"
+    }
+    EOF
+    cp CHANGELOG.md web/static/.well-known/CHANGELOG.md
+
     IMAGE="$GITLAB_REGISTRY/$IMAGE_REPOSITORY"
     DESTINATION="--destination $IMAGE:latest --destination $IMAGE:$(date '+%Y%m%d')"
 
@@ -73,10 +68,6 @@ build-web:
   variables:
     IMAGE_REPOSITORY: "web"
     CONTEXT_DIR: "web/"
-  dependencies:
-    - pre-build
-  needs:
-    - pre-build
 
 deploy-api:
   stage: deploy
