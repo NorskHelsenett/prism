@@ -217,6 +217,16 @@ func CountOWASPCategories() (map[string]int, error) {
 	return categoryCounts, nil
 }
 
+func CountUnresolvedTasks() (int, error) {
+    var count int64
+    result := db.Model(&JSONData{}).Where("status NOT IN (?)", []string{"Resolved", "Rejected"}).Count(&count)
+    if result.Error != nil {
+        return 0, result.Error
+    }
+
+    return int(count), nil
+}
+
 // CountCriticalities returns a map with the count of each criticality level
 func CountCriticalities() (map[string]int, error) {
 	var jsonData []JSONData
