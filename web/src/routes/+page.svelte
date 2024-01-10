@@ -29,7 +29,8 @@
 	import { pageMeta } from '$lib/stores/pageMeta';
   import { onMount } from 'svelte';
 	import Categories from '$lib/components/dashboard/Categories.svelte';
-let severityData;
+	import OwaspDonut from '$lib/components/charts/OwaspDonut.svelte';
+	let severityData;
 	onMount(() => {
 			pageMeta.set({ pretitle: 'Overview',title: 'Pentest Report Information Security Management' });
 
@@ -124,15 +125,11 @@ let severityData;
 					</div>
 				</div>
 			</div>
-			<div class="col-4">
+			<div class="col-8">
 				<div class="card">
 					<div class="card-body" style="height: 10rem">
+						<OwaspDonut severityData={$dashboardStore.owasp}/>
 					</div>
-				</div>
-			</div>
-			<div class="col-4">
-				<div class="card">
-					<div class="card-body"></div>
 				</div>
 			</div>
 			<div class="col-12">

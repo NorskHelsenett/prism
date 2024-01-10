@@ -11,5 +11,3 @@ export const OWASPCategories = {
     SecurityLoggingAndMonitoringFailures: "A09:Security Logging and Monitoring Failures",
     ServerSideRequestForgery: "A10:Server-Side Request Forgery"
 };
-
-

@@ -39,7 +39,8 @@
         '#3A87D1', // More saturated Muted Blue
     ],
     borderColor: '#192433',
-    borderWidth: 0, // Set your desired border width
+    borderWidth: 0,
+    hoverOffset: 8 // Distance the slice moves when hovered
     },
   ],
 };
@@ -54,8 +55,22 @@
     ];
   }
 
+  let options = {
+    responsive: true ,
+    maintainAspectRatio: false,
+    plugins: {
+      datalabels: {
+        display: false
+      },
+      legend:{
+        position: "right",
+        display: false
+      }
+    }
+  }
+
 </script>
 
 {#if severityData}
-<Pie {data} options={{ responsive: true ,maintainAspectRatio: false, plugins: {legend:{position: "right", display: false}}}} />
+	<Pie {data} {options} />
 {/if}
