@@ -1,5 +1,4 @@
 <script>
-  import { onMount } from 'svelte';
   import { Doughnut } from 'svelte-chartjs';
   import ChartDataLabels from 'chartjs-plugin-datalabels';
   import {
@@ -13,57 +12,10 @@
 
   ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, ChartDataLabels);
 
-  export let severityData = { };
-  let themeColors = { };
+  export let severityData = {"A01:Broken Access Control":0,"A02:Cryptographic Failures":0,"A03:Injection":0,"A05:Security Misconfiguration":0,"A08:Software and Data Integrity Failures":0,"uncategorized":0};
+  let data = {}
 
-  onMount(() => {
-    // Access the computed styles of the document's root element
-    const style = getComputedStyle(document.documentElement);
-
-    // Get the values of the CSS variables
-    themeColors = {
-      primary: style.getPropertyValue('--tblr-bg-surface').trim(),
-      secondary: style.getPropertyValue('--tblr-body-color').trim(),
-      success: style.getPropertyValue('--tblr-card-bg').trim(),
-    }
-
-    console.log(themeColors)
-
-    // Now you can use `themeColors` array in your chart configuration
-  });
-
-  let topOwaspCategories = Object.entries(severityData).sort((a,b) => b[1] - a[1]).slice(0,3)
-
-  const labels = topOwaspCategories.map(item => item[0]);
-  const dataPoints = topOwaspCategories.map(item => item[1]);
-
-  let data = {
-    labels: labels, // Adjust the slice as needed based on your data
-    datasets: [{
-      data: dataPoints, // Map severity data to dataset
-      backgroundColor: [
-        '#D63939', // Greyish Blue
-        '#F76706', // Soft Teal
-        '#F59F01', // Light Grey-Blue
-        '#0054A6', // Dark Slate Blue
-        '#4399E1', // Muted Blue
-      ],
-      hoverBackgroundColor: [
-        '#BF3030', // More saturated Greyish Blue
-        '#E65C00', // More saturated Soft Teal
-        '#E08C00', // More saturated Light Grey-Blue
-        '#00458C', // More saturated Dark Slate Blue
-        '#3A87D1', // More saturated Muted Blue
-      ],
-      // Add border color and width here if needed
-      borderWidth: 10,
-      borderColor: '#192433',
-      hoverOffset: 8 // Distance the slice moves when hovered
-
-    }],
-  };
-
-let options = {
+  let options = {
     responsive: true,
     maintainAspectRatio: false,
     cutoutPercentage: 80, // This makes it a donut chart
@@ -106,16 +58,42 @@ let options = {
       tooltip: {
         enabled: true // Enable tooltips
       }
-    },
-    elements: {
-      arc: {
-        borderWidth: 0 // No border for the arcs
-      }
     }
   };
 
+  $: if (severityData) {
+    let topOwaspCategories = Object.entries(severityData).sort((a,b) => b[1] - a[1]).slice(0,3)
+
+    const labels = topOwaspCategories.map(item => item[0]);
+    const dataPoints = topOwaspCategories.map(item => item[1]);
+    data = {
+      labels: labels, // Adjust the slice as needed based on your data
+      datasets: [{
+        data: dataPoints, // Map severity data to dataset
+        backgroundColor: [
+          '#D63939', // Greyish Blue
+          '#F76706', // Soft Teal
+          '#F59F01', // Light Grey-Blue
+          '#0054A6', // Dark Slate Blue
+          '#4399E1', // Muted Blue
+        ],
+        hoverBackgroundColor: [
+          '#BF3030', // More saturated Greyish Blue
+          '#E65C00', // More saturated Soft Teal
+          '#E08C00', // More saturated Light Grey-Blue
+          '#00458C', // More saturated Dark Slate Blue
+          '#3A87D1', // More saturated Muted Blue
+        ],
+        // Add border color and width here if needed
+        borderWidth: 10,
+        borderColor: '#192433',
+        hoverOffset: 8 // Distance the slice moves when hovered
+
+      }],
+    };
+    }
 </script>
 
-{#if topOwaspCategories.length}
+{#if data.datasets[0].data.length}
   <Doughnut {data} {options} />
 {/if}
