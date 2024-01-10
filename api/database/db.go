@@ -71,6 +71,7 @@ type JSONData struct {
 	FoundBy       string
 	ProjectID     *uint        // Foreign key for ProjectData
 	Project       *ProjectData // The associated project
+	Status        string `gorm:"default:Reported"`
 }
 
 type UserData struct {
@@ -128,6 +129,14 @@ func SaveOrUpdateUserData(name string, email string, picture string) error {
 	existingUserData.Name = name
 	existingUserData.Picture = picture
 	return db.Save(&existingUserData).Error
+}
+
+func ChangeVulnerabilityStatus(id uint, status string) error {
+    // Assuming `db` is your *gorm.DB instance
+
+    // Update the status of the vulnerability
+    result := db.Model(&JSONData{}).Where("id = ?", id).Update("Status", status)
+    return result.Error
 }
 
 func GetUserDataByEmail(email string) (*UserData, error) {

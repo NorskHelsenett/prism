@@ -52,6 +52,7 @@ func main() {
 
         apiRoutes.POST("/vulnerabilityfinding", routes.PostVulnerability )
         apiRoutes.PUT("/vulnerabilityfinding/:id", routes.PutVulnerability)
+        apiRoutes.PUT("/vulnerabilityfinding/:id/status/:status", routes.ChangeStatusVulnerability)
         apiRoutes.GET("/vulnerabilityfinding/all", routes.GetAllVulnerabilities)
 
         apiRoutes.GET("/settings/export", routes.ExportAllData)
