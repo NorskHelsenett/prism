@@ -18,7 +18,7 @@ stages:
     - mkdir -p $PWD/.kaniko/
     - echo "{\"auths\":{\"$CI_REGISTRY\":{\"auth\":\"$(echo -n $CI_REGISTRY_USER:$CI_REGISTRY_PASSWORD | base64)\"}}}" > $PWD/.kaniko/config.json
   script: |
-      BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     cat << EOF > web/static/.well-known/buildinfo.json
     {
       "user": "Jonas Bo Grimsgaard",
