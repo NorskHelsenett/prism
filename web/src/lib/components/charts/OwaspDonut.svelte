@@ -30,7 +30,7 @@
         anchor: 'end',
         clamp: true,
         font: {
-          weight: 'bold'
+          weight: 'regular',
         },
         // Configure your line here
         connectors: {
