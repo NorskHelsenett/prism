@@ -1,6 +1,7 @@
 <script>
 	import Export from "$lib/components/settings/export.svelte";
   import Profile from "$lib/components/settings/profile.svelte";
+  import About from "$lib/components/settings/about.svelte";
 
   let activeComponent = Profile;
 
@@ -25,6 +26,7 @@
           <h4 class="subheader">Business settings</h4>
           <div class="list-group list-group-transparent">
             <a href="#" class:active="{activeComponent === Profile}" class="list-group-item list-group-item-action d-flex align-items-center" on:click|preventDefault={() => show(Profile)}>My Account</a>
+            <a href="#" class:active="{activeComponent === About}" class="list-group-item list-group-item-action d-flex align-items-center" on:click|preventDefault={() => show(About)}>About</a>
           </div>
           <h4 class="subheader mt-4">Experience</h4>
           <div class="list-group list-group-transparent">

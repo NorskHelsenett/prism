@@ -8,6 +8,22 @@ stages:
   - build
   - deploy
 
+pre-build:
+  stage: build
+  image: ncr.sky.nhn.no/dockerhub/alpine/git
+  script: |
+    GIT_AUTHOR=$(git log -1 --pretty=format:"%an")
+    BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    cat << EOF > web/static/.well-known/buildinfo.json
+    {
+      "user": "$GIT_AUTHOR",
+      "branch": "$CI_COMMIT_BRANCH",
+      "date": "$BUILD_DATE",
+      "digest": "$CI_COMMIT_SHA"
+    }
+    EOF
+    cp CHANGELOG.md web/static/.well-known/CHANGELOG.md
+
 .template: &build_template
   stage: build
   image:
@@ -57,6 +73,10 @@ build-web:
   variables:
     IMAGE_REPOSITORY: "web"
     CONTEXT_DIR: "web/"
+  dependencies:
+    - pre-build
+  needs:
+    - pre-build
 
 deploy-api:
   stage: deploy
