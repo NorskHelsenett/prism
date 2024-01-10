@@ -41,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Settings panel
 - Profile settings panel (view-only)
 
-## [0.0.1] - 2023-12-12
+## [0.0.1] - 2023-12-06
 
 ### Added
 
