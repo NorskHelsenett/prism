@@ -57,7 +57,7 @@
       ],
       // Add border color and width here if needed
       borderWidth: 10,
-      borderColor: themeColors.primary,
+      borderColor: '#192433',
       hoverOffset: 8 // Distance the slice moves when hovered
 
     }],
@@ -116,6 +116,6 @@ let options = {
 
 </script>
 
-{#if topOwaspCategories.length && themeColors?.primary}
+{#if topOwaspCategories.length}
   <Doughnut {data} {options} />
 {/if}
