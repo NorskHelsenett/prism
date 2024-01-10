@@ -45,5 +45,8 @@
   }
   .capitalize-first-letter::first-letter {
     text-transform: capitalize;
-}
+  }
+  .bg-custom-orange {
+      background-color: #ffa500; /* This is just an example orange color */
+  }
 </style>
