@@ -11,15 +11,10 @@
 	let description = '';
 	let clientEmail = '';
 	let hackerName = '';
-	let file; // For file input
 	let isBugBounty = false
 
     function closeModal() {
         showModal = false;
-    }
-
-    function openFileUploadDialog() {
-        document.getElementById("fileInput").click();
     }
 
 	function handleUserSearchChange(event) {
@@ -32,46 +27,9 @@
 
 let errorMessage = '';
 
-    async function validateImage(file) {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => {
-                const { width, height } = img;
-                if (width !== height) {
-                    reject("Image must be square.");
-                } else if (width < 512 || height < 512 || width > 1024 || height > 1024) {
-                    reject("Image dimensions must be between 512x512 and 1024x1024 pixels.");
-                } else {
-                    resolve();
-                }
-            };
-            img.onerror = () => {
-                reject("Invalid image file.");
-            };
-            img.src = URL.createObjectURL(file);
-        });
-    }
-
     async function handleSubmit() {
         // Reset error message
         errorMessage = '';
-
-        // Validate file
-        if (file && file.length > 0) {
-            const selectedFile = file[0];
-            if (selectedFile.type !== 'image/jpeg' && selectedFile.type !== 'image/png') {
-                errorMessage = 'File must be a JPEG or PNG image.';
-                return;
-            }
-
-            try {
-                await validateImage(selectedFile);
-            } catch (error) {
-                errorMessage = error;
-								console.log(errorMessage)
-                return;
-            }
-        }
 
 			let projectData = {
         projectName: projectName,
@@ -88,11 +46,6 @@ let errorMessage = '';
 			formData.append('description', description);
 			formData.append('clientEmail', clientEmail);
 			formData.append('hackerName', hackerName);
-
-			// Add file to FormData if a file is selected
-			if (file) {
-					formData.append('file', file[0]);
-			}
 try {
 			const response = await Fetch(`/api/project`, {
 				method: 'POST',
@@ -137,12 +90,11 @@ try {
 						<div class="row g-3">
 							<div class="col-xl-12">
 								<div class="row">
-									<div class="col-md-8 col-xl-8">
+									<div class="col-md-12 col-xl-12">
 										<div class="mb-3">
 											<label for="projectname" class="form-label required">Project Name</label>
 											<input type="text" class="form-control" name="projectname" bind:value={projectName}/>
 										</div>
-
 										<div class="mb-3">
 											<div class="form-label">Bug Bounty</div>
 												<label class="form-check form-switch cursor-pointer">
@@ -150,7 +102,6 @@ try {
 														<span class="form-check-label">This project is part of the bug bounty program</span>
 													</label>
 											</div>
-
 									<div class="mb-3">
 									<label class="form-label">Slack Channel</label>
 									<div class="input-group mb-3">
@@ -186,23 +137,6 @@ try {
 									</div>
 									</div>
 
-									<div class="col-md-4 col-xl-4">
-										<div class="mb-3 h-100">
-											<div
-												class="dropzone cursor-pointer"
-												on:click={openFileUploadDialog}
-												tabindex="0">
-
-												<!-- Use a label element as the clickable button -->
-												<label for="fileInput" class="file-button cursor-pointer text-secondary">
-													Add icon
-												</label>
-
-												<!-- Input type file (hidden) for file selection -->
-												<input type="file" id="fileInput" accept="image/*" bind:files={file}/>
-											</div>
-										</div>
-									</div>
 								</div>
 							</div>
 						</div>
@@ -273,31 +207,3 @@ try {
 		</a>
 	</div>
 </Modal>
-
-<style>
-	  .dropzone {
-    border: 2px dashed #1B58A0;
-    border-width: 1px;
-    border-style: dashed;
-    padding: 20px;
-    display: flex; /* Use Flexbox to center the label */
-    flex-direction: column;
-    align-items: center; /* Center horizontally */
-    justify-content: center; /* Center vertically */
-    cursor: pointer;
-    transition: box-shadow 0.3s ease;
-		height: 100%;
-  }
-
-    .dropzone.glow {
-        box-shadow: 0 0 15px 5px rgba(0, 0, 255, 0.5);
-    }
-
-    .dropzone.glow:hover {
-        box-shadow: 0 0 25px 10px rgba(0, 0, 255, 0.7);
-    }
-
-    .dropzone input[type="file"] {
-        display: none;
-    }
-</style>
