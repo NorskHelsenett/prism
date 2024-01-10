@@ -21,7 +21,7 @@ stages:
     BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
     cat << EOF > web/static/.well-known/buildinfo.json
     {
-      "user": "Jonas Bo Grimsgaard",
+      "user": "$CI_COMMIT_AUTHOR",
       "branch": "$CI_COMMIT_BRANCH",
       "date": "$BUILD_DATE",
       "digest": "$CI_COMMIT_SHA"
