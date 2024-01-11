@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - OWASP Categories by Severity on the dashboard frontpage
+- Markdown support for TextArea inputs in Project and Vulnerability
 
 ## [0.0.4] - 2024-01-10
 

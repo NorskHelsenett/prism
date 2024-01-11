@@ -1,6 +1,7 @@
 <script>
   import { Fetch } from '$lib/fetchUtil'
 	import { formatDateToYYYYMMDD } from '$lib/utils';
+  import { marked } from 'marked';
 	import CriticalityPie from '$lib/components/charts/CriticalityPie.svelte';
 	import Criticality from '$lib/components/dashboard/Criticality.svelte';
 	import CountVulnerabilities from '$lib/components/dashboard/countVulnerabilities.svelte';
@@ -176,7 +177,7 @@ let severityData = {
             </div>
             <div class="row mt-3">
                 <div class="datagrid-title">Description</div>
-                <div class="datagrid-content">{project.Description || 'N/A'}</div>
+                <div class="datagrid-content">{@html marked.parse(project.Description) || 'N/A'}</div>
             </div>
 					</div>
 				</div>
