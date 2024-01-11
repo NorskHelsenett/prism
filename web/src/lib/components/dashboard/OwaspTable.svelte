@@ -19,7 +19,7 @@
   <tbody>
     {#each Object.entries(owaspData) as [category, counts]}
     <tr>
-      <td>{category || 'Uncategorized'}</td>
+      <td><strong>{category || 'Uncategorized'}</strong></td>
       <td class="{textColor(counts.low)} text-center">{counts.low || '-'}</td>
       <td class="{textColor(counts.medium)} text-center">{counts.medium || '-'}</td>
       <td class="{textColor(counts.high)} text-center">{counts.high || '-'}</td>
