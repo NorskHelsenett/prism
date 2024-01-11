@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Unified vulnerability table
+- SORTING!: Now sort your vulnerability table (dummy way)
 - Added OWASP Category top 3 Doughnut Chart
 - About page with some curious info
 - Vulnerability status

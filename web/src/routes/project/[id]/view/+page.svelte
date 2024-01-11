@@ -66,6 +66,8 @@ let severityData = {
         severityData.information += 1;
       }
     });
+
+    unresolvedCount = vulnerabilities.filter(vulnerability => vulnerability.Status !== "Resolved" && vulnerability.Status !== "Rejected").length;
   }
 
   async function deleteProject(id){
@@ -77,6 +79,7 @@ let severityData = {
   let assessments = 0;
   let showDropdown = false
   let showDeleteModal = false
+  let unresolvedCount = 0;
 
 </script>
 
@@ -137,7 +140,7 @@ let severityData = {
 
           <div class="col-sm-4 col-lg-4">
 						<div class="card card-sm">
-							<Tasks />
+							<Tasks unresolved={unresolvedCount}/>
 						</div>
 					</div>
 
