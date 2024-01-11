@@ -1,5 +1,9 @@
 <script>
   export let owaspData = {};
+
+  function textColor(value){
+    return value > 0 ? "text-info" : "text-secondary"
+  }
 </script>
 
 <table class="table table-vcenter card-table">
@@ -16,10 +20,10 @@
     {#each Object.entries(owaspData) as [category, counts]}
     <tr>
       <td>{category || 'Uncategorized'}</td>
-      <td class="text-secondary text-center">{counts.low || '-'}</td>
-      <td class="text-secondary text-center">{counts.medium || '-'}</td>
-      <td class="text-secondary text-center">{counts.high || '-'}</td>
-      <td class="text-secondary text-center">{counts.critical || '-'}</td>
+      <td class="{textColor(counts.low)} text-center">{counts.low || '-'}</td>
+      <td class="{textColor(counts.medium)} text-center">{counts.medium || '-'}</td>
+      <td class="{textColor(counts.high)} text-center">{counts.high || '-'}</td>
+      <td class="{textColor(counts.critical)} text-center">{counts.critical || '-'}</td>
     </tr>
     {/each}
   </tbody>
