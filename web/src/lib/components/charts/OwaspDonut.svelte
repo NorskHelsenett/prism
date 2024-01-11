@@ -35,7 +35,7 @@
         // Configure your line here
         connectors: {
           style: 'solid', // Line style
-          length: 20 // Line length
+          length: 50 // Line length
         },
         padding: {
           top: 0,

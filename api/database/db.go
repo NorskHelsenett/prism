@@ -217,6 +217,52 @@ func CountOWASPCategories() (map[string]int, error) {
 	return categoryCounts, nil
 }
 
+type VulnerabilityData struct {
+	Category    string `json:"category"`
+	Criticality string `json:"criticality"`
+}
+
+func FetchOWASPCriticalities() (map[string]map[string]int, error) {
+	var jsonData []JSONData
+	result := db.Find(&jsonData)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	owaspData := make(map[string]map[string]int)
+	for _, data := range jsonData {
+		var vuln VulnerabilityData
+		err := json.Unmarshal(data.Vulnerability, &vuln)
+		if err != nil {
+			return nil, err
+		}
+
+		// If category is empty, default it to "Uncategorized"
+		category := vuln.Category
+		if category == "" {
+			category = "Uncategorized"
+		}
+
+		// If the category doesn't exist yet, initialize the criticality count maps
+		if _, exists := owaspData[category]; !exists {
+			owaspData[category] = map[string]int{
+				"low":      0,
+				"medium":   0,
+				"high":     0,
+				"critical": 0,
+			}
+		}
+
+		// Increment the appropriate criticality count
+		switch vuln.Criticality {
+		case "low", "medium", "high", "critical":
+			owaspData[category][vuln.Criticality]++
+		}
+	}
+
+	return owaspData, nil
+}
+
 func CountUnresolvedTasks() (int, error) {
     var count int64
     result := db.Model(&JSONData{}).Where("status NOT IN (?)", []string{"Resolved", "Rejected"}).Count(&count)
