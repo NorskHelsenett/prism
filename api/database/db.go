@@ -342,18 +342,22 @@ func GetProject(id uint) (ProjectData, error) {
 }
 
 func GetProjects(query string) ([]ProjectData, error) {
-	var projects []ProjectData
+    var projects []ProjectData
 
-	// Perform a search if a query is provided
-	if query != "" {
-		result := db.Where("project_name LIKE ?", "%"+query+"%").Find(&projects)
-		return projects, result.Error
-	}
+    // Prepare the database query
+    db := db
+    if query != "" {
+        db = db.Where("project_name LIKE ?", "%"+query+"%")
+    }
 
-	// Return all projects if no query is provided
-	result := db.Find(&projects)
+    // Sort the results by ProjectName in ascending order
+    db = db.Order("project_name ASC").Find(&projects)
 
-	return projects, result.Error
+    if db.Error != nil {
+        return nil, db.Error
+    }
+
+    return projects, nil
 }
 
 func CountProjectVulnerabilities(projectID uint) (int64, error) {
