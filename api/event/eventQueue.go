@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 	"time"
-	"fmt"
 	"strconv"
 	"encoding/json"
 
@@ -106,7 +105,7 @@ func handleEvent(event database.EventQueue) {
 		data.ImageUrl = imageUrl
 
     if err := sendSlackMessage(data); err != nil {
-        fmt.Errorf("Failed to send Slack message: %v", err)
+        log.Printf("Failed to send Slack message: %v", err)
     } else {
 			// Mark event as processed
 			database.SetEventProcessed(&event)
