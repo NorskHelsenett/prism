@@ -31,6 +31,18 @@ type Config struct {
     Cors Cors `yaml:"cors"`
     Database Database `yaml:"database"`
     Admins []string `yaml:"admins"`
+    Events Events `yaml:"events"`
+    Slack Slack `yaml:"slack"`
+}
+
+type Slack struct {
+    Enable       bool `yaml:"enable"`
+    Token        string `yaml:"token"`
+    WebhookUrl   string `yaml:"webhookUrl"`
+}
+
+type Events struct {
+    Interval int `yaml: "interval"`
 }
 
 // LoadConfig reads configuration from a YAML file specified by the CONFIG_PATH environment variable.
@@ -59,6 +71,11 @@ func LoadConfig() (*Config, error) {
     err = yaml.Unmarshal(configFile, &config)
     if err != nil {
         return nil, fmt.Errorf("error parsing config file: %w", err)
+    }
+
+    // Set default value for Interval if it's zero
+    if config.Events.Interval == 0 {
+        config.Events.Interval = 60
     }
 
     return &config, nil

@@ -65,9 +65,10 @@
 <div class="card-body">
   <h2 class="card-title">Export data</h2>
   <p class="text-secondary">Export the database file as its entirity. Importing the file will overwrite any existing database file, and quit any current connections. Use with <strong>CARE!</strong></p>
-</div>
-<div class="card-footer btn-list justify-content-end">
-  <input type="file" id="file-input" bind:this={fileInput} on:change={handleFileChange} hidden>
-  <button on:click={uploadFile} class="btn btn-outline-danger">Import Data</button>
-  <button class="btn btn-primary d-none d-sm-inline-block" on:click={download}>Export data</button>
+
+  <div class="btn-list justify-content-end">
+    <input type="file" id="file-input" bind:this={fileInput} on:change={handleFileChange} hidden>
+    <button on:click={uploadFile} class="btn btn-outline-danger">Import Data</button>
+    <button class="btn btn-primary d-none d-sm-inline-block" on:click={download}>Export data</button>
+  </div>
 </div>

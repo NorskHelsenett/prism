@@ -21,9 +21,46 @@ api:
     mountPath: /tmp
     readOnly: false
     storage: 50Mi
+  - name: config-web
+    mountPath: /var/config/slack.json
+    readOnly: true
+    subPath: slack.json
+    config:
+      fileName: slack.json
+      data: |
+        { "blocks": [
+          {
+            "type": "section",
+            "text": {
+              "type": "mrkdwn",
+              "text": "New vulnerability reported by *<@{{.FoundBy}}>*"
+            }
+          },
+          {
+            "type": "section",
+            "text": {
+              "type": "mrkdwn",
+              "text": "*Title:* \n{{.Vulnerability.Title}}\n\n*Criticality:*\n{{.Vulnerability.Criticality}}\n\n*Category:*\n{{.Vulnerability.Category}}"
+            },
+            "accessory": {
+              "type": "image",
+              "image_url": "{{.ImageUrl}}",
+              "alt_text": "{{.Vulnerability.Criticality}}"
+            }
+          },
+          {
+            "type": "section",
+            "text": {
+              "type": "mrkdwn",
+              "text": "<{{.URL}}|More info>"
+            }
+          }]
+        }
   env:
   - name: CONFIG_PATH
     value: "/config/config.yaml"
+  - name: SLACK_PATH
+    value: "/var/config/slack.json"
   services:
   - name: api
     port: 8080
