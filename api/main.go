@@ -8,10 +8,12 @@ import (
     "prism/config"
     "prism/routes"
     "prism/database"
+    "prism/event"
 
     "time"
     "fmt"
 )
+
 func main() {
     database.InitDB()
     // Set up the primary Gin router for the main application
@@ -55,9 +57,13 @@ func main() {
         apiRoutes.PUT("/vulnerabilityfinding/:id/status/:status", routes.ChangeStatusVulnerability)
         apiRoutes.GET("/vulnerabilityfinding/all", routes.GetAllVulnerabilities)
 
+        apiRoutes.GET("/settings/events", event.EventQueues)
+        apiRoutes.PUT("/settings/events/:id/update/:status", event.UpdateEventQueues)
         apiRoutes.GET("/settings/export", routes.ExportAllData)
         apiRoutes.POST("/settings/import", routes.ImportData)
     }
+
+    go event.PollEventQueue()
 
     // Run the main application in a separate goroutine
     go func() {

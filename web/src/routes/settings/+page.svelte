@@ -2,6 +2,8 @@
 	import Export from "$lib/components/settings/export.svelte";
   import Profile from "$lib/components/settings/profile.svelte";
   import About from "$lib/components/settings/about.svelte";
+  import Settings from "$lib/components/settings/settings.svelte";
+  import Events from "$lib/components/settings/eventQueue.svelte";
 
   let activeComponent = Profile;
 
@@ -30,7 +32,8 @@
           </div>
           <h4 class="subheader mt-4">Experience</h4>
           <div class="list-group list-group-transparent">
-            <a href="#" class:active="{activeComponent === Export}" class="list-group-item list-group-item-action" on:click|preventDefault={() => show(Export)}>Export</a>
+            <a href="#" class:active="{activeComponent === Settings}" class="list-group-item list-group-item-action" on:click|preventDefault={() => show(Settings)}>Settings</a>
+            <a href="#" class:active="{activeComponent === Events}" class="list-group-item list-group-item-action" on:click|preventDefault={() => show(Events)}>Events</a>
           </div>
         </div>
       </div>

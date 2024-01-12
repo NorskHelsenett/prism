@@ -1,6 +1,7 @@
-{{- if .Values.web.mounts }}
-{{- range .Values.web.mounts }}
-{{- if and .config .config.data }}
+{{- range $key, $value := .Values }}
+  {{- if $value.mounts }}
+    {{- range $value.mounts }}
+      {{- if and .config .config.data }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -8,6 +9,8 @@ metadata:
 data:
   {{ .config.fileName }}: |-
 {{ .config.data | nindent 4 }}
-{{- end }}
-{{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+---
 {{- end }}

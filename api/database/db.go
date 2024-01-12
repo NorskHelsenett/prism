@@ -10,6 +10,7 @@ import (
 
 	"os"
 	"path/filepath"
+	"time"
 
 	"prism/config"
 )
@@ -88,6 +89,15 @@ type Vulnerability struct {
 	ProjectID   uint   `json:"projectID"`
 }
 
+type EventQueue struct {
+    ID        uint `gorm:"primaryKey"`
+    TableID   uint
+    TableName string
+    Processed bool `gorm:"default:false;index:idx_processed"`
+    CreatedAt time.Time `gorm:"index:idx_created_at,autoCreateTime"`
+    UpdatedAt time.Time `gorm:"autoCreateTime"`
+}
+
 var db *gorm.DB
 
 func InitDB() {
@@ -103,6 +113,48 @@ func InitDB() {
 	db.AutoMigrate(&JSONData{})
 	db.AutoMigrate(&UserData{})
 	db.AutoMigrate(&ProjectData{})
+	db.AutoMigrate(&EventQueue{})
+
+	db.Exec(`
+    CREATE TRIGGER IF NOT EXISTS jsondata_insert AFTER INSERT ON json_data
+		BEGIN
+    	INSERT INTO event_queues (table_id, table_name, created_at) VALUES (NEW.id, 'vulnerability', CURRENT_TIMESTAMP);
+		END;
+		`)
+}
+
+func SetEventProcessed(event *EventQueue) {
+	db.Model(&event).Update("processed", true)
+}
+
+func UpdateEvent(id uint, processed bool) error {
+    result := db.Model(&EventQueue{}).Where("id = ?", id).Update("processed", processed)
+    return result.Error // Return the error if there is one
+}
+
+func GetOpenEvents() (*[]EventQueue, error) {
+	var events []EventQueue
+	result := db.Where("processed = ?", false).Limit(10).Find(&events)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &events, nil
+}
+
+func GetAllEvents(limit int) (*[]EventQueue, error) {
+    var eventQueues []EventQueue
+
+    if limit <= 0 {
+        limit = 50 // Default limit
+    }
+
+    result := db.Order("created_at desc").Limit(limit).Find(&eventQueues)
+    if result.Error != nil {
+        return nil, result.Error
+    }
+    return &eventQueues, nil
 }
 
 func SaveOrUpdateUserData(name string, email string, picture string) error {
