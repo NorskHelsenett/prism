@@ -1,6 +1,7 @@
 // src/lib/fetchUtil.js
 import { get } from 'svelte/store';
 import { apiEndpoint } from '$lib/stores/configStore';
+import { error } from '@sveltejs/kit';
 // import { goto } from '$app/navigation';
 
 export async function Fetch(endpoint, options = {}) {
@@ -15,6 +16,16 @@ export async function Fetch(endpoint, options = {}) {
 
       if (response.status === 401) {
         window.location.href = '/login';
+        return Promise.resolve(null);
+      }
+
+      if (response.status === 403) {
+        window.location.href = '/403';
+        return Promise.resolve(null);
+      }
+
+      if (response.status === 404) {
+        window.location.href = '/404';
         return Promise.resolve(null);
       }
 

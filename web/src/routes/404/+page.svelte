@@ -1,6 +1,7 @@
-<div class="page page-center">
+<div class="card page page-center">
       <div class="container-tight py-4">
         <div class="empty">
+          <img src="/404.png" alt="403 error">
           <div class="empty-header">404</div>
           <p class="empty-title">Oops… You just found an error page</p>
           <p class="empty-subtitle text-secondary">
