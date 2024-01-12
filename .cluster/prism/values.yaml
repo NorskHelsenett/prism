@@ -3,7 +3,7 @@
 # Declare variables to be passed into your templates.
 api:
   repository: registry-helse.nhn.no/jonasbg/prism/api
-  pullPolicy: Always
+  pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
   deployment: statefulSet
@@ -69,7 +69,7 @@ api:
 
 web:
   repository: registry-helse.nhn.no/jonasbg/prism/web
-  pullPolicy: Always
+  pullPolicy: IfNotPresent
   deployment: deployment
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
