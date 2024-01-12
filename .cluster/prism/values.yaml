@@ -22,7 +22,7 @@ api:
     readOnly: false
     storage: 50Mi
   - name: config-api
-    mountPath: /var/config/slack.json
+    mountPath: /var/config
     readOnly: true
     subPath: slack.json
     config:
