@@ -109,6 +109,25 @@ func InitDB() {
 		panic("failed to connect to the database")
 	}
 
+	// Get generic database object sql.DB to use its functions
+	sqlDB, err := db.DB()
+	if err != nil {
+		panic("failed to get database object")
+	}
+
+	// Set the maximum number of open connections to the database
+	// Since SQLite over NFS is not ideal for high concurrency, especially with writes,
+	// we keep the max open connections low.
+	sqlDB.SetMaxOpenConns(5)
+
+	// Set the maximum number of idle connections to the database
+	sqlDB.SetMaxIdleConns(2)
+
+	// Set the maximum amount of time a connection may be reused
+	// For a web API, it can be reasonable to have a short max lifetime to refresh connections regularly
+	sqlDB.SetConnMaxLifetime(30 * time.Second) // 30 seconds
+
+
 	// Enable WAL mode
 	if err := db.Exec("PRAGMA journal_mode = WAL;").Error; err != nil {
 		panic("failed to set journal_mode to WAL")
