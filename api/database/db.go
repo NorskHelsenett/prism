@@ -101,8 +101,9 @@ type EventQueue struct {
 var db *gorm.DB
 
 func InitDB() {
+	appConfig, _ := config.LoadConfig()
 	var err error
-	db, err = gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	db, err = gorm.Open(sqlite.Open(appConfig.Database.Path+"/prism.db"), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect to the database")
 	}
@@ -119,11 +120,11 @@ func InitDB() {
 	sqlDB.SetMaxOpenConns(5)
 
 	// Set the maximum number of idle connections to the database
-	sqlDB.SetMaxIdleConns(2)
+	sqlDB.SetMaxIdleConns(1)
 
 	// Set the maximum amount of time a connection may be reused
 	// For a web API, it can be reasonable to have a short max lifetime to refresh connections regularly
-	sqlDB.SetConnMaxLifetime(30 * time.Second) // 30 seconds
+	sqlDB.SetConnMaxLifetime(10 * time.Second) // 30 seconds
 
 
 	// Enable WAL mode
