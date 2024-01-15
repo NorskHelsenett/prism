@@ -109,6 +109,16 @@ func InitDB() {
 		panic("failed to connect to the database")
 	}
 
+	// Enable WAL mode
+	if err := db.Exec("PRAGMA journal_mode = WAL;").Error; err != nil {
+		panic("failed to set journal_mode to WAL")
+	}
+
+	// Set cache size to 10000 pages. Each page is usually 4KB.
+	if err := db.Exec("PRAGMA cache_size = 10000;").Error; err != nil {
+		panic("failed to set cache_size")
+	}
+
 	// Migrate the schema
 	db.AutoMigrate(&JSONData{})
 	db.AutoMigrate(&UserData{})
