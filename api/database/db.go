@@ -117,10 +117,10 @@ func InitDB() {
 	// Set the maximum number of open connections to the database
 	// Since SQLite over NFS is not ideal for high concurrency, especially with writes,
 	// we keep the max open connections low.
-	sqlDB.SetMaxOpenConns(10)
+	sqlDB.SetMaxOpenConns(3)
 
 	// Set the maximum number of idle connections to the database
-	sqlDB.SetMaxIdleConns(3)
+	sqlDB.SetMaxIdleConns(1)
 
 	// Set the maximum amount of time a connection may be reused
 	// For a web API, it can be reasonable to have a short max lifetime to refresh connections regularly
