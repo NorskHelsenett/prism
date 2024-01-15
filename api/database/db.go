@@ -103,7 +103,7 @@ var db *gorm.DB
 func InitDB() {
 	appConfig, _ := config.LoadConfig()
 	var err error
-	db, err = gorm.Open(sqlite.Open(appConfig.Database.Path+"/prism.db"), &gorm.Config{})
+	db, err = gorm.Open(sqlite.Open(appConfig.Database.Path+"/prism.db?cache=shared&_synchronous=NORMAL"), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect to the database")
 	}
@@ -117,24 +117,24 @@ func InitDB() {
 	// Set the maximum number of open connections to the database
 	// Since SQLite over NFS is not ideal for high concurrency, especially with writes,
 	// we keep the max open connections low.
-	sqlDB.SetMaxOpenConns(3)
+	sqlDB.SetMaxOpenConns(5)
 
 	// Set the maximum number of idle connections to the database
-	sqlDB.SetMaxIdleConns(1)
+	sqlDB.SetMaxIdleConns(10)
 
 	// Set the maximum amount of time a connection may be reused
 	// For a web API, it can be reasonable to have a short max lifetime to refresh connections regularly
-	sqlDB.SetConnMaxLifetime(5 * time.Second) // 30 seconds
-
-
-	// Enable WAL mode
+	sqlDB.SetConnMaxLifetime(30 * time.Second) // 30 seconds
+// Enable WAL mode
 	if err := db.Exec("PRAGMA journal_mode = WAL;").Error; err != nil {
 		panic("failed to set journal_mode to WAL")
 	}
-
-	// Set cache size to 10000 pages. Each page is usually 4KB.
-	if err := db.Exec("PRAGMA cache_size = 10000;").Error; err != nil {
+	// Set cache size to 20000 pages. Each page is usually 4KB.
+	if err := db.Exec("PRAGMA cache_size = 20000;").Error; err != nil {
 		panic("failed to set cache_size")
+	}
+	if err := db.Exec("PRAGMA locking_mode = NORMAL;").Error; err != nil {
+		panic("failed to set locking_mode")
 	}
 
 	// Migrate the schema
