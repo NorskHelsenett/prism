@@ -71,6 +71,7 @@ build-web:
 
 deploy-api:
   stage: deploy
+  image: ncr.sky.nhn.no/dockerhub/library/alpine
   script:
     - echo "Deploying using API image digest $DIGEST"
     - echo "API_DIGEST=$DIGEST" >> build.env
@@ -84,6 +85,7 @@ deploy-api:
 
 deploy-web:
   stage: deploy
+  image: ncr.sky.nhn.no/dockerhub/library/alpine
   script:
     - echo "Deploying using API image digest $DIGEST"
     - echo "WEB_DIGEST=$DIGEST" >> build.env
