@@ -9,6 +9,7 @@ import (
     "prism/routes"
     "prism/database"
     "prism/event"
+    "prism/audit"
 
     "time"
     "fmt"
@@ -19,6 +20,7 @@ func main() {
     // Set up the primary Gin router for the main application
     r := gin.Default()
     r.Use(CORSMiddleware())
+    r.Use(audit.AuditMiddleware())
 
     r.GET("/api/login", auth.HandleLogin)
     r.GET("/api/callback", auth.HandleCallback)
@@ -64,6 +66,7 @@ func main() {
         apiRoutes.PUT("/settings/events/:id/update/:status", event.UpdateEventQueues)
         apiRoutes.DELETE("/settings/events/:id", event.DeleteEventQueue)
         apiRoutes.GET("/settings/export", routes.ExportAllData)
+        apiRoutes.GET("/settings/audit", audit.GetAllAudits)
         apiRoutes.POST("/settings/import", routes.ImportData)
 
         apiRoutes.GET("/slack/channels", routes.GetSlackChannels)

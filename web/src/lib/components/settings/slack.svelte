@@ -11,6 +11,9 @@
       channelID: "",
       enabled: false,
       workspace: ""
+    },
+    auditlog: {
+      enabled: false
     }
   }
 
@@ -68,6 +71,25 @@
       }
   }
 
+  async function changeAuditlog() {
+    settings.auditlog.enabled = !settings.auditlog.enabled;
+
+    const response = await Fetch("/api/settings", { method: "POST", body: JSON.stringify(settings) });
+        if(!response.error) {
+      notification.addAlert({
+        type: 'success',
+        title: 'Settings',
+        message: 'Settings updated successfully'
+      });
+    } else {
+      notification.addAlert({
+        type: 'warning',
+        title: 'Failure',
+        message: 'Failure to update settings'
+      });
+    }
+  }
+
   async function persistSlackStatus() {
     settings.slack.enabled = !settings.slack.enabled; // Toggle the value (you can modify this logic as needed)
 
@@ -98,7 +120,11 @@
   }
 </script>
 <div class="card-body">
-  <h3 class="card-title mt-4">Slack</h3>
+  <h3 class="card-title mt-4">Slack
+    {#if settings.slack.enabled}
+      <span class="badge bg-green-lt">On</span>
+    {/if}
+  </h3>
   <p class="card-subtitle">Enable slack integration which will post a new slack message for each new vulnerability found.</p>
   <div>
     <label class="form-check form-switch form-switch-lg">
@@ -134,5 +160,24 @@
         persisting={persisting} />
       </div>
     </div>
+  </div>
+</div>
+
+<div class="card-body">
+  <h3 class="card-title mt-4">Audit logging
+    {#if settings.auditlog.enabled}
+      <span class="badge bg-green-lt">On</span>
+    {/if}
+  </h3>
+  <p class="card-subtitle">
+      Enabling audit logging captures detailed records of all user requests, enhancing security and aiding in compliance. This feature is invaluable for security monitoring, regulatory adherence, and troubleshooting. However, it's important to be aware of the potential impacts on system performance and data management. Audit logs can increase system load and generate significant data volumes, necessitating efficient storage and management solutions. Additionally, careful consideration must be given to privacy and data protection laws, as these logs often contain sensitive user information.
+  </p>
+
+  <div>
+    <label class="form-check form-switch form-switch-lg">
+      <input class="form-check-input" type="checkbox" on:change={changeAuditlog} bind:checked={settings.auditlog.enabled}>
+      <span class="form-check-label form-check-label-on">Audit log is now turned on</span>
+      <span class="form-check-label form-check-label-off">Audit log is disabled</span>
+    </label>
   </div>
 </div>

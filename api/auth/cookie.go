@@ -14,7 +14,7 @@ var hashKey = securecookie.GenerateRandomKey(64)
 var blockKey = securecookie.GenerateRandomKey(32)
 var secure = securecookie.New(hashKey, blockKey)
 
-func setSignedCookie(c *gin.Context, name, value string) {
+func SetSignedCookie(c *gin.Context, name, value string) {
 
     // Encode the base64 string using securecookie
     encoded, err := secure.Encode(name, value)
@@ -56,7 +56,7 @@ func getDomainFromURL(urlStr string) (string, error) {
     return u.Hostname(), nil
 }
 
-func getSignedCookie(c *gin.Context, name string) (string, error) {
+func GetSignedCookie(c *gin.Context, name string) (string, error) {
 	cookie, err := c.Request.Cookie(name)
     if err != nil {
         return "", err

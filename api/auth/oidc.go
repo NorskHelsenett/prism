@@ -92,7 +92,7 @@ func AdminMiddleware() gin.HandlerFunc {
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		cookie, err := getSignedCookie(c, cookieName)
+		cookie, err := GetSignedCookie(c, cookieName)
 		if err != nil {
 			// Handle error or invalid session
 			c.AbortWithStatus(http.StatusUnauthorized)
@@ -100,7 +100,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		userInfo, err := decodeCookieAndUnmarshal(c, cookie)
+		userInfo, err := DecodeCookieAndUnmarshal(c, cookie)
 		if err != nil {
 			c.AbortWithStatus(http.StatusInternalServerError)
 			return
@@ -126,7 +126,7 @@ type UserInfo struct {
 }
 
 // Extracted function to decode the cookie and unmarshal JSON
-func decodeCookieAndUnmarshal(c *gin.Context, cookie string) (UserInfo, error) {
+func DecodeCookieAndUnmarshal(c *gin.Context, cookie string) (UserInfo, error) {
 	decodedBytes, err := base64.StdEncoding.DecodeString(cookie)
 	if err != nil {
 		// handle base64 decoding error
@@ -147,7 +147,7 @@ func decodeCookieAndUnmarshal(c *gin.Context, cookie string) (UserInfo, error) {
 }
 
 func HandleUserRequest(c *gin.Context) {
-	cookie, err := getSignedCookie(c, cookieName)
+	cookie, err := GetSignedCookie(c, cookieName)
 	if err != nil {
 		// Handle error or invalid session
 		c.AbortWithStatus(http.StatusUnauthorized)
@@ -155,7 +155,7 @@ func HandleUserRequest(c *gin.Context) {
 		return
 	}
 
-	userInfo, err := decodeCookieAndUnmarshal(c, cookie)
+	userInfo, err := DecodeCookieAndUnmarshal(c, cookie)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
@@ -219,7 +219,7 @@ func HandleCallback(c *gin.Context) {
 
 		// Base64 encode the JSON string
 		encodedJSON := base64.StdEncoding.EncodeToString(jsonValue)
-		setSignedCookie(c, cookieName, encodedJSON)
+		SetSignedCookie(c, cookieName, encodedJSON)
 		appConfig, err := config.LoadConfig()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to load configuration: %v\n", err)

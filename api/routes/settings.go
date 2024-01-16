@@ -126,6 +126,7 @@ func ExportAllData(c *gin.Context) {
 func GetSettings(c *gin.Context) {
 	settings, err := database.GetSettings()
 	if err != nil {
+		log.Printf("%v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load settings"})
 		return
 	}
