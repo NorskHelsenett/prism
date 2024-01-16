@@ -101,9 +101,8 @@ type EventQueue struct {
 var db *gorm.DB
 
 func InitDB() {
-	appConfig, _ := config.LoadConfig()
 	var err error
-	db, err = gorm.Open(sqlite.Open(appConfig.Database.Path+"/prism.db?cache=shared&_synchronous=NORMAL"), &gorm.Config{})
+	db, err = gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect to the database")
 	}
