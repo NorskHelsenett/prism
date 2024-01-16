@@ -6,23 +6,8 @@ RUN npm install --force
 COPY . .
 
 RUN npm run build
-RUN mkdir -p /etc/nginx/conf.d/ && echo "\
-server {\
-    listen 8080;\
-    server_name localhost;\
-    root /usr/share/nginx/html;\
-    index index.html;\
-\
-    location / {\
-        try_files \$uri \$uri/ /index.html;\
-    }\
-\
-    error_page 500 502 503 504 /50x.html;\
-    location = /50x.html {\
-        root /usr/share/nginx/html;\
-    }\
-}\
-" > /etc/nginx/conf.d/default.conf
+RUN mkdir -p /etc/nginx/conf.d/
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 FROM ncr.sky.nhn.no/dockerhub/nginxinc/nginx-unprivileged
 WORKDIR /usr/share/nginx/html
