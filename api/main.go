@@ -29,6 +29,7 @@ func main() {
     apiRoutes := r.Group("/api")
     {
         apiRoutes.GET("/user", auth.HandleUserRequest)
+        apiRoutes.PUT("/user", routes.UpdateUser)
         apiRoutes.GET("/userinfo/:email", routes.GetUserInfo)
         apiRoutes.GET("/logout", auth.HandleLogout)
         apiRoutes.GET("/dashboard", routes.HandleDashboard)
@@ -58,9 +59,13 @@ func main() {
         apiRoutes.GET("/vulnerabilityfinding/all", routes.GetAllVulnerabilities)
 
         apiRoutes.GET("/settings/events", event.EventQueues)
+        apiRoutes.GET("/settings", routes.GetSettings)
+        apiRoutes.POST("/settings", routes.PostSettings)
         apiRoutes.PUT("/settings/events/:id/update/:status", event.UpdateEventQueues)
         apiRoutes.GET("/settings/export", routes.ExportAllData)
         apiRoutes.POST("/settings/import", routes.ImportData)
+
+        apiRoutes.GET("/slack/channels", routes.GetSlackChannels)
     }
 
     go event.PollEventQueue()

@@ -6,6 +6,7 @@
     let isHidden = true;
     let name = '';
     let image = '';
+    let title = "";
 
     function toggleHidden() {
         isHidden = !isHidden;
@@ -17,8 +18,9 @@
 
     onMount(async () => {
         const data = await Fetch(`/api/user`);
-        name = data.name;
-        image = data.picture;
+        name = data.Name;
+        image = data.Picture;
+        title = data.Title;
     });
 </script>
 
@@ -26,7 +28,7 @@
     <span class="avatar avatar-sm" style="background-image: url({image})"></span>
     <div class="d-none d-xl-block ps-2">
         <div>{name}</div>
-        <div class="mt-1 small text-secondary">Security Engineer/pen-tester</div>
+        <div class="mt-1 small text-secondary">{title}</div>
     </div>
 </a>
 <div

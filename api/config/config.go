@@ -36,7 +36,6 @@ type Config struct {
 }
 
 type Slack struct {
-    Enable       bool `yaml:"enable"`
     Token        string `yaml:"token"`
     WebhookUrl   string `yaml:"webhookUrl"`
 }

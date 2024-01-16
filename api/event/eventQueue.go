@@ -7,6 +7,8 @@ import (
 	"time"
 	"strconv"
 	"encoding/json"
+	"strings"
+	"fmt"
 
 	"prism/config"
 	"prism/database"
@@ -65,6 +67,7 @@ func UpdateEventQueues(c *gin.Context) {
 
 func handleEvent(event database.EventQueue) {
 		appConfig, _ := config.LoadConfig()
+		settings, _ := database.GetSettings()
     finding,_ := database.GetJSONData(event.TableID)
 
 		var vulnData Vulnerability
@@ -104,12 +107,36 @@ func handleEvent(event database.EventQueue) {
 
 		data.ImageUrl = imageUrl
 
-    if err := sendSlackMessage(data); err != nil {
+		project,_ := database.GetProject(*finding.ProjectID)
+
+		    // Check if the channel is empty
+    if project.SlackChannel == "" {
+        project.SlackChannel = settings.Slack.ChannelID
+        if project.SlackChannel == ""{
+            log.Printf("Channel is set to empty. Update it in settings.")
+						return
+        }
+    }
+
+    timestamp, err := sendSlackMessage(data, project.SlackChannel);
+		if err != nil { //timestamp comes from here
         log.Printf("Failed to send Slack message: %v", err)
     } else {
 			// Mark event as processed
-			database.SetEventProcessed(&event)
+			url := getUrlFor(project.SlackChannel, timestamp, settings.Slack.Workspace)
+			err = database.SetVulnerabilitySlackUrl(finding.ID, url)
+			if err != nil {
+			} else {
+				database.SetEventProcessed(&event)
+			}
 		}
+}
+
+func getUrlFor(channel string, timestamp string, workspace string) string {
+	// Construct the URL
+	// Replace the period in the timestamp with an empty string
+	formattedTimestamp := strings.Replace(timestamp, ".", "", 1)
+	return fmt.Sprintf("https://%s.slack.com/archives/%s/p%s", workspace, channel, formattedTimestamp)
 }
 
 func PollEventQueue() {

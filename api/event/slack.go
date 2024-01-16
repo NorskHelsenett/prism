@@ -1,23 +1,23 @@
 package event
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
-	"net/http"
-	"net/url"
 	"os"
 	"text/template"
+    "encoding/json"
+    "bytes"
 
+	"github.com/slack-go/slack"
 	"prism/config"
+	"prism/database"
 )
 
 type Vulnerability struct {
-	Title        string `json:"title"`
-	Criticality  string `json:"criticality"`
-	Category     string `json:"category"`
+	Title       string `json:"title"`
+	Criticality string `json:"criticality"`
+	Category    string `json:"category"`
 }
 
 type VulnerabilityData struct {
@@ -27,87 +27,113 @@ type VulnerabilityData struct {
 	URL           string
 }
 
-func sendSlackMessage(data VulnerabilityData) error {
-		appConfig, _ := config.LoadConfig()
-		if appConfig.Slack.Enable == false {
-			return fmt.Errorf("Slack is disabled")
-		}
+func sendSlackMessage(data VulnerabilityData, channel string) (string, error) {
+	appConfig, _ := config.LoadConfig()
+    settings, _ := database.GetSettings()
+	if !settings.Slack.Enabled {
+		return "",fmt.Errorf("Slack is disabled")
+	}
 
-		templateFilePath := os.Getenv("SLACK_PATH")
-
-    templateString, err := readTemplateFile(templateFilePath)
-    if err != nil {
-        return err
+    // Check if the channel is empty
+    if channel == "" {
+        return "", fmt.Errorf("Channel is set to empty")
     }
 
-    tmpl, err := template.New("slackMessage").Parse(templateString)
-    if err != nil {
-        return err
-    }
+	templateFilePath := os.Getenv("SLACK_PATH")
+	templateString, err := readTemplateFile(templateFilePath)
+	if err != nil {
+		return "",err
+	}
+
+	tmpl, err := template.New("slackMessage").Parse(string(templateString))
+	if err != nil {
+		return "",err
+	}
 
     var msgBuffer bytes.Buffer
     if err := tmpl.Execute(&msgBuffer, data); err != nil {
-        return err
+        return "",err
     }
 
-    // Set up the HTTP request
-    url := appConfig.Slack.WebhookUrl // Replace with your webhook URL if using a webhook
-    response, err := http.Post(url, "application/json", &msgBuffer)
+    // Unmarshal the blocks using the custom unmarshaler
+    blocks, err := unmarshalBlocks(msgBuffer.Bytes())
     if err != nil {
-        log.Printf("Error making API call: %v", err)
-        return err
-    }
-    defer response.Body.Close()
-
-    if response.StatusCode != http.StatusOK {
-        log.Printf("Non-OK HTTP status: %d", response.StatusCode)
+        log.Fatalf("Error unmarshaling blocks: %v", err)
+        return "",err
     }
 
-    return nil
+	api := slack.New(appConfig.Slack.Token)
+
+	channelID, timestamp, err := api.PostMessage(
+		channel,
+		slack.MsgOptionBlocks(blocks...),
+	)
+	if err != nil {
+		log.Fatalf("Error posting message: %v", err)
+        return "",err
+	}
+	fmt.Printf("Message successfully sent to channel %s at %s\n", channelID, timestamp)
+
+	return timestamp, nil
+}
+
+func unmarshalBlocks(data []byte) ([]slack.Block, error) {
+    var rawBlocks []json.RawMessage
+    wrapper := struct {
+        Blocks *[]json.RawMessage `json:"blocks"`
+    }{Blocks: &rawBlocks}
+
+    err := json.Unmarshal(data, &wrapper)
+    if err != nil {
+        return nil, err
+    }
+
+    var blocks []slack.Block
+    for _, rawBlock := range rawBlocks {
+        var blockType struct {
+            Type string `json:"type"`
+        }
+        err := json.Unmarshal(rawBlock, &blockType)
+        if err != nil {
+            return nil, err
+        }
+
+        var block slack.Block
+        switch blockType.Type {
+        case "section":
+            block = new(slack.SectionBlock)
+        // Add other block types here
+        default:
+            continue
+        }
+
+        err = json.Unmarshal(rawBlock, block)
+        if err != nil {
+            return nil, err
+        }
+
+        blocks = append(blocks, block)
+    }
+
+    return blocks, nil
 }
 
 func readTemplateFile(filePath string) (string, error) {
-    content, err := ioutil.ReadFile(filePath)
-    if err != nil {
-        return "", err
-    }
-    return string(content), nil
+	content, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+	return string(content), nil
 }
 
 func findUserIDByEmail(email string) (string, error) {
-		appConfig, _ := config.LoadConfig()
+	appConfig, _ := config.LoadConfig()
+	api := slack.New(appConfig.Slack.Token)
 
-    slackURL := fmt.Sprintf("https://slack.com/api/users.lookupByEmail?email=%s", url.QueryEscape(email))
+	user, err := api.GetUserByEmail(email)
+	if err != nil {
+		return "", fmt.Errorf("failed to find user with email %s: %v", email, err)
+	}
 
-    req, err := http.NewRequest("GET", slackURL, nil)
-    if err != nil {
-        return "", err
-    }
-
-		token := appConfig.Slack.Token
-    req.Header.Add("Authorization", "Bearer "+token)
-
-    client := &http.Client{}
-    resp, err := client.Do(req)
-    if err != nil {
-        return "", err
-    }
-    defer resp.Body.Close()
-
-    var result struct {
-        Ok    bool `json:"ok"`
-        User struct {
-            ID string `json:"id"`
-        } `json:"user"`
-    }
-
-    if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-        return "", err
-    }
-
-    if !result.Ok {
-        return email, fmt.Errorf("failed to find user with email %s", email)
-    }
-
-    return result.User.ID, nil
+	return user.ID, nil
 }

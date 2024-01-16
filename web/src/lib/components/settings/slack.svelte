@@ -1,0 +1,138 @@
+<script>
+	import { Fetch } from "$lib/fetchUtil";
+	import { onMount } from "svelte";
+	import DebouncedInput from "../DebouncedInput.svelte";
+	import { notification } from "$lib/stores/notificationStore";
+
+  let persisting = false;
+  let settings = {
+    ID: 0,
+    slack: {
+      channelID: "",
+      enabled: false,
+      workspace: ""
+    }
+  }
+
+  onMount(async () => {
+    settings = await Fetch("/api/settings")
+  })
+
+  function debounce(func, wait) {
+      let timeout;
+      return function(...args) {
+          const later = () => {
+              clearTimeout(timeout);
+              func(...args);
+          };
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+      };
+  }
+
+  async function persistChannelID() {
+      try {
+          persisting = true;
+          // Replace with actual API call
+          await updateChannelIDAPI();
+          console.log("Channel ID persisted:", settings.slack.channelID);
+      } catch (error) {
+          console.error("Failed to persist channel ID:", error);
+      } finally {
+          persisting = false;
+      }
+  }
+
+  // Debounce the persistChannelID function
+  const debouncePersist = debounce(persistChannelID, 500);
+
+  function handleBlur() {
+      debouncePersist();
+  }
+
+  // Mock API function with a timeout to simulate delay
+  async function updateChannelIDAPI() {
+    const response = await Fetch("/api/settings", { method: "POST", body: JSON.stringify(settings) });
+      if(!response.error) {
+				notification.addAlert({
+					type: 'success',
+					title: 'Settings',
+					message: 'Settings updated successfully'
+				});
+			} else {
+				notification.addAlert({
+					type: 'warning',
+					title: 'Failure',
+					message: 'Failure to update settings'
+				});
+      }
+  }
+
+  async function persistSlackStatus() {
+    settings.slack.enabled = !settings.slack.enabled; // Toggle the value (you can modify this logic as needed)
+
+    const response = await Fetch("/api/settings", { method: "POST", body: JSON.stringify(settings) });
+          if(!response.error) {
+				notification.addAlert({
+					type: 'success',
+					title: 'Settings',
+					message: 'Settings updated successfully'
+				});
+			} else {
+				notification.addAlert({
+					type: 'warning',
+					title: 'Failure',
+					message: 'Failure to update settings'
+				});
+      }
+  }
+
+  function handleChannelIDChange(newVal) {
+    settings.slack.channelID = newVal.detail;
+    debouncePersist();
+  }
+
+  function handleWorkspaceChange(newVal) {
+    settings.slack.workspace = newVal.detail;
+    debouncePersist();
+  }
+</script>
+<div class="card-body">
+  <h3 class="card-title mt-4">Slack</h3>
+  <p class="card-subtitle">Enable slack integration which will post a new slack message for each new vulnerability found.</p>
+  <div>
+    <label class="form-check form-switch form-switch-lg">
+      <input class="form-check-input" type="checkbox" on:change={persistSlackStatus} bind:checked={settings.slack.enabled}>
+      <span class="form-check-label form-check-label-on">Slack integration is now turned on</span>
+      <span class="form-check-label form-check-label-off">Slack integration disabled</span>
+    </label>
+  </div>
+
+  <div class="row">
+    <div class="col-6">
+      <label class="form-label text-secondary">Default slack channelID if not set in project.</label>
+
+      <div class="form-floating mb-3">
+        <DebouncedInput
+            id="channel-id"
+            placeholder="Channel ID"
+            bind:value={settings.slack.channelID}
+            on:change={handleChannelIDChange}
+            persisting={persisting} />
+          </div>
+    </div>
+    <div class="col-6">
+
+      <label class="form-label text-secondary">The workspace where your bot is installed.</label>
+      <div class="form-floating mb-3">
+
+    <DebouncedInput
+        id="workspace"
+        placeholder="Workspace"
+        bind:value={settings.slack.workspace}
+        on:change={handleWorkspaceChange}
+        persisting={persisting} />
+      </div>
+    </div>
+  </div>
+</div>
