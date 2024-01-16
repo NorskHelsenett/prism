@@ -139,7 +139,8 @@ func InitDB() {
 	// Set the maximum amount of time a connection may be reused
 	// For a web API, it can be reasonable to have a short max lifetime to refresh connections regularly
 	sqlDB.SetConnMaxLifetime(30 * time.Second) // 30 seconds
-// Enable WAL mode
+
+	// Enable WAL mode
 	if err := db.Exec("PRAGMA journal_mode = WAL;").Error; err != nil {
 		panic("failed to set journal_mode to WAL")
 	}
@@ -236,6 +237,11 @@ func UpdateUser(user *UserData) error {
 func UpdateEvent(id uint, processed bool) error {
     result := db.Model(&EventQueue{}).Where("id = ?", id).Update("processed", processed)
     return result.Error // Return the error if there is one
+}
+
+func DeleteEvent(id uint) error {
+	result := db.Model(&EventQueue{}).Where("id = ?", id).Delete(&EventQueue{})
+	return result.Error // Return the error if there is one
 }
 
 func GetOpenEvents() (*[]EventQueue, error) {

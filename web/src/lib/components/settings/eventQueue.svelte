@@ -14,6 +14,17 @@
     }
   }
 
+  async function deleteEvent(id) {
+    try {
+      await Fetch(`/api/settings/events/${id}`, {
+        method: "DELETE"
+      });
+      await fetchEvents(); // Re-fetch events after retrying
+    } catch (error) {
+      console.error("Error retrying event:", error);
+    }
+  }
+
   onMount(() => {
 
     fetchEvents(); // Initial fetch when component mounts
@@ -34,9 +45,9 @@
     return new Date(dateString).toLocaleDateString('en-US', options).replace(/\//g, '.').replace(',', '');
   }
 
-  async function retryEvent(id) {
+  async function retryEvent(id, status=false) {
     try {
-      await Fetch(`/api/settings/events/${id}/update/false`, {
+      await Fetch(`/api/settings/events/${id}/update/${status}`, {
         method: "PUT"
       });
       await fetchEvents(); // Re-fetch events after retrying
@@ -80,7 +91,14 @@
           {/if}
         </td>
         <td>
-          <a href="#" class="btn btn-sm btn-pill" on:click={retryEvent(event.ID)}>retry</a>
+          {#if event.Processed}
+            <a href="#" class="btn btn-sm btn-pill text-cyan" on:click={retryEvent(event.ID)}>retry</a>
+            <a href="#" class="btn btn-sm btn-pill text-red" on:click={deleteEvent(event.ID)}>delete</a>
+
+          {:else}
+            <a href="#" class="btn btn-sm btn-pill text-green" on:click={retryEvent(event.ID, true)}>finish</a>
+            <a href="#" class="btn btn-sm btn-pill text-red" on:click={deleteEvent(event.ID)}>delete</a>
+          {/if}
         </td>
       </tr>
       {/each}

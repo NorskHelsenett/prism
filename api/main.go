@@ -62,6 +62,7 @@ func main() {
         apiRoutes.GET("/settings", routes.GetSettings)
         apiRoutes.POST("/settings", routes.PostSettings)
         apiRoutes.PUT("/settings/events/:id/update/:status", event.UpdateEventQueues)
+        apiRoutes.DELETE("/settings/events/:id", event.DeleteEventQueue)
         apiRoutes.GET("/settings/export", routes.ExportAllData)
         apiRoutes.POST("/settings/import", routes.ImportData)
 

@@ -33,6 +33,25 @@ func EventQueues(c *gin.Context) {
     c.JSON(http.StatusOK, events)
 }
 
+func DeleteEventQueue(c *gin.Context) {
+	// Extract the vulnerability ID from the URL parameters
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+			return
+	}
+
+	// Call UpdateEvent with the ID
+	err = database.DeleteEvent(uint(id))
+	if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to delete event"})
+			return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Event deleted"})
+}
+
 func UpdateEventQueues(c *gin.Context) {
     // Extract the vulnerability ID from the URL parameters
     idStr := c.Param("id")
