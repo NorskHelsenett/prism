@@ -101,8 +101,9 @@ type EventQueue struct {
 var db *gorm.DB
 
 func InitDB() {
+	appConfig, _ := config.LoadConfig()
 	var err error
-	db, err = gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	db, err = gorm.Open(sqlite.Open(appConfig.Database.Path+"/prism.db?cache=shared&_synchronous=FULL"), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect to the database")
 	}
@@ -116,10 +117,10 @@ func InitDB() {
 	// Set the maximum number of open connections to the database
 	// Since SQLite over NFS is not ideal for high concurrency, especially with writes,
 	// we keep the max open connections low.
-	sqlDB.SetMaxOpenConns(5)
+	sqlDB.SetMaxOpenConns(10)
 
 	// Set the maximum number of idle connections to the database
-	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetMaxIdleConns(2)
 
 	// Set the maximum amount of time a connection may be reused
 	// For a web API, it can be reasonable to have a short max lifetime to refresh connections regularly
