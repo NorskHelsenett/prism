@@ -108,6 +108,7 @@ func ImportData(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "File uploaded, verified, and saved successfully"})
+	log.Fatalf("Exiting app due to new database written")
 }
 
 // ExportAllData handles the downloading of the prism.db database file.

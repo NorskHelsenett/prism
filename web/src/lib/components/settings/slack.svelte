@@ -125,7 +125,8 @@
       <span class="badge bg-green-lt">On</span>
     {/if}
   </h3>
-  <p class="card-subtitle">Enable slack integration which will post a new slack message for each new vulnerability found.</p>
+  <p class="card-subtitle"> With Slack notification activated, you'll receive instant Slack notifications for each new vulnerability detected. This integration ensures you stay informed in real-time, enabling quicker responses and seamless collaboration within your team.
+  </p>
   <div>
     <label class="form-check form-switch form-switch-lg">
       <input class="form-check-input" type="checkbox" on:change={persistSlackStatus} bind:checked={settings.slack.enabled}>
