@@ -7,7 +7,7 @@ metadata:
   labels:
     app: {{ $key }}
 spec:
-  replicas: 1
+  replicas: {{ $value.replicaCount | default 1}}
   selector:
     matchLabels:
       app: {{ $key }}
@@ -23,13 +23,23 @@ spec:
       containers:
       - name: {{ $key }}
         image: {{ $value.repository }}:{{ $value.tag | default "latest" }}
+        resources:
+        {{- if $value.resources }}
+        {{- toYaml $value.resources | nindent 10 }}
+        {{- else }}
+          requests:
+            memory: "50Mi"   # Request 50 MiB of memory
+            cpu: "50m"       # Request 50 millicpu (0.05 CPU cores)
+          limits:
+            memory: "100Mi"  # Limit to 100 MiB of memory
+            cpu: "200m"      # Limit to 200 millicpu (0.2 CPU cores)
+          {{- end }}
         imagePullPolicy: {{ $value.pullPolicy }}
         ports:
         {{- range $value.services }}
         - name: {{ .name }}
           containerPort: {{ .port }}
         {{- end }}
-        resources: {}
         env:
         {{- range $value.env }}
         - name: {{ .name }}

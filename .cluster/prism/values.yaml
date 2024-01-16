@@ -71,6 +71,7 @@ web:
   repository: registry-helse.nhn.no/jonasbg/prism/web
   pullPolicy: IfNotPresent
   deployment: deployment
+  replicaCount: 2
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
   host: prism.t-jonas-001.trd1-sky-test.sky.nhn.no
