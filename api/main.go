@@ -68,7 +68,7 @@ func main() {
     // Run the main application in a separate goroutine
     go func() {
         if err := r.Run(":8080"); err != nil && err != http.ErrServerClosed {
-            fmt.Println("Main server failed to start: %v", err)
+        fmt.Printf("Main server failed to start: %v\n", err)
         }
     }()
 
