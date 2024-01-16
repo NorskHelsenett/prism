@@ -11,6 +11,8 @@
 	import Assessments from '$lib/components/dashboard/Assessments.svelte';
 	import Dropdown from '$lib/components/Dropdown.svelte';
 	import Create from '$lib/components/project/Create.svelte';
+	import OwaspTable from '$lib/components/dashboard/OwaspTable.svelte';
+	import EndpointVulnerability from '$lib/components/dashboard/EndpointVulnerability.svelte';
 
   export let data;
 
@@ -19,7 +21,26 @@
   let project
   let vulnerabilitiesTotal
   let vulnerabilities = []
+  let owaspData = {};
 
+  function categorizeData(apiResponse) {
+    const results = {};
+
+    apiResponse.forEach(item => {
+      const category = item.Vulnerability.category || 'Uncategorized';
+      const criticality = item.Vulnerability.criticality.toLowerCase();
+
+      if (!(category in results)) {
+        results[category] = { low: 0, medium: 0, high: 0, critical: 0 };
+      }
+
+      if (criticality in results[category]) {
+        results[category][criticality]++;
+      }
+    });
+
+    return results;
+  }
   async function fetchProjectData() {
     try {
       const response = await Fetch(`/api/project/${data.id}`);
@@ -30,6 +51,9 @@
 
       const vulnerabilitiesResponse = await Fetch(`/api/project/${project.ID}/vulnerabilities`);
       vulnerabilities = vulnerabilitiesResponse;
+
+      owaspData = categorizeData(vulnerabilities);
+
     } catch (error) {
       console.error("Error fetching project data:", error);
     }
@@ -151,7 +175,7 @@ let severityData = {
 					</div>
 
 			<div class="col-8">
-				<div class="card card h-100">
+				<div class="card h-100">
 					<div class="card-body" style="min-height: 10rem">
             <div class="datagrid">
 
@@ -186,10 +210,31 @@ let severityData = {
 				</div>
 			</div>
 
-			<div class="col-4 card h-100">
-					<div class="card-body " style="min-height: 10rem">
+			<div class="col-4 h-100">
+        <div class="card">
+            <div class="card-body " style="min-height: 10rem">
             <CriticalityPie {severityData} />
+          </div>
+        </div>
+			</div>
+
+			<div class="col-4">
+        <div class="card h-100" >
+					<div class="card-body">
+              <EndpointVulnerability/>
+          </div>
+        </div>
+      </div>
+
+
+			<div class="col-8" >
+        <div class="card h-100" >
+					<div class="card-body">
+						<div class="table-responsive w-100">
+							<OwaspTable owaspData={owaspData}/>
+						</div>
 					</div>
+        </div>
 			</div>
 
 			<div class="col-12">
