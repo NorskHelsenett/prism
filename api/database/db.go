@@ -82,10 +82,16 @@ type SlackSettings struct {
 	Workspace   string `json:"workspace"`
 }
 
+type AuditLoggingSettings struct {
+	Enabled      bool `json:"enabled"`
+}
+
 type Settings struct {
 	gorm.Model
-	SlackData string `json:"-" gorm:"column:slack_settings"` // Stores SlackSettings as JSON
+	SlackData string `json:"-" gorm:"column:slack_settings"`
 	Slack SlackSettings `gorm:"-" json:"slack"`
+	AuditLogData string `json:"-" gorm:"column:auditlog_settings"`
+	AuditLog AuditLoggingSettings `gorm:"-" json:"auditlog"`
 }
 
 type UserData struct {
@@ -110,6 +116,15 @@ type EventQueue struct {
     Processed bool `gorm:"default:false;index:idx_processed"`
     CreatedAt time.Time `gorm:"index:idx_created_at,autoCreateTime"`
     UpdatedAt time.Time `gorm:"autoCreateTime"`
+}
+
+type AuditLog struct {
+    Timestamp   time.Time
+    UserEmail   string
+		Method      string
+    Action      string
+    Status      string
+    Description string
 }
 
 var db *gorm.DB
@@ -158,6 +173,7 @@ func InitDB() {
 	db.AutoMigrate(&ProjectData{})
 	db.AutoMigrate(&EventQueue{})
 	db.AutoMigrate(&Settings{})
+	db.AutoMigrate(&AuditLog{})
 
 	db.Exec(`
     CREATE TRIGGER IF NOT EXISTS jsondata_insert AFTER INSERT ON json_data
@@ -167,8 +183,28 @@ func InitDB() {
 		`)
 }
 
+func RecordAuditLog(log AuditLog) error {
+		return db.Create(&log).Error
+}
+
 func SetEventProcessed(event *EventQueue) {
 	db.Model(&event).Update("processed", true)
+}
+
+func GetAllAudits(limit int) (*[]AuditLog, error){
+	var auditLog []AuditLog
+
+	if limit <= 0 {
+			limit = 50 // Default limit
+	}
+
+	result := db.Order("timestamp desc").Limit(limit).Find(&auditLog)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &auditLog, nil
 }
 
 func GetSettings() (*Settings, error) {
@@ -176,22 +212,34 @@ func GetSettings() (*Settings, error) {
 	result := db.First(&settings)
 
 	if result.Error != nil {
+
+
 		// Check if it's a 'record not found' error
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 
 			// Creating default SlackSettings
-			defaultSlackSettings := SlackSettings{
+			defaultSlackSettings := SlackSettings {
 				Enabled:   false,
 				ChannelID: "",
 				Workspace: "",
 			}
+
 			jsonSlack, err := json.Marshal(defaultSlackSettings)
 			if err != nil {
 				return nil, err
 			}
 
+			defaultAuditLog := AuditLoggingSettings { Enabled: false, }
+
+			auditJSON, err := json.Marshal(defaultAuditLog)
+			if err != nil {
+				return nil, err
+			}
+
+
 			defaultSettings := Settings{
 				SlackData: string(jsonSlack),
+				AuditLogData: string(auditJSON),
 			}
 
 			// Create the default settings in the database
@@ -207,6 +255,11 @@ func GetSettings() (*Settings, error) {
 	// Deserialize SlackData into Slack struct
 	// After unmarshalling
 	if err := json.Unmarshal([]byte(settings.SlackData), &settings.Slack); err != nil {
+		return nil, err
+	}
+	// Deserialize SlackData into Slack struct
+	// After unmarshalling
+	if err := json.Unmarshal([]byte(settings.AuditLogData), &settings.AuditLog); err != nil {
 		return nil, err
 	}
 
@@ -226,8 +279,15 @@ func UpdateSettings(updatedSettings *Settings) error {
     }
     settingsDb.SlackData = string(updatedJson)
 
+    // Serialize the updated SlackSettings to JSON
+    auditlogUpdated, err := json.Marshal(updatedSettings.AuditLog)
+    if err != nil {
+        return err
+    }
+    settingsDb.AuditLogData = string(auditlogUpdated)
+
     // Update the existing record with new SlackData
-    return db.Model(settingsDb).Update("SlackData", settingsDb.SlackData).Error
+    return db.Model(settingsDb).Update("SlackData", settingsDb.SlackData).Update("AuditLogData", settingsDb.AuditLogData).Error
 }
 
 func UpdateUser(user *UserData) error {

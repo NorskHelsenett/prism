@@ -83,7 +83,6 @@ func UpdateEventQueues(c *gin.Context) {
     c.JSON(http.StatusOK, gin.H{"message": "Update successful"})
 }
 
-
 func handleEvent(event database.EventQueue) {
 		appConfig, _ := config.LoadConfig()
 		settings, _ := database.GetSettings()
