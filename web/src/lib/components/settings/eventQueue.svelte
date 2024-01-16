@@ -45,7 +45,7 @@
     return new Date(dateString).toLocaleDateString('en-US', options).replace(/\//g, '.').replace(',', '');
   }
 
-  async function retryEvent(id, status=false) {
+  async function updateEvent(id, status=false) {
     try {
       await Fetch(`/api/settings/events/${id}/update/${status}`, {
         method: "PUT"
@@ -92,11 +92,11 @@
         </td>
         <td>
           {#if event.Processed}
-            <a href="#" class="btn btn-sm btn-pill text-cyan" on:click={retryEvent(event.ID)}>retry</a>
+            <a href="#" class="btn btn-sm btn-pill text-cyan" on:click={updateEvent(event.ID)}>retry</a>
             <a href="#" class="btn btn-sm btn-pill text-red" on:click={deleteEvent(event.ID)}>delete</a>
 
           {:else}
-            <a href="#" class="btn btn-sm btn-pill text-green" on:click={retryEvent(event.ID, true)}>finish</a>
+            <a href="#" class="btn btn-sm btn-pill text-green" on:click={updateEvent(event.ID, true)}>finish</a>
             <a href="#" class="btn btn-sm btn-pill text-red" on:click={deleteEvent(event.ID)}>delete</a>
           {/if}
         </td>
