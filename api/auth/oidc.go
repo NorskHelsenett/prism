@@ -161,7 +161,9 @@ func HandleUserRequest(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, userInfo)
+	user,_ := database.GetUserDataByEmail(userInfo.Email)
+
+	c.JSON(http.StatusOK, user)
 }
 
 func HandleLogout(c *gin.Context) {

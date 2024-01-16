@@ -73,6 +73,19 @@ type JSONData struct {
 	ProjectID     *uint        // Foreign key for ProjectData
 	Project       *ProjectData // The associated project
 	Status        string `gorm:"default:Reported"`
+	SlackUrl      string
+}
+
+type SlackSettings struct {
+	Enabled     bool   `json:"enabled"`
+	ChannelID   string `json:"channelID"`
+	Workspace   string `json:"workspace"`
+}
+
+type Settings struct {
+	gorm.Model
+	SlackData string `json:"-" gorm:"column:slack_settings"` // Stores SlackSettings as JSON
+	Slack SlackSettings `gorm:"-" json:"slack"`
 }
 
 type UserData struct {
@@ -81,6 +94,7 @@ type UserData struct {
 	Name    string
 	Picture string
 	Role    string
+	Title   string `gorm:"default:My title"`
 }
 
 type Vulnerability struct {
@@ -142,6 +156,7 @@ func InitDB() {
 	db.AutoMigrate(&UserData{})
 	db.AutoMigrate(&ProjectData{})
 	db.AutoMigrate(&EventQueue{})
+	db.AutoMigrate(&Settings{})
 
 	db.Exec(`
     CREATE TRIGGER IF NOT EXISTS jsondata_insert AFTER INSERT ON json_data
@@ -153,6 +168,69 @@ func InitDB() {
 
 func SetEventProcessed(event *EventQueue) {
 	db.Model(&event).Update("processed", true)
+}
+
+func GetSettings() (*Settings, error) {
+	var settings Settings
+	result := db.First(&settings)
+
+	if result.Error != nil {
+		// Check if it's a 'record not found' error
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+
+			// Creating default SlackSettings
+			defaultSlackSettings := SlackSettings{
+				Enabled:   false,
+				ChannelID: "",
+				Workspace: "",
+			}
+			jsonSlack, err := json.Marshal(defaultSlackSettings)
+			if err != nil {
+				return nil, err
+			}
+
+			defaultSettings := Settings{
+				SlackData: string(jsonSlack),
+			}
+
+			// Create the default settings in the database
+			if err := db.Create(&defaultSettings).Error; err != nil {
+				return nil, err
+			}
+
+			return &defaultSettings, nil
+		}
+		return nil, result.Error
+	}
+
+	// Deserialize SlackData into Slack struct
+	// After unmarshalling
+	if err := json.Unmarshal([]byte(settings.SlackData), &settings.Slack); err != nil {
+		return nil, err
+	}
+
+	return &settings, nil
+}
+
+func UpdateSettings(updatedSettings *Settings) error {
+    settingsDb, err := GetSettings()
+    if err != nil {
+        return err
+    }
+
+    // Serialize the updated SlackSettings to JSON
+    updatedJson, err := json.Marshal(updatedSettings.Slack)
+    if err != nil {
+        return err
+    }
+    settingsDb.SlackData = string(updatedJson)
+
+    // Update the existing record with new SlackData
+    return db.Model(settingsDb).Update("SlackData", settingsDb.SlackData).Error
+}
+
+func UpdateUser(user *UserData) error {
+	return db.Model(user).Where("email = ?", user.Email).Update("title", user.Title).Error
 }
 
 func UpdateEvent(id uint, processed bool) error {
@@ -244,6 +322,14 @@ func GetAllUsers() (*[]UserData, error){
 // createJSONData saves new JSON data to the database
 func CreateJSONData(jsonData *JSONData) {
 	db.Create(jsonData)
+}
+
+func SetVulnerabilitySlackUrl(id uint, url string) error {
+	result := db.Model(&JSONData{}).Where("id = ?", id).Update("SlackUrl", url)
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
 }
 
 func UpdateVulnerability(jsonData *JSONData) error {

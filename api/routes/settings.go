@@ -13,10 +13,10 @@ import (
 	"bytes"
 
 	"prism/config"
+	"prism/database"
 )
 
 func ImportData(c *gin.Context) {
-
 	// Receive the file
 	file, err := c.FormFile("file")
 	if err != nil {
@@ -121,4 +121,33 @@ func ExportAllData(c *gin.Context) {
 	dbFilePath := filepath.Join(appConfig.Database.Path, "prism.db")
 	c.Header("Content-Disposition", "attachment; filename=prism.db")
 	c.FileAttachment(dbFilePath, "prism.db")
+}
+
+func GetSettings(c *gin.Context) {
+	settings, err := database.GetSettings()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load settings"})
+		return
+	}
+
+	c.JSON(http.StatusOK, settings)
+}
+
+func PostSettings(c *gin.Context){
+		var settings database.Settings
+
+    // Parse the incoming JSON to newSettings
+    if err := c.BindJSON(&settings); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data format"})
+        return
+    }
+
+		err := database.UpdateSettings(&settings)
+
+		if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update settings"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "Settings updated successfully"})
 }
