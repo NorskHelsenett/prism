@@ -7,10 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0] - 2024-01-15 - Morris Release
+## [0.1.0] - 2024-01-16 - Morris Release
 
 ### Added
 
+- Audit logging for every request
 - Slack post message on new event triggered by new finding
 - Event based mechanism by listening on a sqlite database table
 - OWASP Categories by Severity on the dashboard frontpage
