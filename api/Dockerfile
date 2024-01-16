@@ -28,6 +28,7 @@ RUN GOOS=linux go build -a -ldflags '-linkmode external -extldflags "-static"' -
 # Start from a scratch (empty) image
 FROM scratch
 ENV CONFIG_PATH="/config"
+ENV GIN_MODE="release"
 
 # Set the working directory to /app
 WORKDIR /app
