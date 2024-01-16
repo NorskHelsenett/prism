@@ -17,6 +17,7 @@ import (
 	"os"
 	"time"
 	"net/url"
+	"log"
 
 	"prism/config"
 	"prism/database"
