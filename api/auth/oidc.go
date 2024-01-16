@@ -15,6 +15,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
+	"net/url"
 
 	"prism/config"
 	"prism/database"
@@ -58,7 +60,7 @@ func generateState() string {
 	b := make([]byte, 32) // Creates a slice with 32 random bytes
 	_, err := rand.Read(b)
 	if err != nil {
-		// Handle error
+		log.Fatalf("Failed to generate random state: %v", err)
 	}
 	return base64.URLEncoding.EncodeToString(b) // Converts bytes to a base64 URL-safe string
 }
@@ -116,6 +118,9 @@ func AuthMiddleware() gin.HandlerFunc {
 func HandleLogin(c *gin.Context) {
 	// Redirect to the OIDC provider's login page
 	state := generateState()
+
+	setSecureStateCookie(c, state)
+
 	c.Redirect(http.StatusTemporaryRedirect, oauth2Config.AuthCodeURL(state))
 }
 
@@ -177,6 +182,21 @@ func HandleLogout(c *gin.Context) {
 }
 
 func HandleCallback(c *gin.Context) {
+	appConfig, _ := config.LoadConfig()
+
+	receivedState, err := c.Cookie("oidc_state")
+	if err != nil {
+			c.Redirect(http.StatusFound, appConfig.Cors.Origin + "/error.html?message="+url.QueryEscape("OIDC Cookie state is not found. Contact administrator. You could be a victim of a CSRF attack!"))
+			return
+	}
+
+	// Compare with the state in the query parameter
+	queryState := c.Query("state")
+	if receivedState != queryState {
+			c.Redirect(http.StatusFound, appConfig.Cors.Origin +"/error.html?message="+url.QueryEscape("Cookie state does not match. Contact administrator. You could be a victim of a CSRF attack!"))
+			return
+	}
+
 	// Extract code and state from query parameters
 	code := c.Query("code")
 
@@ -237,4 +257,20 @@ func getStringFromMapClaims(claims jwt.MapClaims, key string) string {
 		}
 	}
 	return ""
+}
+
+func setSecureStateCookie(c *gin.Context, state string) {
+
+    expirationTime := time.Now().Add(5 * time.Minute)
+    expirationSeconds := int(expirationTime.Sub(time.Now()).Seconds())
+
+    c.SetCookie(
+        "oidc_state",      // Name of the cookie
+        state,             // Value of the cookie (state string)
+        expirationSeconds, // Max-Age of the cookie in seconds (10 minutes)
+        "/api/callback",  // Path for which the cookie is valid
+        "",                // Domain for which the cookie is valid (empty string means current domain)
+        true,              // Secure flag (true means send only over HTTPS)
+        true,              // HttpOnly flag (true means the cookie is not accessible via JavaScript)
+    )
 }

@@ -1,0 +1,120 @@
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Page 498 - PRISM - You might be a victim!</title>
+
+  <style>
+
+/* Assuming a dark theme as indicated by the data-bs-theme="dark" attribute */
+body {
+  background-color: #121212; /* Dark background color */
+  color: #ffffff; /* Light text color for contrast */
+  font-family: 'Arial', sans-serif; /* Using Arial as the base font */
+}
+
+.border-top-wide {
+  border-top: 10px solid #2563eb; /* A thick blue border at the top of the body */
+}
+
+.border-primary {
+  border-color: #2563eb; /* Blue border color */
+}
+
+.page {
+  height: 100vh; /* Full height of the viewport */
+  display: flex;
+  align-items: center; /* Centering vertically */
+  justify-content: center; /* Centering horizontally */
+}
+
+.container-tight {
+  max-width: 400px; /* Maximum width of the container */
+}
+
+.empty {
+  text-align: center; /* Centering text */
+}
+
+.empty-header {
+  font-size: 96px; /* Large font size for the error code */
+  font-weight: bold;
+  margin-bottom: 24px; /* Spacing below the error code */
+}
+
+.empty-title {
+  font-size: 24px; /* Prominent font size for the main message */
+  margin-bottom: 16px; /* Spacing below the title */
+}
+
+.empty-subtitle {
+  font-size: 16px; /* Smaller font size for the subtitle */
+  color: #adb5bd; /* Secondary text color for the subtitle */
+  margin-bottom: 24px; /* Spacing below the subtitle */
+}
+
+.alert {
+  font-size: 16px;
+  color: #856404; /* Color for the alert text */
+  background-color: #fff3cd; /* Light background color for the alert */
+  border-color: #ffeeba; /* Light border color for the alert */
+  padding: 10px; /* Padding inside the alert box */
+  border-radius: 5px; /* Rounded corners for the alert box */
+}
+
+.alert-warning {
+  color: #856404; /* Color for the alert text */
+  background-color: #fff3cd; /* Light background color for the alert */
+  border-color: #ffeeba; /* Light border color for the alert */
+}
+
+.d-flex {
+  display: flex; /* Using flexbox for layout */
+}
+
+.flex-column {
+  flex-direction: column; /* Stacking children vertically */
+}
+
+.page-center {
+  justify-content: center; /* Centering horizontally for the flex container */
+  align-items: center; /* Centering vertically for the flex container */
+}
+
+
+    body {
+      background-color: #192433;
+    }
+  </style>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const params = new URLSearchParams(window.location.search);
+        const message = params.get('message');
+
+        if (message) {
+          document.getElementById('errorMessage').textContent = message;
+        } else {
+          document.getElementById('errorMessage').textContent = 'An unknown error occurred.';
+        }
+      });
+  </script>
+</head>
+
+<body class=" border-top-wide border-primary d-flex flex-column" data-bs-theme="dark">
+  <div class="page page-center">
+    <div class="container-tight py-4">
+      <div class="empty">
+        <div class="empty-header">498</div>
+        <p class="empty-title">You might be a victim of a CSRF attack!</p>
+        <p class="empty-subtitle text-secondary">
+          If you see this page that means that you might be a victim of a CSRF attack during your OIDC login flow.
+        </p>
+        <div class="alert alert-warning" id="errorMessage"></div>
+      </div>
+    </div>
+  </div>
+
+</body>
+
+</html>
