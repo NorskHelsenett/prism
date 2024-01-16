@@ -134,18 +134,7 @@
 					</div>
 				</div>
 			</div>
-			<div class="col-4">
-				<div class="card">
-						<div class="card-body">
-              <EndpointVulnerability />
-            </div>
-					</div>
-			</div>
-			<!-- <div class="col-8">
-				<div class="card">
-					<div class="card-body" style="height: 10rem"></div>
-				</div>
-			</div> -->
+
 			<div class="col-8">
 				<div class="card">
 					<div class="card-body">
@@ -155,6 +144,19 @@
 					</div>
 				</div>
 			</div>
+
+			<div class="col-4">
+				<div class="card">
+						<div class="card-body">
+
+            </div>
+					</div>
+			</div>
+			<!-- <div class="col-8">
+				<div class="card">
+					<div class="card-body" style="height: 10rem"></div>
+				</div>
+			</div> -->
 		</div>
 
 {#if showModal}
