@@ -213,7 +213,6 @@ func GetSettings() (*Settings, error) {
 
 	if result.Error != nil {
 
-
 		// Check if it's a 'record not found' error
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 
@@ -259,9 +258,7 @@ func GetSettings() (*Settings, error) {
 	}
 	// Deserialize SlackData into Slack struct
 	// After unmarshalling
-	if err := json.Unmarshal([]byte(settings.AuditLogData), &settings.AuditLog); err != nil {
-		return nil, err
-	}
+	_ = json.Unmarshal([]byte(settings.AuditLogData), &settings.AuditLog)
 
 	return &settings, nil
 }
