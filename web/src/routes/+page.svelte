@@ -121,6 +121,7 @@
 					</div>
 				</div>
 			</div>
+
 			<div class="col-5">
 				<div class="card">
 					<div class="card-body">
@@ -128,6 +129,7 @@
 					</div>
 				</div>
 			</div>
+
 			<div class="col-7">
 				<div class="card">
 					<div class="card-body">
