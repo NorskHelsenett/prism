@@ -221,7 +221,7 @@ let severityData = {
 			<div class="col-4">
         <div class="card h-100" >
 					<div class="card-body">
-              <EndpointVulnerability/>
+              <EndpointVulnerability dataset={vulnerabilities}/>
           </div>
         </div>
       </div>
