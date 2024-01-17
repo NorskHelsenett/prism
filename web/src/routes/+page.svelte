@@ -116,7 +116,7 @@
 					</div>
 					<div class="col-sm-6 col-lg-3">
 						<div class="card card-sm">
-							<Tasks unresolved={$dashboardStore.statuses}/>
+							<Tasks statuses={$dashboardStore.statuses}/>
 						</div>
 					</div>
 				</div>

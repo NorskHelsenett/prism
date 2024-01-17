@@ -6,6 +6,8 @@
     "Resolved": 0
   };
 
+	export let unresolvedCount = 0;
+
     // Reactive declaration to compute unresolvedCount by excluding "Rejected" and "Resolved" statuses
   $: unresolvedCount = Object.entries(statuses).filter(([status,]) => status !== "Resolved" && status !== "Rejected").reduce((total, [, count]) => total + count, 0);
 

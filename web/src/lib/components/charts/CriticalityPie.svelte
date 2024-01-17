@@ -41,6 +41,7 @@
     ],
     borderColor: 'transparent',
     borderWidth: 0,
+    spacing: 0,
     hoverOffset: 15 // Distance the slice moves when hovered
     },
   ],

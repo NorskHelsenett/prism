@@ -164,7 +164,7 @@ let severityData = {
 
           <div class="col-sm-4 col-lg-4">
 						<div class="card card-sm">
-							<Tasks unresolved={unresolvedCount}/>
+							<Tasks unresolvedCount={unresolvedCount}/>
 						</div>
 					</div>
 

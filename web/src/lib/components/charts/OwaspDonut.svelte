@@ -18,7 +18,7 @@
   let options = {
     responsive: true,
     maintainAspectRatio: false,
-    cutout: 90,
+    cutout: 75,
     plugins: {
       datalabels: {
         display: true,
@@ -90,6 +90,7 @@
         ],
         // Add border color and width here if needed
         borderWidth: 10,
+        spacing: 25,
         borderColor: 'transparent',
         hoverOffset: 15 // Distance the slice moves when hovered
 
