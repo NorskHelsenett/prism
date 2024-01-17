@@ -83,10 +83,10 @@
     },
     layout: {
       padding: {
-        top: 20,    // Replace with desired padding value
-        right: 20,  // Replace with desired padding value
-        bottom: 20, // Replace with desired padding value
-        left: 20    // Replace with desired padding value
+        top: 30,    // Replace with desired padding value
+        right: 30,  // Replace with desired padding value
+        bottom: 30, // Replace with desired padding value
+        left: 30    // Replace with desired padding value
       }
     }
   }
