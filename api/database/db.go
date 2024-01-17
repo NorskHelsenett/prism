@@ -492,14 +492,27 @@ func FetchOWASPCriticalities() (map[string]map[string]int, error) {
 	return owaspData, nil
 }
 
-func CountUnresolvedTasks() (int, error) {
-	var count int64
-	result := db.Model(&JSONData{}).Where("status NOT IN (?)", []string{"Resolved", "Rejected"}).Count(&count)
-	if result.Error != nil {
-		return 0, result.Error
+func CountByStatus() (map[string]int, error) {
+	var results []struct {
+		Status string
+		Count  int
+	}
+	statusCounts := make(map[string]int)
+
+	// Group the results by 'Status' and count each group
+	if err := db.Model(&JSONData{}).
+		Select("status, COUNT(*) as count").
+		Group("status").
+		Scan(&results).Error; err != nil {
+		return nil, err
 	}
 
-	return int(count), nil
+	// Fill the map with the status counts
+	for _, result := range results {
+		statusCounts[result.Status] = result.Count
+	}
+
+	return statusCounts, nil
 }
 
 // CountCriticalities returns a map with the count of each criticality level

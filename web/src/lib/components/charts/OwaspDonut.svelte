@@ -18,7 +18,7 @@
   let options = {
     responsive: true,
     maintainAspectRatio: false,
-    cutoutPercentage: 80, // This makes it a donut chart
+    cutout: 90,
     plugins: {
       datalabels: {
         display: true,
@@ -29,6 +29,8 @@
         align: 'end',
         anchor: 'end',
         clamp: true,
+        color: '#4399E1',
+        offset: 20,
         font: {
           weight: 'regular',
         },
@@ -37,12 +39,6 @@
           style: 'solid', // Line style
           length: 50 // Line length
         },
-        padding: {
-          top: 0,
-          right: 0,
-          bottom: 0,
-          left: 0
-        }
       },
       legend: {
         display: false // Hide legend
@@ -57,6 +53,14 @@
       },
       tooltip: {
         enabled: true // Enable tooltips
+      }
+    },
+    layout: {
+      padding: {
+        top: 20,    // Replace with desired padding value
+        right: 20,  // Replace with desired padding value
+        bottom: 20, // Replace with desired padding value
+        left: 20    // Replace with desired padding value
       }
     }
   };

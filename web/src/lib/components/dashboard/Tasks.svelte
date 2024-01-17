@@ -1,5 +1,14 @@
 <script>
-	export let unresolved = 0
+	export let statuses = {
+    "In Progress": 0,
+    "Rejected": 0,
+    "Reported": 0,
+    "Resolved": 0
+  };
+
+    // Reactive declaration to compute unresolvedCount by excluding "Rejected" and "Resolved" statuses
+  $: unresolvedCount = Object.entries(statuses).filter(([status,]) => status !== "Resolved" && status !== "Rejected").reduce((total, [, count]) => total + count, 0);
+
 </script>
 
 <div class="card-body">
@@ -12,7 +21,7 @@
 		</div>
 		<div class="col">
 			<div class="font-weight-medium">
-				{unresolved}
+				{unresolvedCount}
 			</div>
 			<div class="text-secondary">Unresolved</div>
 		</div>

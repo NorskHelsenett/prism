@@ -1,5 +1,6 @@
 <script>
-  import { Pie } from 'svelte-chartjs';
+  import { Doughnut } from 'svelte-chartjs';
+  import ChartDataLabels from 'chartjs-plugin-datalabels';
   import {
     Chart as ChartJS,
     Title,
@@ -9,7 +10,7 @@
     CategoryScale,
   } from 'chart.js';
 
-  ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale);
+  ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, ChartDataLabels);
 
   export let severityData = { critical: 0, high: 0, medium: 0, low: 0, information: 0 };
 
@@ -23,7 +24,7 @@
   ],
   datasets: [
     {
-      data: [1, 4, 5, 1, 6],
+      data: [0, 0, 0, 0, 0],
       backgroundColor: [
         '#D63939', // Greyish Blue
         '#F76706', // Soft Teal
@@ -56,15 +57,35 @@
   }
 
   let options = {
-    responsive: true ,
+    responsive: true,
     maintainAspectRatio: false,
+    cutout: 0,
     plugins: {
       datalabels: {
-        display: false
+        display: true,
+        align: 'end',
+        anchor: 'end',
+        clamp: true,
+        formatter: (value, context) => {
+          return context.chart.data.labels[context.dataIndex]; // Display the label text instead of the value
+        },
+        color: '#4399E1',
+        font: {
+          weight: 'regular',
+        },
+        offset: 20,
       },
       legend:{
         position: "right",
         display: false
+      }
+    },
+    layout: {
+      padding: {
+        top: 20,    // Replace with desired padding value
+        right: 20,  // Replace with desired padding value
+        bottom: 20, // Replace with desired padding value
+        left: 20    // Replace with desired padding value
       }
     }
   }
@@ -72,5 +93,5 @@
 </script>
 
 {#if severityData}
-	<Pie {data} {options} />
+	<Doughnut {data} {options} />
 {/if}

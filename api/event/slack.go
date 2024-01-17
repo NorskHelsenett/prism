@@ -11,7 +11,6 @@ import (
 
 	"github.com/slack-go/slack"
 	"prism/config"
-	"prism/database"
 )
 
 type Vulnerability struct {
@@ -29,10 +28,6 @@ type VulnerabilityData struct {
 
 func sendSlackMessage(data VulnerabilityData, channel string) (string, error) {
 	appConfig, _ := config.LoadConfig()
-	settings, _ := database.GetSettings()
-	if !settings.Slack.Enabled {
-		return "", fmt.Errorf("Slack is disabled")
-	}
 
 	// Check if the channel is empty
 	if channel == "" {

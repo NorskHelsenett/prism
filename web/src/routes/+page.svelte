@@ -116,7 +116,7 @@
 					</div>
 					<div class="col-sm-6 col-lg-3">
 						<div class="card card-sm">
-							<Tasks unresolved={$dashboardStore.unresolved}/>
+							<Tasks unresolved={$dashboardStore.statuses}/>
 						</div>
 					</div>
 				</div>
@@ -149,7 +149,7 @@
 			<div class="col-4">
 				<div class="card">
 						<div class="card-body">
-							<StatusVulnerability />
+							<StatusVulnerability statuses={$dashboardStore.statuses}/>
             </div>
 					</div>
 			</div>

@@ -86,6 +86,11 @@ func UpdateEventQueues(c *gin.Context) {
 func handleEvent(event database.EventQueue) {
 	appConfig, _ := config.LoadConfig()
 	settings, _ := database.GetSettings()
+
+	if !settings.Slack.Enabled {
+		return
+	}
+
 	finding, _ := database.GetJSONData(event.TableID)
 
 	var vulnData Vulnerability
