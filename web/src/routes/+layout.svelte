@@ -438,7 +438,7 @@
 
 	<div class="page-wrapper">
 		<div class="page-header d-print-none">
-			<div class="container-xl">
+			<div class="container-xl mb-5">
 				<slot />
 				<!-- This is where your page content will be injected -->
 			</div>

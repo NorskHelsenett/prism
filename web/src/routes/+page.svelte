@@ -32,6 +32,7 @@
 	import OwaspDonut from '$lib/components/charts/OwaspDonut.svelte';
 	import OwaspTable from '$lib/components/dashboard/OwaspTable.svelte';
 	import EndpointVulnerability from '$lib/components/dashboard/EndpointVulnerability.svelte';
+	import StatusVulnerability from '$lib/components/dashboard/StatusVulnerability.svelte';
 	let severityData;
 	onMount(() => {
 			pageMeta.set({ pretitle: 'Overview',title: 'Pentest Report Information Security Management' });
@@ -148,7 +149,7 @@
 			<div class="col-4">
 				<div class="card">
 						<div class="card-body">
-
+							<StatusVulnerability />
             </div>
 					</div>
 			</div>

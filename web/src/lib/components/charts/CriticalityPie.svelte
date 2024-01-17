@@ -38,9 +38,9 @@
         '#00458C', // More saturated Dark Slate Blue
         '#3A87D1', // More saturated Muted Blue
     ],
-    borderColor: '#192433',
+    borderColor: 'transparent',
     borderWidth: 0,
-    hoverOffset: 8 // Distance the slice moves when hovered
+    hoverOffset: 15 // Distance the slice moves when hovered
     },
   ],
 };

@@ -86,8 +86,8 @@
         ],
         // Add border color and width here if needed
         borderWidth: 10,
-        borderColor: '#192433',
-        hoverOffset: 8 // Distance the slice moves when hovered
+        borderColor: 'transparent',
+        hoverOffset: 15 // Distance the slice moves when hovered
 
       }],
     };
