@@ -16,8 +16,8 @@ import (
 )
 
 var (
-    ErrNotFound = errors.New("record not found")
-    // Other custom errors can be defined here
+	ErrNotFound = errors.New("record not found")
+	// Other custom errors can be defined here
 )
 
 type ProjectData struct {
@@ -39,30 +39,30 @@ func CreateProject(project *ProjectData) {
 }
 
 func UpdateProject(project *ProjectData) error {
-    // Begin a transaction
-    tx := db.Begin()
-    if tx.Error != nil {
-        return tx.Error
-    }
+	// Begin a transaction
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
 
-    // Step 1: Update regular fields, excluding the boolean field
-    if err := tx.Model(&ProjectData{}).Where("id = ?", project.ID).
-        Omit("IsBugBounty").Updates(project).Error; err != nil {
-        tx.Rollback() // Rollback the transaction in case of error
-        return err
-    }
+	// Step 1: Update regular fields, excluding the boolean field
+	if err := tx.Model(&ProjectData{}).Where("id = ?", project.ID).
+		Omit("IsBugBounty").Updates(project).Error; err != nil {
+		tx.Rollback() // Rollback the transaction in case of error
+		return err
+	}
 
-    // Step 2: Update the boolean field alone
-    if err := tx.Model(&ProjectData{}).Where("id = ?", project.ID).
-        Select("IsBugBounty").Updates(map[string]interface{}{
-            "IsBugBounty": project.IsBugBounty,
-        }).Error; err != nil {
-        tx.Rollback() // Rollback the transaction in case of error
-        return err
-    }
+	// Step 2: Update the boolean field alone
+	if err := tx.Model(&ProjectData{}).Where("id = ?", project.ID).
+		Select("IsBugBounty").Updates(map[string]interface{}{
+		"IsBugBounty": project.IsBugBounty,
+	}).Error; err != nil {
+		tx.Rollback() // Rollback the transaction in case of error
+		return err
+	}
 
-    // Commit the transaction
-    return tx.Commit().Error
+	// Commit the transaction
+	return tx.Commit().Error
 }
 
 // JSONData is a simple model for storing JSON data
@@ -72,26 +72,26 @@ type JSONData struct {
 	FoundBy       string
 	ProjectID     *uint        // Foreign key for ProjectData
 	Project       *ProjectData // The associated project
-	Status        string `gorm:"default:Reported"`
+	Status        string       `gorm:"default:Reported"`
 	SlackUrl      string
 }
 
 type SlackSettings struct {
-	Enabled     bool   `json:"enabled"`
-	ChannelID   string `json:"channelID"`
-	Workspace   string `json:"workspace"`
+	Enabled   bool   `json:"enabled"`
+	ChannelID string `json:"channelID"`
+	Workspace string `json:"workspace"`
 }
 
 type AuditLoggingSettings struct {
-	Enabled      bool `json:"enabled"`
+	Enabled bool `json:"enabled"`
 }
 
 type Settings struct {
 	gorm.Model
-	SlackData string `json:"-" gorm:"column:slack_settings"`
-	Slack SlackSettings `gorm:"-" json:"slack"`
-	AuditLogData string `json:"-" gorm:"column:auditlog_settings"`
-	AuditLog AuditLoggingSettings `gorm:"-" json:"auditlog"`
+	SlackData    string               `json:"-" gorm:"column:slack_settings"`
+	Slack        SlackSettings        `gorm:"-" json:"slack"`
+	AuditLogData string               `json:"-" gorm:"column:auditlog_settings"`
+	AuditLog     AuditLoggingSettings `gorm:"-" json:"auditlog"`
 }
 
 type UserData struct {
@@ -110,21 +110,21 @@ type Vulnerability struct {
 }
 
 type EventQueue struct {
-    ID        uint `gorm:"primaryKey"`
-    TableID   uint
-    TableName string
-    Processed bool `gorm:"default:false;index:idx_processed"`
-    CreatedAt time.Time `gorm:"index:idx_created_at,autoCreateTime"`
-    UpdatedAt time.Time `gorm:"autoCreateTime"`
+	ID        uint `gorm:"primaryKey"`
+	TableID   uint
+	TableName string
+	Processed bool      `gorm:"default:false;index:idx_processed"`
+	CreatedAt time.Time `gorm:"index:idx_created_at,autoCreateTime"`
+	UpdatedAt time.Time `gorm:"autoCreateTime"`
 }
 
 type AuditLog struct {
-    Timestamp   time.Time
-    UserEmail   string
-		Method      string
-    Action      string
-    Status      string
-    Description string
+	Timestamp   time.Time
+	UserEmail   string
+	Method      string
+	Action      string
+	Status      string
+	Description string
 }
 
 var db *gorm.DB
@@ -184,18 +184,18 @@ func InitDB() {
 }
 
 func RecordAuditLog(log AuditLog) error {
-		return db.Create(&log).Error
+	return db.Create(&log).Error
 }
 
 func SetEventProcessed(event *EventQueue) {
 	db.Model(&event).Update("processed", true)
 }
 
-func GetAllAudits(limit int) (*[]AuditLog, error){
+func GetAllAudits(limit int) (*[]AuditLog, error) {
 	var auditLog []AuditLog
 
 	if limit <= 0 {
-			limit = 50 // Default limit
+		limit = 50 // Default limit
 	}
 
 	result := db.Order("timestamp desc").Limit(limit).Find(&auditLog)
@@ -217,7 +217,7 @@ func GetSettings() (*Settings, error) {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 
 			// Creating default SlackSettings
-			defaultSlackSettings := SlackSettings {
+			defaultSlackSettings := SlackSettings{
 				Enabled:   false,
 				ChannelID: "",
 				Workspace: "",
@@ -228,16 +228,15 @@ func GetSettings() (*Settings, error) {
 				return nil, err
 			}
 
-			defaultAuditLog := AuditLoggingSettings { Enabled: false, }
+			defaultAuditLog := AuditLoggingSettings{Enabled: false}
 
 			auditJSON, err := json.Marshal(defaultAuditLog)
 			if err != nil {
 				return nil, err
 			}
 
-
 			defaultSettings := Settings{
-				SlackData: string(jsonSlack),
+				SlackData:    string(jsonSlack),
 				AuditLogData: string(auditJSON),
 			}
 
@@ -264,27 +263,27 @@ func GetSettings() (*Settings, error) {
 }
 
 func UpdateSettings(updatedSettings *Settings) error {
-    settingsDb, err := GetSettings()
-    if err != nil {
-        return err
-    }
+	settingsDb, err := GetSettings()
+	if err != nil {
+		return err
+	}
 
-    // Serialize the updated SlackSettings to JSON
-    updatedJson, err := json.Marshal(updatedSettings.Slack)
-    if err != nil {
-        return err
-    }
-    settingsDb.SlackData = string(updatedJson)
+	// Serialize the updated SlackSettings to JSON
+	updatedJson, err := json.Marshal(updatedSettings.Slack)
+	if err != nil {
+		return err
+	}
+	settingsDb.SlackData = string(updatedJson)
 
-    // Serialize the updated SlackSettings to JSON
-    auditlogUpdated, err := json.Marshal(updatedSettings.AuditLog)
-    if err != nil {
-        return err
-    }
-    settingsDb.AuditLogData = string(auditlogUpdated)
+	// Serialize the updated SlackSettings to JSON
+	auditlogUpdated, err := json.Marshal(updatedSettings.AuditLog)
+	if err != nil {
+		return err
+	}
+	settingsDb.AuditLogData = string(auditlogUpdated)
 
-    // Update the existing record with new SlackData
-    return db.Model(settingsDb).Update("SlackData", settingsDb.SlackData).Update("AuditLogData", settingsDb.AuditLogData).Error
+	// Update the existing record with new SlackData
+	return db.Model(settingsDb).Update("SlackData", settingsDb.SlackData).Update("AuditLogData", settingsDb.AuditLogData).Error
 }
 
 func UpdateUser(user *UserData) error {
@@ -292,8 +291,8 @@ func UpdateUser(user *UserData) error {
 }
 
 func UpdateEvent(id uint, processed bool) error {
-    result := db.Model(&EventQueue{}).Where("id = ?", id).Update("processed", processed)
-    return result.Error // Return the error if there is one
+	result := db.Model(&EventQueue{}).Where("id = ?", id).Update("processed", processed)
+	return result.Error // Return the error if there is one
 }
 
 func DeleteEvent(id uint) error {
@@ -313,17 +312,17 @@ func GetOpenEvents() (*[]EventQueue, error) {
 }
 
 func GetAllEvents(limit int) (*[]EventQueue, error) {
-    var eventQueues []EventQueue
+	var eventQueues []EventQueue
 
-    if limit <= 0 {
-        limit = 50 // Default limit
-    }
+	if limit <= 0 {
+		limit = 50 // Default limit
+	}
 
-    result := db.Order("created_at desc").Limit(limit).Find(&eventQueues)
-    if result.Error != nil {
-        return nil, result.Error
-    }
-    return &eventQueues, nil
+	result := db.Order("created_at desc").Limit(limit).Find(&eventQueues)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &eventQueues, nil
 }
 
 func SaveOrUpdateUserData(name string, email string, picture string) error {
@@ -353,11 +352,11 @@ func SaveOrUpdateUserData(name string, email string, picture string) error {
 }
 
 func ChangeVulnerabilityStatus(id uint, status string) error {
-    // Assuming `db` is your *gorm.DB instance
+	// Assuming `db` is your *gorm.DB instance
 
-    // Update the status of the vulnerability
-    result := db.Model(&JSONData{}).Where("id = ?", id).Update("Status", status)
-    return result.Error
+	// Update the status of the vulnerability
+	result := db.Model(&JSONData{}).Where("id = ?", id).Update("Status", status)
+	return result.Error
 }
 
 func GetUserDataByEmail(email string) (*UserData, error) {
@@ -371,7 +370,7 @@ func GetUserDataByEmail(email string) (*UserData, error) {
 	return &userData, nil
 }
 
-func GetAllUsers() (*[]UserData, error){
+func GetAllUsers() (*[]UserData, error) {
 	var userData []UserData
 	result := db.Find(&userData)
 
@@ -396,22 +395,22 @@ func SetVulnerabilitySlackUrl(id uint, url string) error {
 }
 
 func UpdateVulnerability(jsonData *JSONData) error {
-    // Assuming `db` is your *gorm.DB instance
+	// Assuming `db` is your *gorm.DB instance
 
-    // Directly attempt to update the model using the primary key (ID)
-    result := db.Model(&JSONData{}).Where("id = ?", jsonData.ID).Updates(jsonData)
-    if result.Error != nil {
-        // Handle the error, could be record not found or any other DB related error
-        return result.Error
-    }
+	// Directly attempt to update the model using the primary key (ID)
+	result := db.Model(&JSONData{}).Where("id = ?", jsonData.ID).Updates(jsonData)
+	if result.Error != nil {
+		// Handle the error, could be record not found or any other DB related error
+		return result.Error
+	}
 
-    // RowsAffected can tell you how many records were updated
-    if result.RowsAffected == 0 {
-        // No records updated, which can indicate that the record wasn't found
-        return errors.New("no records updated, record may not exist")
-    }
+	// RowsAffected can tell you how many records were updated
+	if result.RowsAffected == 0 {
+		// No records updated, which can indicate that the record wasn't found
+		return errors.New("no records updated, record may not exist")
+	}
 
-    return nil // Return nil if no error occurred
+	return nil // Return nil if no error occurred
 }
 
 func AllVulnerabilities() ([]JSONData, error) {
@@ -493,13 +492,13 @@ func FetchOWASPCriticalities() (map[string]map[string]int, error) {
 }
 
 func CountUnresolvedTasks() (int, error) {
-    var count int64
-    result := db.Model(&JSONData{}).Where("status NOT IN (?)", []string{"Resolved", "Rejected"}).Count(&count)
-    if result.Error != nil {
-        return 0, result.Error
-    }
+	var count int64
+	result := db.Model(&JSONData{}).Where("status NOT IN (?)", []string{"Resolved", "Rejected"}).Count(&count)
+	if result.Error != nil {
+		return 0, result.Error
+	}
 
-    return int(count), nil
+	return int(count), nil
 }
 
 // CountCriticalities returns a map with the count of each criticality level
@@ -571,22 +570,22 @@ func GetProject(id uint) (ProjectData, error) {
 }
 
 func GetProjects(query string) ([]ProjectData, error) {
-    var projects []ProjectData
+	var projects []ProjectData
 
-    // Prepare the database query
-    db := db
-    if query != "" {
-        db = db.Where("project_name LIKE ?", "%"+query+"%")
-    }
+	// Prepare the database query
+	db := db
+	if query != "" {
+		db = db.Where("project_name LIKE ?", "%"+query+"%")
+	}
 
-    // Sort the results by ProjectName in ascending order
-    db = db.Order("project_name ASC").Find(&projects)
+	// Sort the results by ProjectName in ascending order
+	db = db.Order("project_name ASC").Find(&projects)
 
-    if db.Error != nil {
-        return nil, db.Error
-    }
+	if db.Error != nil {
+		return nil, db.Error
+	}
 
-    return projects, nil
+	return projects, nil
 }
 
 func CountProjectVulnerabilities(projectID uint) (int64, error) {
@@ -607,85 +606,85 @@ func GetProjectVulnerabilities(projectID uint) ([]JSONData, error) {
 }
 
 func deleteVulnerabilitiesAndImages(tx *gorm.DB, projectID *uint, ID *uint) error {
-    var jsonData []JSONData
-		appConfig, _ := config.LoadConfig()
+	var jsonData []JSONData
+	appConfig, _ := config.LoadConfig()
 
-    // Determine the query based on the provided IDs
-    var err error
-    if ID != nil {
-        // Find specific jsonData entry by ID
-        err = tx.Where("id = ?", *ID).Find(&jsonData).Error
-    } else if projectID != nil {
-        // Find all jsonData entries for a project
-        err = tx.Where("project_id = ?", *projectID).Find(&jsonData).Error
-    }
+	// Determine the query based on the provided IDs
+	var err error
+	if ID != nil {
+		// Find specific jsonData entry by ID
+		err = tx.Where("id = ?", *ID).Find(&jsonData).Error
+	} else if projectID != nil {
+		// Find all jsonData entries for a project
+		err = tx.Where("project_id = ?", *projectID).Find(&jsonData).Error
+	}
 
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
-    // Delete jsonData based on the provided IDs
-    if ID != nil {
-        // Delete specific jsonData entry by ID
-        err = tx.Where("id = ?", *ID).Delete(&JSONData{}).Error
-    } else {
-        // Delete all jsonData entries for a project
-        err = tx.Where("project_id = ?", *projectID).Delete(&JSONData{}).Error
-    }
+	// Delete jsonData based on the provided IDs
+	if ID != nil {
+		// Delete specific jsonData entry by ID
+		err = tx.Where("id = ?", *ID).Delete(&JSONData{}).Error
+	} else {
+		// Delete all jsonData entries for a project
+		err = tx.Where("project_id = ?", *projectID).Delete(&JSONData{}).Error
+	}
 
-    if err != nil {
-        return err
-    }
+	if err != nil {
+		return err
+	}
 
-    // Delete images
-    for _, data := range jsonData {
-        var vulnerability map[string]interface{}
-        if err := json.Unmarshal(data.Vulnerability, &vulnerability); err != nil {
-            return err
-        }
-        if images, ok := vulnerability["images"].([]interface{}); ok {
-            for _, img := range images {
-                if imageName, ok := img.(string); ok {
-                    imagePath := filepath.Join(appConfig.Database.Path, "/images", imageName)
-                    if err := os.Remove(imagePath); err != nil {
-                        return err
-                    }
-                }
-            }
-        }
-    }
+	// Delete images
+	for _, data := range jsonData {
+		var vulnerability map[string]interface{}
+		if err := json.Unmarshal(data.Vulnerability, &vulnerability); err != nil {
+			return err
+		}
+		if images, ok := vulnerability["images"].([]interface{}); ok {
+			for _, img := range images {
+				if imageName, ok := img.(string); ok {
+					imagePath := filepath.Join(appConfig.Database.Path, "/images", imageName)
+					if err := os.Remove(imagePath); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
 
-    return nil
+	return nil
 }
 
 func DeleteProjectAndAssets(projectID uint) error {
-    // Start a transaction
-    tx := db.Begin()
+	// Start a transaction
+	tx := db.Begin()
 
-    if err := deleteVulnerabilitiesAndImages(tx, &projectID, nil); err != nil {
-        tx.Rollback()
-        return err
-    }
+	if err := deleteVulnerabilitiesAndImages(tx, &projectID, nil); err != nil {
+		tx.Rollback()
+		return err
+	}
 
-    // Delete ProjectData
-    if err := tx.Where("id = ?", projectID).Delete(&ProjectData{}).Error; err != nil {
-        tx.Rollback()
-        return err
-    }
+	// Delete ProjectData
+	if err := tx.Where("id = ?", projectID).Delete(&ProjectData{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
 
-    // Commit the transaction
-    return tx.Commit().Error
+	// Commit the transaction
+	return tx.Commit().Error
 }
 
 func DeleteVulnerability(vulnerabilityID uint) error {
-    // Start a transaction
-    tx := db.Begin()
+	// Start a transaction
+	tx := db.Begin()
 
-    if err := deleteVulnerabilitiesAndImages(tx, nil, &vulnerabilityID); err != nil {
-        tx.Rollback()
-        return err
-    }
+	if err := deleteVulnerabilitiesAndImages(tx, nil, &vulnerabilityID); err != nil {
+		tx.Rollback()
+		return err
+	}
 
-    // Commit the transaction
-    return tx.Commit().Error
+	// Commit the transaction
+	return tx.Commit().Error
 }

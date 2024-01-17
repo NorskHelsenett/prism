@@ -12,10 +12,10 @@ import (
 )
 
 func GetBlob(c *gin.Context) {
-    appConfig, _ := config.LoadConfig()
+	appConfig, _ := config.LoadConfig()
 
 	filename := c.Param("filename")
-    filepath := filepath.Join(appConfig.Database.Path+"/images", filename)
+	filepath := filepath.Join(appConfig.Database.Path+"/images", filename)
 
 	// Serve the file
 	c.File(filepath)

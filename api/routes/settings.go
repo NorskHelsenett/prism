@@ -1,16 +1,16 @@
 package routes
 
 import (
-	"gorm.io/gorm"
-	"gorm.io/driver/sqlite"
 	"github.com/gin-gonic/gin"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 
-	"net/http"
-	"path/filepath"
-	"io"
-	"os"
-	"log"
 	"bytes"
+	"io"
+	"log"
+	"net/http"
+	"os"
+	"path/filepath"
 
 	"prism/config"
 	"prism/database"
@@ -53,11 +53,11 @@ func ImportData(c *gin.Context) {
 
 	src.Seek(0, 0) // Reset the read pointer to the beginning
 
-// Create a temporary file
+	// Create a temporary file
 	tempFile, err := os.CreateTemp("", "upload-*.db")
 	if err != nil {
-    log.Printf("Failed to create a temporary file: %v\n", err)
-    c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create a temporary file", "detail": err.Error()})
+		log.Printf("Failed to create a temporary file: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create a temporary file", "detail": err.Error()})
 		return
 	}
 	defer os.Remove(tempFile.Name()) // Clean up
@@ -77,9 +77,9 @@ func ImportData(c *gin.Context) {
 	db, err := gorm.Open(sqlite.Open(tempFile.Name()), &gorm.Config{})
 	if err != nil {
 		c.JSON(http.StatusMethodNotAllowed, gin.H{
-			"error": "Failed to open uploaded SQLite database directly with GORM",
+			"error":  "Failed to open uploaded SQLite database directly with GORM",
 			"detail": err.Error(),
-			"file": file.Filename,
+			"file":   file.Filename,
 		})
 		return
 	}
@@ -135,21 +135,21 @@ func GetSettings(c *gin.Context) {
 	c.JSON(http.StatusOK, settings)
 }
 
-func PostSettings(c *gin.Context){
-		var settings database.Settings
+func PostSettings(c *gin.Context) {
+	var settings database.Settings
 
-    // Parse the incoming JSON to newSettings
-    if err := c.BindJSON(&settings); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data format"})
-        return
-    }
+	// Parse the incoming JSON to newSettings
+	if err := c.BindJSON(&settings); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data format"})
+		return
+	}
 
-		err := database.UpdateSettings(&settings)
+	err := database.UpdateSettings(&settings)
 
-		if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update settings"})
-        return
-    }
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update settings"})
+		return
+	}
 
-    c.JSON(http.StatusOK, gin.H{"message": "Settings updated successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Settings updated successfully"})
 }

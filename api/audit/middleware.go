@@ -1,29 +1,29 @@
 package audit
 
 import (
-	"prism/database"
 	"prism/auth"
+	"prism/database"
 
-	"github.com/gin-gonic/gin"
-	"net/http"
 	"fmt"
-	"time"
-	"strconv"
+	"github.com/gin-gonic/gin"
 	"log"
+	"net/http"
+	"strconv"
+	"time"
 )
 
 type WrappedResponseWriter struct {
-    http.ResponseWriter
-    StatusCode int
+	http.ResponseWriter
+	StatusCode int
 }
 
 func NewWrappedResponseWriter(w http.ResponseWriter) *WrappedResponseWriter {
-    return &WrappedResponseWriter{ResponseWriter: w, StatusCode: http.StatusOK}
+	return &WrappedResponseWriter{ResponseWriter: w, StatusCode: http.StatusOK}
 }
 
 func (wrw *WrappedResponseWriter) WriteHeader(code int) {
-    wrw.StatusCode = code
-    wrw.ResponseWriter.WriteHeader(code)
+	wrw.StatusCode = code
+	wrw.ResponseWriter.WriteHeader(code)
 }
 
 func AuditMiddleware() gin.HandlerFunc {

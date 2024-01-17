@@ -14,10 +14,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
+	"net/url"
 	"os"
 	"time"
-	"net/url"
-	"log"
 
 	"prism/config"
 	"prism/database"
@@ -167,7 +167,7 @@ func HandleUserRequest(c *gin.Context) {
 		return
 	}
 
-	user,_ := database.GetUserDataByEmail(userInfo.Email)
+	user, _ := database.GetUserDataByEmail(userInfo.Email)
 
 	c.JSON(http.StatusOK, user)
 }
@@ -187,15 +187,15 @@ func HandleCallback(c *gin.Context) {
 
 	receivedState, err := c.Cookie("oidc_state")
 	if err != nil {
-			c.Redirect(http.StatusFound, appConfig.Cors.Origin + "/error.html?message="+url.QueryEscape("OIDC Cookie state is not found. Contact administrator. You could be a victim of a CSRF attack!"))
-			return
+		c.Redirect(http.StatusFound, appConfig.Cors.Origin+"/error.html?message="+url.QueryEscape("OIDC Cookie state is not found. Contact administrator. You could be a victim of a CSRF attack!"))
+		return
 	}
 
 	// Compare with the state in the query parameter
 	queryState := c.Query("state")
 	if receivedState != queryState {
-			c.Redirect(http.StatusFound, appConfig.Cors.Origin +"/error.html?message="+url.QueryEscape("Cookie state does not match. Contact administrator. You could be a victim of a CSRF attack!"))
-			return
+		c.Redirect(http.StatusFound, appConfig.Cors.Origin+"/error.html?message="+url.QueryEscape("Cookie state does not match. Contact administrator. You could be a victim of a CSRF attack!"))
+		return
 	}
 
 	// Extract code and state from query parameters
@@ -262,16 +262,16 @@ func getStringFromMapClaims(claims jwt.MapClaims, key string) string {
 
 func setSecureStateCookie(c *gin.Context, state string) {
 
-    expirationTime := time.Now().Add(5 * time.Minute)
-    expirationSeconds := int(expirationTime.Sub(time.Now()).Seconds())
+	expirationTime := time.Now().Add(5 * time.Minute)
+	expirationSeconds := int(expirationTime.Sub(time.Now()).Seconds())
 
-    c.SetCookie(
-        "oidc_state",      // Name of the cookie
-        state,             // Value of the cookie (state string)
-        expirationSeconds, // Max-Age of the cookie in seconds (10 minutes)
-        "/api/callback",  // Path for which the cookie is valid
-        "",                // Domain for which the cookie is valid (empty string means current domain)
-        true,              // Secure flag (true means send only over HTTPS)
-        true,              // HttpOnly flag (true means the cookie is not accessible via JavaScript)
-    )
+	c.SetCookie(
+		"oidc_state",      // Name of the cookie
+		state,             // Value of the cookie (state string)
+		expirationSeconds, // Max-Age of the cookie in seconds (10 minutes)
+		"/api/callback",   // Path for which the cookie is valid
+		"",                // Domain for which the cookie is valid (empty string means current domain)
+		true,              // Secure flag (true means send only over HTTPS)
+		true,              // HttpOnly flag (true means the cookie is not accessible via JavaScript)
+	)
 }
