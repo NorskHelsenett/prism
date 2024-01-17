@@ -474,16 +474,17 @@ func FetchOWASPCriticalities() (map[string]map[string]int, error) {
 		// If the category doesn't exist yet, initialize the criticality count maps
 		if _, exists := owaspData[category]; !exists {
 			owaspData[category] = map[string]int{
-				"low":      0,
-				"medium":   0,
-				"high":     0,
-				"critical": 0,
+				"information": 0,
+				"low":         0,
+				"medium":      0,
+				"high":        0,
+				"critical":    0,
 			}
 		}
 
 		// Increment the appropriate criticality count
 		switch vuln.Criticality {
-		case "low", "medium", "high", "critical":
+		case "information", "low", "medium", "high", "critical":
 			owaspData[category][vuln.Criticality]++
 		}
 	}

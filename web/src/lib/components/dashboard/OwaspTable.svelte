@@ -10,6 +10,7 @@
   <thead>
     <tr>
       <th>OWASP</th>
+      <th>Information</th>
       <th>Low</th>
       <th>Medium</th>
       <th>High</th>
@@ -20,6 +21,7 @@
     {#each Object.entries(owaspData) as [category, counts]}
     <tr>
       <td><strong>{category || 'Uncategorized'}</strong></td>
+      <td class="{textColor(counts.information)} text-center">{counts.information || '-'}</td>
       <td class="{textColor(counts.low)} text-center">{counts.low || '-'}</td>
       <td class="{textColor(counts.medium)} text-center">{counts.medium || '-'}</td>
       <td class="{textColor(counts.high)} text-center">{counts.high || '-'}</td>

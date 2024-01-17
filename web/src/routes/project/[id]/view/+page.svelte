@@ -27,11 +27,11 @@
     const results = {};
 
     apiResponse.forEach(item => {
-      const category = item.Vulnerability.category || 'Uncategorized';
+      const category = item.Vulnerability.category || '';
       const criticality = item.Vulnerability.criticality.toLowerCase();
 
       if (!(category in results)) {
-        results[category] = { low: 0, medium: 0, high: 0, critical: 0 };
+        results[category] = { information: 0, low: 0, medium: 0, high: 0, critical: 0 };
       }
 
       if (criticality in results[category]) {
