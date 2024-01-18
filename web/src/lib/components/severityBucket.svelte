@@ -21,7 +21,7 @@
   let showTooltip = false
 </script>
 
-<div on:mouseover={() => showTooltip = true} on:mouseout={() => showTooltip = false}>
+<div on:mouseover={() => showTooltip = true} on:mouseout={() => showTooltip = false} style="min-width: 9em !important;">
   {#each getSeverityClasses(severity) as severityClass}
     <span class={severityClass + ' text-white avatar ml-03'} style="height: 16px; width: 16px;">&nbsp;</span>
   {/each}
