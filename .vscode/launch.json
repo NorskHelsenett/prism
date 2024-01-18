@@ -1,0 +1,43 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch API Server",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/api",
+      "env": {
+        "SLACK_PATH": "tmp/slackMessage.json",
+        "GO_ENV": "dev"
+      },
+      "args": []
+    },
+    {
+      "name": "Launch frontend",
+      "request": "launch",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--host",
+        "0.0.0.0"
+      ],
+      "runtimeExecutable": "bun",
+      "cwd": "${workspaceFolder}/web",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "type": "node",
+      // "console": "integratedTerminal"
+    },
+  ],
+    "compounds": [
+      {
+        "name": "Both",
+        "configurations": [
+          "Launch frontend",
+          "Launch API Server"
+        ]
+      }
+    ]
+}

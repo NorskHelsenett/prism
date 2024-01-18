@@ -24,7 +24,7 @@
 export function refreshList() {
     // The logic previously in onMount
     async function fetchData() {
-      projects = await Fetch("/api/project");
+      projects = await Fetch("/api/project/all");
     }
 
     fetchData();

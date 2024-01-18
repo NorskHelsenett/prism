@@ -1,13 +1,11 @@
 <script>
-  export let severity;
+  export let impact;
 
   function getSeverityClasses(localSeverity = "") {
       const baseClasses = {
-          'information': ['bg-info'],
-          'low': ['bg-info', 'bg-primary'],
-          'medium': ['bg-info', 'bg-primary', 'bg-custom-orange'],
-          'high': ['bg-info', 'bg-primary', 'bg-custom-orange', 'bg-warning'],
-          'critical': ['bg-info', 'bg-primary', 'bg-custom-orange', 'bg-warning', 'bg-red']
+          'low': ['bg-info'],
+          'medium': ['bg-info', 'bg-custom-orange'],
+          'high': ['bg-info', 'bg-custom-orange', 'bg-red'],
       };
 
       let classes = baseClasses[localSeverity.toLowerCase()] || [];
@@ -19,16 +17,18 @@
   }
 
   let showTooltip = false
+
+  let height = [12,16,20]
 </script>
 
 <div on:mouseover={() => showTooltip = true} on:mouseout={() => showTooltip = false} style="min-width: 9em !important;">
-  {#each getSeverityClasses(severity) as severityClass}
-    <span class={severityClass + ' text-white avatar ml-03'} style="height: 16px; width: 16px;">&nbsp;</span>
+  {#each getSeverityClasses(impact) as severityClass, index}
+    <span class={severityClass + ' text-white avatar ml-03'} style="height: {height[index]}px; width: 16px;">&nbsp;</span>
   {/each}
   {#if showTooltip}
     <div class="dropdown-menu dropdown-menu-demo dropdown-menu-arrow show">
         <div class="m-2 capitalize-first-letter">
-          {severity}
+          {impact}
       </div>
     </div>
   {/if}

@@ -261,17 +261,18 @@ func getStringFromMapClaims(claims jwt.MapClaims, key string) string {
 }
 
 func setSecureStateCookie(c *gin.Context, state string) {
+    expirationTime := time.Now().Add(5 * time.Minute)
 
-	expirationTime := time.Now().Add(5 * time.Minute)
-	expirationSeconds := int(expirationTime.Sub(time.Now()).Seconds())
+    cookie := &http.Cookie{
+        Name:     "oidc_state",
+        Value:    state,
+        Expires:  expirationTime,
+        Path:     "/api/callback",
+        Domain:   "", // Current domain
+        Secure:   true,
+        HttpOnly: true,
+        SameSite: http.SameSiteLaxMode, // Setting SameSite to Strict
+    }
 
-	c.SetCookie(
-		"oidc_state",      // Name of the cookie
-		state,             // Value of the cookie (state string)
-		expirationSeconds, // Max-Age of the cookie in seconds (10 minutes)
-		"/api/callback",   // Path for which the cookie is valid
-		"",                // Domain for which the cookie is valid (empty string means current domain)
-		true,              // Secure flag (true means send only over HTTPS)
-		true,              // HttpOnly flag (true means the cookie is not accessible via JavaScript)
-	)
+    http.SetCookie(c.Writer, cookie)
 }
