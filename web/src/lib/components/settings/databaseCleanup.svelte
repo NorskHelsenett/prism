@@ -59,7 +59,7 @@
 </div>
 
 <style>
-  .button:disabled {
-    border-color:none;
+  .btn:disabled {
+    border-color: rgba(0,0,0,0);
   }
 </style>
