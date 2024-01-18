@@ -72,15 +72,19 @@ func GetSignedCookie(c *gin.Context, name string) (string, error) {
 }
 
 func ClearSignedCookie(c *gin.Context, name string) {
+	appConfig, _ := config.LoadConfig()
+	domain, _ := getDomainFromURL(appConfig.Cors.Origin)
+
 	// Set a cookie with the same name, but with an expiration date in the past
 	// c.SetCookie(name, "", -1, "/", "", false, true)
 	cookie := &http.Cookie{
 		Name:     name,
 		Value:    "",
 		Path:     "/",
+		Domain:   domain,
 		SameSite: http.SameSiteStrictMode,
-		HttpOnly: true,  // Recommended
-		Secure:   false, // Set to true if using HTTPS, Required when SameSite=None
+		HttpOnly: true,
+		Secure:   true,
 		Expires:  time.Unix(0, 0),
 		MaxAge:   -1,
 	}
