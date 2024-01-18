@@ -99,7 +99,7 @@ func handleEvent(event database.EventQueue) {
 	}
 
 	var vulnData Vulnerability
-	err := json.Unmarshal(finding.Vulnerability, &vulnData)
+	err = json.Unmarshal(finding.Vulnerability, &vulnData)
 	if err != nil {
 		log.Printf("Error unmarshaling JSON data: %v", err)
 		return
