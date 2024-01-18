@@ -23,6 +23,7 @@ func UpdateUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data format"})
 		return
 	}
+
 	if user.Email != email {
 		c.JSON(http.StatusMethodNotAllowed, gin.H{"error": "Wrong data values"})
 	}

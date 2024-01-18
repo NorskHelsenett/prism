@@ -283,11 +283,12 @@ func UpdateSettings(updatedSettings *Settings) error {
 	settingsDb.AuditLogData = string(auditlogUpdated)
 
 	// Update the existing record with new SlackData
+	// @todo fix this db.Model(settingsDb) updates ALL fields, db.Model(&Settings{}) will only update updates fields, if that is what i want
 	return db.Model(settingsDb).Update("SlackData", settingsDb.SlackData).Update("AuditLogData", settingsDb.AuditLogData).Error
 }
 
 func UpdateUser(user *UserData) error {
-	return db.Model(user).Where("email = ?", user.Email).Update("title", user.Title).Error
+	return db.Model(&UserData{}).Where("email = ?", user.Email).Update("title", user.Title).Error
 }
 
 func UpdateEvent(id uint, processed bool) error {
