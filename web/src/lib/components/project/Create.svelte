@@ -50,7 +50,7 @@
 		formData.append('hackerName', hackerName);
 		try {
 			const method = (model == null) ? "POST" : "PUT";
-			const url = (model == null) ? "/api/project" : `/api/project/${model.ID}`
+			const url = (model == null) ? "/api/project/all" : `/api/project/${model.ID}`
 			const response = await Fetch(url, {
 				method: method,
 				headers: {

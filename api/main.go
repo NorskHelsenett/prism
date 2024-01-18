@@ -31,7 +31,6 @@ func main() {
 	apiRoutes := r.Group("/api")
 	{
 		apiRoutes.GET("/user", auth.HandleUserRequest)
-		apiRoutes.PUT("/user", routes.UpdateUser)
 		apiRoutes.GET("/userinfo/:email", routes.GetUserInfo)
 		apiRoutes.GET("/logout", auth.HandleLogout)
 		apiRoutes.GET("/dashboard", routes.HandleDashboard)
@@ -46,11 +45,12 @@ func main() {
 		// Admin users
 		apiRoutes.Use(auth.AdminMiddleware())
 
+		apiRoutes.PUT("/user", routes.UpdateUser)
 		apiRoutes.GET("/user/all", routes.GetAllUsers)
 		apiRoutes.DELETE("/vulnerability/:id", routes.DeleteVulnerability)
 		apiRoutes.DELETE("/project/:projectID", routes.DeleteProject)
 		apiRoutes.PUT("/project/:projectID", routes.HandleProjectPut)
-		apiRoutes.GET("/project", routes.GetProjects)
+		apiRoutes.GET("/project/all", routes.GetProjects)
 		apiRoutes.POST("/project", routes.HandleProjectPost)
 		apiRoutes.POST("/blob/upload", routes.HandleBlobUpload)
 		apiRoutes.DELETE("/blob/:filename", routes.HandleBlobDelete)
