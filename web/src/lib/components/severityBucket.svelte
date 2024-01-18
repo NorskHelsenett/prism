@@ -11,7 +11,7 @@
       };
 
       let classes = baseClasses[localSeverity.toLowerCase()] || [];
-      while (classes.length < 5) {
+      while (classes.length < Object.keys(baseClasses).length) {
           classes.push('bg-muted opacity-01');
       }
 
