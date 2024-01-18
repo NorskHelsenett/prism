@@ -91,7 +91,12 @@ func handleEvent(event database.EventQueue) {
 		return
 	}
 
-	finding, _ := database.GetJSONData(event.TableID)
+	finding, err := database.GetJSONData(event.TableID)
+
+	if(err != nil) {
+		log.Printf("Error vulnerability not found: %v", err)
+		return
+	}
 
 	var vulnData Vulnerability
 	err := json.Unmarshal(finding.Vulnerability, &vulnData)
