@@ -51,7 +51,7 @@ func sendSlackMessage(data VulnerabilityData, channel string) (string, error) {
 	}
 
 	data.Vulnerability.replaceQuotes()
-	data.Vulnerability.truncateTitle(25)
+	data.Vulnerability.truncateTitle(50)
 
 	tmpl, err := template.New("slackMessage").Parse(string(templateString))
 	if err != nil {
