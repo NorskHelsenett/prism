@@ -113,6 +113,7 @@ type EventQueue struct {
 	ID        uint `gorm:"primaryKey"`
 	TableID   uint
 	TableName string
+	Error     string
 	Processed bool      `gorm:"default:false;index:idx_processed"`
 	CreatedAt time.Time `gorm:"index:idx_created_at,autoCreateTime"`
 	UpdatedAt time.Time `gorm:"autoCreateTime"`
@@ -188,7 +189,7 @@ func RecordAuditLog(log AuditLog) error {
 }
 
 func SetEventProcessed(event *EventQueue) {
-	db.Model(&event).Update("processed", true)
+	db.Model(&event).Update("processed", true).Update("error", event.Error)
 }
 
 func GetAllAudits(limit int) (*[]AuditLog, error) {

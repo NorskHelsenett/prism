@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"text/template"
+	"strings"
 
 	"github.com/slack-go/slack"
 	"prism/config"
@@ -26,6 +26,16 @@ type VulnerabilityData struct {
 	URL           string
 }
 
+func (v *Vulnerability) truncateTitle(maxLength int) {
+    if len(v.Title) > maxLength {
+        v.Title = v.Title[:maxLength]
+    }
+}
+
+func (v *Vulnerability) replaceQuotes() {
+    v.Title = strings.ReplaceAll(v.Title, "\"", " ")
+}
+
 func sendSlackMessage(data VulnerabilityData, channel string) (string, error) {
 	appConfig, _ := config.LoadConfig()
 
@@ -40,6 +50,9 @@ func sendSlackMessage(data VulnerabilityData, channel string) (string, error) {
 		return "", err
 	}
 
+	data.Vulnerability.replaceQuotes()
+	data.Vulnerability.truncateTitle(25)
+
 	tmpl, err := template.New("slackMessage").Parse(string(templateString))
 	if err != nil {
 		return "", err
@@ -53,8 +66,7 @@ func sendSlackMessage(data VulnerabilityData, channel string) (string, error) {
 	// Unmarshal the blocks using the custom unmarshaler
 	blocks, err := unmarshalBlocks(msgBuffer.Bytes())
 	if err != nil {
-		log.Fatalf("Error unmarshaling blocks: %v", err)
-		return "", err
+		return "", fmt.Errorf("Error unmarshaling blocks: %v", err)
 	}
 
 	api := slack.New(appConfig.Slack.Token)
@@ -64,7 +76,6 @@ func sendSlackMessage(data VulnerabilityData, channel string) (string, error) {
 		slack.MsgOptionBlocks(blocks...),
 	)
 	if err != nil {
-		log.Fatalf("Error posting message: %v", err)
 		return "", err
 	}
 	fmt.Printf("Message successfully sent to channel %s at %s\n", channelID, timestamp)
