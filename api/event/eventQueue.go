@@ -110,7 +110,7 @@ func handleEvent(event database.EventQueue) {
 	data.URL = appConfig.Cors.Origin + "/vulnerability/" + strconv.FormatUint(uint64(finding.ID), 10) + "/view"
 	var imageUrl string
 
-	userID, err = findUserIDByEmail(finding.FoundBy)
+	userID, err := findUserIDByEmail(finding.FoundBy)
 
 	if err != nil {
 		log.Printf("User not found: %v", err)
