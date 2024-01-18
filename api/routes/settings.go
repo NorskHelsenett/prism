@@ -16,6 +16,15 @@ import (
 	"prism/database"
 )
 
+func CleanUpDatabase(c *gin.Context) {
+	err := database.CleanUpDatabase()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Error cleaning database"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{})
+}
+
 func ImportData(c *gin.Context) {
 	// Receive the file
 	file, err := c.FormFile("file")

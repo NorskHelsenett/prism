@@ -62,6 +62,7 @@ func main() {
 
 		apiRoutes.GET("/settings/events", event.EventQueues)
 		apiRoutes.GET("/settings", routes.GetSettings)
+		apiRoutes.GET("/settings/cleanup", routes.CleanUpDatabase)
 		apiRoutes.POST("/settings", routes.PostSettings)
 		apiRoutes.PUT("/settings/events/:id/update/:status", event.UpdateEventQueues)
 		apiRoutes.DELETE("/settings/events/:id", event.DeleteEventQueue)

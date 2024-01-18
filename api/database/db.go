@@ -192,6 +192,59 @@ func SetEventProcessed(event *EventQueue) {
 	db.Model(&event).Update("processed", true).Update("error", event.Error)
 }
 
+func CleanUpDatabase() error {
+	    // Wrap the cleanup in a transaction
+    tx := db.Begin()
+    defer func() {
+        if r := recover(); r != nil {
+            tx.Rollback()
+        }
+    }()
+
+		// List of models to be hard-deleted
+    models := []interface{}{&JSONData{}, &ProjectData{},&UserData{}}
+
+    for _, model := range models {
+        // Perform hard delete on each model
+        if err := tx.Unscoped().Where("deleted_at IS NOT NULL").Delete(model).Error; err != nil {
+            tx.Rollback() // Rollback the transaction in case of error
+            return err
+        }
+    }
+
+		// Commit the transaction for hard deletes
+    if err := tx.Commit().Error; err != nil {
+        return err
+    }
+
+    // SQLite specific optimizations
+    if err := optimizeSQLite(db); err != nil {
+        tx.Rollback()
+        return err
+    }
+
+    // Commit the transaction
+    return nil
+}
+
+func optimizeSQLite(db *gorm.DB) error {
+    // List of SQL commands for maintenance and optimization
+    commands := []string{
+        "VACUUM;",                  // Clean up the database, reduce file size
+        "REINDEX;",                 // Rebuild all indices
+        "ANALYZE;",                 // Analyze the database, gather statistics
+        // Add more commands as necessary
+    }
+
+    for _, cmd := range commands {
+        if err := db.Exec(cmd).Error; err != nil {
+            return err
+        }
+    }
+
+    return nil
+}
+
 func GetAllAudits(limit int) (*[]AuditLog, error) {
 	var auditLog []AuditLog
 

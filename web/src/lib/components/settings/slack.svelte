@@ -94,19 +94,19 @@
     settings.slack.enabled = !settings.slack.enabled; // Toggle the value (you can modify this logic as needed)
 
     const response = await Fetch("/api/settings", { method: "POST", body: JSON.stringify(settings) });
-          if(!response.error) {
-				notification.addAlert({
-					type: 'success',
-					title: 'Settings',
-					message: 'Settings updated successfully'
-				});
-			} else {
-				notification.addAlert({
-					type: 'warning',
-					title: 'Failure',
-					message: 'Failure to update settings'
-				});
-      }
+    if(!response.error) {
+      notification.addAlert({
+        type: 'success',
+        title: 'Settings',
+        message: 'Settings updated successfully'
+      });
+    } else {
+      notification.addAlert({
+        type: 'warning',
+        title: 'Failure',
+        message: 'Failure to update settings'
+      });
+    }
   }
 
   function handleChannelIDChange(newVal) {

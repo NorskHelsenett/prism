@@ -14,6 +14,7 @@
 	let clientEmail = '';
 	let hackerName = '';
 	let isBugBounty = false;
+	let isPersisting = false
 
 	function closeModal() {
 		showModal = false;
@@ -32,6 +33,7 @@
 	async function handleSubmit() {
 		// Reset error message
 		errorMessage = '';
+		isPersisting = true
 
 		let projectData = {
 			projectName: projectName,
@@ -80,6 +82,7 @@
 				message: 'Unable to store new vulnerability!'
 			});
 			console.error('There was a problem storing the new project:', error);
+			isPersisting = false
 		}
 	}
   onMount(async () => {
@@ -228,7 +231,7 @@
 
 	<div class="modal-footer" slot="footer">
 		<a href="#" class="btn btn-link link-secondary" on:click={closeModal}> Cancel </a>
-		<a href="#" class="btn btn-primary ms-auto" on:click|preventDefault={handleSubmit}>
+		<button disabled={isPersisting} href="#" class="btn btn-primary ms-auto" on:click|preventDefault={handleSubmit}>
 			<!-- Download SVG icon from http://tabler-icons.io/i/plus -->
 			{#if model == null}
 				<svg
@@ -249,6 +252,6 @@
 			{:else}
 				Update Project
 			{/if}
-		</a>
+		</button>
 	</div>
 </Modal>
