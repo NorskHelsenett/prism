@@ -39,7 +39,7 @@ func SetSignedCookie(c *gin.Context, name, value string) {
 		Value:  encoded,
 		Path:   "/",
 		Domain: domain,
-		// SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteStrictMode,
 		HttpOnly: true,       // Recommended
 		Secure:   secureFlag, // Set to true if using HTTPS, Required when SameSite=None
 		MaxAge:   3600 * 12,
