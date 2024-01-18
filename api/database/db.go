@@ -352,9 +352,6 @@ func SaveOrUpdateUserData(name string, email string, picture string) error {
 }
 
 func ChangeVulnerabilityStatus(id uint, status string) error {
-	// Assuming `db` is your *gorm.DB instance
-
-	// Update the status of the vulnerability
 	result := db.Model(&JSONData{}).Where("id = ?", id).Update("Status", status)
 	return result.Error
 }
