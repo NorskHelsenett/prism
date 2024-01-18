@@ -83,26 +83,25 @@ func UpdateEventQueues(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Update successful"})
 }
 
-func handleEvent(event database.EventQueue) {
+// move this functionality to its own function, handle all errors, and mark events as processed, but failed.
+func handleEvent(event database.EventQueue) error {
 	appConfig, _ := config.LoadConfig()
 	settings, _ := database.GetSettings()
 
 	if !settings.Slack.Enabled {
-		return
+		return fmt.Errorf("Slack is disabled")
 	}
 
 	finding, err := database.GetJSONData(event.TableID)
 
 	if(err != nil) {
-		log.Printf("Error vulnerability not found: %v", err)
-		return
+		return fmt.Errorf("Error vulnerability not found: %v", err)
 	}
 
 	var vulnData Vulnerability
 	err = json.Unmarshal(finding.Vulnerability, &vulnData)
 	if err != nil {
-		log.Printf("Error unmarshaling JSON data: %v", err)
-		return
+		return fmt.Errorf("Error unmarshaling JSON data: %v", err)
 	}
 
 	var data VulnerabilityData
@@ -135,29 +134,36 @@ func handleEvent(event database.EventQueue) {
 
 	data.ImageUrl = imageUrl
 
-	project, _ := database.GetProject(*finding.ProjectID)
+	if finding.ProjectID != nil {
+		log.Printf("ProjectID is empty")
+	}
 
-	// Check if the channel is empty
-	if project.SlackChannel == "" {
-		project.SlackChannel = settings.Slack.ChannelID
+	slackChannel := settings.Slack.ChannelID
+
+	if (finding.ProjectID != nil) {
+		project, _ := database.GetProject(*finding.ProjectID)
+
+		// Check if the channel is empty
 		if project.SlackChannel == "" {
-			log.Printf("Channel is set to empty. Update it in settings.")
-			return
+			project.SlackChannel = slackChannel
+			if project.SlackChannel == "" {
+				return fmt.Errorf("Channel is set to empty. Update it in settings.")
+			}
 		}
 	}
 
-	timestamp, err := sendSlackMessage(data, project.SlackChannel)
+	timestamp, err := sendSlackMessage(data, slackChannel)
 	if err != nil { //timestamp comes from here
-		log.Printf("Failed to send Slack message: %v", err)
+		return fmt.Errorf("Failed to send Slack message for channel %s: %v",slackChannel, err)
 	} else {
 		// Mark event as processed
-		url := getUrlFor(project.SlackChannel, timestamp, settings.Slack.Workspace)
+		url := getUrlFor(slackChannel, timestamp, settings.Slack.Workspace)
 		err = database.SetVulnerabilitySlackUrl(finding.ID, url)
 		if err != nil {
-		} else {
-			database.SetEventProcessed(&event)
+			return fmt.Errorf("Failed to get URL for channel %w", err)
 		}
 	}
+	return nil
 }
 
 func getUrlFor(channel string, timestamp string, workspace string) string {
@@ -167,11 +173,26 @@ func getUrlFor(channel string, timestamp string, workspace string) string {
 	return fmt.Sprintf("https://%s.slack.com/archives/%s/p%s", workspace, channel, formattedTimestamp)
 }
 
+func prepareAndSendSlackMessage(event database.EventQueue) {
+    err := handleEvent(event)
+    if err != nil {
+        // Log the error and mark the event as processed with an error
+        log.Printf("Error processing event: %v", err)
+        event.Error = fmt.Sprintf("Error processing event: %v", err)
+        database.SetEventProcessed(&event)
+    } else {
+        // If no error, mark the event as processed normally
+        database.SetEventProcessed(&event)
+    }
+}
+
 func PollEventQueue() {
 	appConfig, _ := config.LoadConfig()
 	log.Println("Starting polling for queue events")
-	return
+
 	for {
+		time.Sleep(time.Duration(appConfig.Events.Interval) * time.Second)
+
 		eventsPtr, err := database.GetOpenEvents()
 		if err != nil {
 			log.Println(err)
@@ -181,9 +202,7 @@ func PollEventQueue() {
 		events := *eventsPtr
 
 		for _, event := range events {
-			go handleEvent(event)
+			go prepareAndSendSlackMessage(event)
 		}
-
-		time.Sleep(time.Duration(appConfig.Events.Interval) * time.Second)
 	}
 }
