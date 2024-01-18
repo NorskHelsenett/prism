@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { marked } from 'marked';
+  import DOMPurify from 'dompurify'
 
   let buildInfo = {
     "user": "",
@@ -19,7 +20,7 @@
 
     const mdResponse = await fetch('/.well-known/CHANGELOG.md');
     const md = await mdResponse.text();
-    changelog = marked.parse(md);
+    changelog = DOMPurify.sanitize(marked.parse(md));
   });
 </script>
 <div class="card-body">

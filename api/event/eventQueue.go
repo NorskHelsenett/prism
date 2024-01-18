@@ -91,10 +91,15 @@ func handleEvent(event database.EventQueue) {
 		return
 	}
 
-	finding, _ := database.GetJSONData(event.TableID)
+	finding, err := database.GetJSONData(event.TableID)
+
+	if(err != nil) {
+		log.Printf("Error vulnerability not found: %v", err)
+		return
+	}
 
 	var vulnData Vulnerability
-	err := json.Unmarshal(finding.Vulnerability, &vulnData)
+	err = json.Unmarshal(finding.Vulnerability, &vulnData)
 	if err != nil {
 		log.Printf("Error unmarshaling JSON data: %v", err)
 		return
@@ -169,6 +174,7 @@ func PollEventQueue() {
 		eventsPtr, err := database.GetOpenEvents()
 		if err != nil {
 			log.Println(err)
+			return
 		}
 
 		events := *eventsPtr
