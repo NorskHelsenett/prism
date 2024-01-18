@@ -170,6 +170,7 @@ func getUrlFor(channel string, timestamp string, workspace string) string {
 func PollEventQueue() {
 	appConfig, _ := config.LoadConfig()
 	log.Println("Starting polling for queue events")
+	return
 	for {
 		eventsPtr, err := database.GetOpenEvents()
 		if err != nil {
