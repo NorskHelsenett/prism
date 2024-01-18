@@ -174,6 +174,7 @@ func PollEventQueue() {
 		eventsPtr, err := database.GetOpenEvents()
 		if err != nil {
 			log.Println(err)
+			return
 		}
 
 		events := *eventsPtr
