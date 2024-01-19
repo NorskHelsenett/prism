@@ -133,7 +133,7 @@ func HandleOTPGenerate(c *gin.Context) {
 
 func generateOTP(email string) (*otp, error) {
 	secret, err := totp.Generate(totp.GenerateOpts{
-		Issuer:      "PRIME",
+		Issuer:      "PRISM",
 		AccountName: email,
 	})
 
