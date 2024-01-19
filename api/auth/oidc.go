@@ -134,7 +134,7 @@ func AuthMiddleware(store *session.SessionStore) gin.HandlerFunc {
             return
         }
 
-        if !validation.IsOTPVerified && c.Request.URL.Path != "/api/session/otp/generate"  && c.Request.URL.Path != "/api/session/otp/validate" {
+        if !validation.IsOTPVerified && c.Request.URL.Path != "/api/session/otp/generate"  && c.Request.URL.Path != "/api/session/otp/validate" && c.Request.URL.Path != "/api/session/otp/reset" {
             // OTP is not verified, initiate OTP verification process
             c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "OTP is not verified", "initiateOTP": true})
             return
