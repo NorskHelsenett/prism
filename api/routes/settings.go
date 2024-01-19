@@ -107,6 +107,14 @@ func ImportData(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load configuration"})
 		return
 	}
+
+	// Assuming db is your database connection object
+	// and there is a function to get this object
+	err = database.CloseConnection()
+	if err != nil {
+		// handle error
+	}
+
 	dbFilePath := filepath.Join(appConfig.Database.Path, "prism.db")
 
 	// Save the file directly
@@ -116,8 +124,13 @@ func ImportData(c *gin.Context) {
 		return
 	}
 
+	// Re-establish a new connection to the new database
+	// You will need to implement the logic to reinitialize the DB connection
+	// depending on how your application is structured
+	database.InitDB()
+
 	c.JSON(http.StatusOK, gin.H{"message": "File uploaded, verified, and saved successfully"})
-	log.Fatalf("Exiting app due to new database written")
+	// log.Fatalf("Exiting app due to new database written")
 }
 
 // ExportAllData handles the downloading of the prism.db database file.

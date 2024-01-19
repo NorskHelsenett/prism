@@ -64,8 +64,10 @@
 </script>
 <div class="card-body">
   <h2 class="card-title">Export data</h2>
-  <p class="text-secondary">Export the entire database file. Importing this file will overwrite any existing database file and terminate any active connections. All users will be <strong>logged out.</strong> Please exercise <strong >CAUTION</strong> when using this option. </p>
-  <span class="badge bg-orange-lt mb-3">The server will perform a hard restart after the import</span>
+  <div class="text-secondary">
+    <p>Export the entire database file. The export function downloads the complete SQL file as it currently exists. This database uses Write-Ahead Logging (WAL), which offers improved concurrency and recovery. However, during the export, ensure no active write operations are occurring to prevent potential data inconsistencies. It's recommended to perform exports during periods of low database activity.</p>
+    <p>Importing this file will overwrite any existing database file and terminate any active connections. Please exercise <strong>CAUTION</strong> when using this option. Before importing, ensure that all applications or services using the database are stopped to prevent data conflicts or loss. The import process replaces the current database with the uploaded file, and any unsaved changes or ongoing transactions in the old database will be lost. It's advisable to create a backup before proceeding with the import.</p>
+  </div>
   <div class="btn-list justify-content-end">
     <input type="file" id="file-input" bind:this={fileInput} on:change={handleFileChange} hidden>
     <button on:click={uploadFile} class="btn btn-outline-danger">Import Data</button>

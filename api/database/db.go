@@ -185,6 +185,15 @@ func InitDB() {
 		`)
 }
 
+func CloseConnection() error {
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err // return error if failed to get underlying database
+	}
+
+	return sqlDB.Close() // close the underlying SQL database
+}
+
 func RecordAuditLog(log AuditLog) error {
 	return db.Create(&log).Error
 }

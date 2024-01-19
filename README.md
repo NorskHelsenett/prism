@@ -61,7 +61,7 @@ cd api
 Summon the API with the ancient Go runes:
 
 ```bash
-GO_END=dev go run *.go
+SLACK_PATH="tmp/slackMessage.json" GO_END=dev go run *.go
 ```
 
 ### Weaving the Web Interface
