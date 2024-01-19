@@ -170,7 +170,7 @@ func getUrlFor(channel string, timestamp string, workspace string) string {
 	// Construct the URL
 	// Replace the period in the timestamp with an empty string
 	formattedTimestamp := strings.Replace(timestamp, ".", "", 1)
-	return fmt.Sprintf("https://%s.slack.com/archives/%s/p%s", workspace, channel, formattedTimestamp)
+	return fmt.Sprintf("slack://%s.slack.com/archives/%s/p%s", workspace, channel, formattedTimestamp)
 }
 
 func prepareAndSendSlackMessage(event database.EventQueue) {
