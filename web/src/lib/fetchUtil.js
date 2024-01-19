@@ -20,6 +20,13 @@ export async function Fetch(endpoint, options = {}) {
       }
 
       if (response.status === 403) {
+        const errormessage = await response.json()
+
+        if (errormessage?.initiateOTP === true) {
+          window.location.href = "/auth"
+          return Promise.resolve(null);
+        }
+
         window.location.href = '/403';
         return Promise.resolve(null);
       }

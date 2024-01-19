@@ -27,6 +27,7 @@
   },
   "type": "module",
   "dependencies": {
+    "@svelte-put/qr": "^1.0.3",
     "@tabler/core": "^1.0.0-beta20",
     "@tabler/icons-svelte": "^2.46.0",
     "chart.js": "^4.4.1",

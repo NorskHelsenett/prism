@@ -24,6 +24,7 @@
 		notification.update((notification) => notification.filter((a) => a.id !== id));
 	}
 	const isLoginPage = derived(page, $page => $page.url.pathname === '/login');
+	const isAuthPage = derived(page, $page => $page.url.pathname === '/auth');
 
 	let isInitialized = false;
 
@@ -34,7 +35,7 @@
 	$: isInitialized = !$isLoading;
 </script>
 {#if isInitialized}
-{#if $isLoginPage}
+{#if $isLoginPage || $isAuthPage}
   <slot/>
 {:else}
 <div class="alert-container">

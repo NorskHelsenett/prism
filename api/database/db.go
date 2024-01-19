@@ -96,11 +96,12 @@ type Settings struct {
 
 type UserData struct {
 	gorm.Model
-	Email   string
-	Name    string
-	Picture string
-	Role    string
-	Title   string `gorm:"default:My title"`
+	Email     string
+	Name      string
+	Picture   string
+	Role      string
+	Title     string `gorm:"default:My title"`
+	OTPSecret string `json:"-"`
 }
 
 type Vulnerability struct {
@@ -259,6 +260,43 @@ func GetAllAudits(limit int) (*[]AuditLog, error) {
 	}
 
 	return &auditLog, nil
+}
+
+func PersistOTPSecret(email string, secret string) error {
+	return db.Model(&UserData{}).Where("email = ?", email).Update("otp_secret", secret).Error
+}
+
+func DeleteOTPCode(email string) error {
+	return db.Model(&UserData{}).Where("email = ?", email).Update("otp_secret", nil).Error
+}
+
+func GetOTPCode(email string) (string, error) {
+    var user UserData
+    result := db.Where("email = ?", email).First(&user)
+
+    if result.Error != nil {
+        return "", result.Error
+    }
+
+    return user.OTPSecret, nil
+}
+
+func CheckForOtpEnabled(email string) (bool, error) {
+	var user UserData
+	result := db.Where("email = ?", email).First(&user)
+
+	// Check for database-related errors
+	if result.Error != nil {
+			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+					// No record found is not an error in this context
+					return false, nil
+			}
+			// Some other error occurred
+			return false, result.Error
+	}
+
+	// If OTPSecret is not empty, OTP is enabled
+	return user.OTPSecret != "", nil
 }
 
 func GetSettings() (*Settings, error) {
