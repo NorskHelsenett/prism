@@ -1,21 +1,28 @@
 package main
 
 import (
-	"net/http"
-
 	"github.com/gin-gonic/gin"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+
 	"prism/audit"
 	"prism/auth"
 	"prism/config"
 	"prism/database"
 	"prism/event"
 	"prism/routes"
+	"prism/session"
 
+	"net/http"
 	"fmt"
 	"time"
 )
 
+var session_db *gorm.DB // Global variable for the database
+
 func main() {
+	initSessionDatabase()
+	sessionStore := session.NewSessionStore(session_db)
 	database.InitDB()
 	// Set up the primary Gin router for the main application
 	r := gin.Default()
@@ -23,17 +30,23 @@ func main() {
 	r.Use(audit.AuditMiddleware())
 
 	r.GET("/api/login", auth.HandleLogin)
-	r.GET("/api/callback", auth.HandleCallback)
+	r.GET("/api/callback", func(c *gin.Context) {
+			auth.HandleCallback(c, sessionStore)
+	})
 
 	// Authenticated users
-	r.Use(auth.AuthMiddleware())
+	r.Use(auth.AuthMiddleware(sessionStore))
 
 	apiRoutes := r.Group("/api")
 	{
 		apiRoutes.GET("/user", auth.HandleUserRequest)
 		apiRoutes.GET("/userinfo/:email", routes.GetUserInfo)
-		apiRoutes.GET("/logout", auth.HandleLogout)
+		apiRoutes.GET("/logout", func(c *gin.Context) { auth.HandleLogout(c, sessionStore) })
 		apiRoutes.GET("/dashboard", routes.HandleDashboard)
+
+		apiRoutes.GET("/session/otp/generate", session.HandleOTPGenerate)
+		apiRoutes.POST("/session/otp/validate", func(c *gin.Context) { session.HandleOTPValidate(c, sessionStore) })
+		apiRoutes.GET("/session/otp/reset", func(c *gin.Context) { session.HandleOTPReset(c, sessionStore) })
 
 		// ACL Routes
 		apiRoutes.GET("/blob/:filename", routes.GetBlob)
@@ -119,4 +132,15 @@ func CORSMiddleware() gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+func initSessionDatabase() {
+	var err error // Declare err separately
+	session_db, err = gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	if err != nil {
+			panic("failed to connect to the database")
+	}
+
+	// Perform database migrations
+	session_db.AutoMigrate(&session.Session{})
 }

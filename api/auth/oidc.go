@@ -21,6 +21,7 @@ import (
 
 	"prism/config"
 	"prism/database"
+	"prism/session"
 )
 
 var (
@@ -68,7 +69,17 @@ func generateState() string {
 
 func AdminMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		email, _ := c.Request.Context().Value(EmailContextKey).(string)
+		emailInterface, exists := c.Get(EmailContextKey)
+		if !exists {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "user email not found in context"})
+				return
+		}
+
+		email, ok := emailInterface.(string)
+		if !ok {
+				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"message": "invalid email format in context"})
+				return
+		}
 
 		appConfig, _ := config.LoadConfig()
 
@@ -82,7 +93,7 @@ func AdminMiddleware() gin.HandlerFunc {
 				break
 			}
 		}
-		// 403 since we are testing for authenticated users before running this middleware.
+
 		if !isAdmin {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
 				"message": "Access forbidden",
@@ -93,28 +104,49 @@ func AdminMiddleware() gin.HandlerFunc {
 	}
 }
 
-func AuthMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		cookie, err := GetSignedCookie(c, cookieName)
-		if err != nil {
-			// Handle error or invalid session
-			c.AbortWithStatus(http.StatusUnauthorized)
-			fmt.Println(err)
-			return
-		}
+func AuthMiddleware(store *session.SessionStore) gin.HandlerFunc {
+    return func(c *gin.Context) {
+        cookie, err := GetSignedCookie(c, cookieName)
+        if err != nil {
+            // Handle error or invalid session
+            c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized - no valid cookie"})
+            fmt.Println(err)
+            return
+        }
 
-		userInfo, err := DecodeCookieAndUnmarshal(c, cookie)
-		if err != nil {
-			c.AbortWithStatus(http.StatusInternalServerError)
-			return
-		}
+        userInfo, err := DecodeCookieAndUnmarshal(c, cookie)
+        if err != nil {
+            c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
+            fmt.Println(err)
+            return
+        }
 
-		ctx := context.WithValue(c.Request.Context(), EmailContextKey, userInfo.Email)
-		c.Request = c.Request.WithContext(ctx)
+        validation, err := store.ValidateSession(userInfo.Email)
+        if err != nil {
+            // Handle invalid session
+            c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized - invalid session"})
+            return
+        }
 
-		c.Next()
-	}
+        if !validation.IsValid {
+            // Handle completely invalid session
+            c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized - session not found"})
+            return
+        }
+
+        if !validation.IsOTPVerified && c.Request.URL.Path != "/api/session/otp/generate"  && c.Request.URL.Path != "/api/session/otp/validate" {
+            // OTP is not verified, initiate OTP verification process
+            c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "OTP is not verified", "initiateOTP": true})
+            return
+        }
+
+        // Add email to Gin context for easier access in subsequent handlers
+        c.Set(EmailContextKey, userInfo.Email)
+
+        c.Next()
+    }
 }
+
 
 func HandleLogin(c *gin.Context) {
 	// Redirect to the OIDC provider's login page
@@ -172,17 +204,36 @@ func HandleUserRequest(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
-func HandleLogout(c *gin.Context) {
+func HandleLogout(c *gin.Context, store *session.SessionStore) {
+	// Retrieve email from Gin context
+	emailInterface, exists := c.Get(EmailContextKey)
+	if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "user email not found in context"})
+			return
+	}
+	email, ok := emailInterface.(string)
+	if !ok {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid email format in context"})
+			return
+	}
+
 	ClearSignedCookie(c, cookieName)
+
+	// Invalidate the session
+	if err := store.InvalidateSession(email); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to invalidate session"})
+		return
+	}
+
 	appConfig, err := config.LoadConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to load configuration: %v\n", err)
 		os.Exit(1)
 	}
-	c.Redirect(http.StatusFound, appConfig.Cors.Origin+"/login")
+	c.Redirect(http.StatusFound, appConfig.Cors.Origin)
 }
 
-func HandleCallback(c *gin.Context) {
+func HandleCallback(c *gin.Context, store *session.SessionStore) {
 	appConfig, _ := config.LoadConfig()
 
 	receivedState, err := c.Cookie("oidc_state")
@@ -237,6 +288,8 @@ func HandleCallback(c *gin.Context) {
 			// handle JSON marshaling error
 			return
 		}
+
+		store.PersistSession(userInfo.Email)
 
 		// Base64 encode the JSON string
 		encodedJSON := base64.StdEncoding.EncodeToString(jsonValue)

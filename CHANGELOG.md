@@ -7,15 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.0] - 2024-01-16 - Morris Release
+## [0.1.0] - 2024-01-19 - Morris Release
 
 ### Added
 
-- Audit logging for every request
-- Slack post message on new event triggered by new finding
-- Event based mechanism by listening on a sqlite database table
-- OWASP Categories by Severity on the dashboard frontpage
-- Markdown support for TextArea inputs in Project and Vulnerability
+- OTP (One-Time Password) implementation for enhanced user security.
+- Server-side session management for robust session control.
+- Database optimization for improved performance.
+- Comprehensive audit logging for all requests.
+- Slack notifications for events triggered by new findings.
+- Event-driven mechanism with SQLite database table monitoring.
+- Display of OWASP Categories by Severity on the dashboard.
+- Spidergraph visualization for all vulnerability statuses.
+- Markdown support in TextArea inputs for Projects and Vulnerabilities.
+
+### Security
+
+- Completion of penetration testing, leading to the identification and resolution of security vulnerabilities.
+
+- Addressed several vulnerabilities to strengthen system integrity and user data protection.
 
 ## [0.0.4] - 2024-01-10
 

@@ -54,7 +54,7 @@
         I accept the risk of my action.
       </span>
     </label>
-    <button disabled={!warningAccepted} class="btn btn-warning d-none d-sm-inline-block" on:click={cleanup}>Perform Database Cleanup</button>
+    <button disabled={!warningAccepted} class="btn btn-warning btn-ghost-warning d-none d-sm-inline-block" on:click={cleanup}>Perform Database Cleanup</button>
   </div>
 </div>
 
