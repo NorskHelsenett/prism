@@ -111,12 +111,21 @@ function formatDateText(expiresAt) {
       <tbody>
       {#each sessions as session}
         <tr>
-          <td class="text-secondary" title="{formatDateText(session.CreatedAt)}">{formatDate(session.CreatedAt)}</td>
-          <td class="text-secondary" title="{formatDateText(session.ExpiresAt)}">
+          <td class:text-info={session.IsCurrent} class="text-secondary" title="{formatDateText(session.CreatedAt)}">
+            <div class="position-relative">
+
+            {formatDate(session.CreatedAt)}
+            </div>
+          </td>
+          <td class:text-info={session.IsCurrent} class="text-secondary" title="{formatDateText(session.ExpiresAt)}">
             {formatDate(session.ExpiresAt)}
           </td>
           <td>
-            <a href="#" class="" on:click={endSession(session.SessionID)}>Disconnect</a>
+            <a href="#" class="position-relative" on:click={endSession(session.SessionID)}>Disconnect
+              {#if session.IsCurrent == true}
+                <span class="badge bg-blue badge-notification badge-blink"></span>
+              {/if}
+            </a>
           </td>
         </tr>
       {/each}

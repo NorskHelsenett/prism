@@ -42,7 +42,17 @@ func GetUserSessions(c *gin.Context, session *SessionStore) {
 		return
 	}
 
-	c.JSON(http.StatusOK, sessions)
+	sessionID, _ := c.Get("sessionID")
+
+	sessionsArray := *sessions
+
+	for i := range sessionsArray {
+		if sessionsArray[i].SessionID == sessionID {
+			sessionsArray[i].IsCurrent = true
+		}
+	}
+
+	c.JSON(http.StatusOK, sessionsArray)
 }
 
 func HandleOTPReset(c *gin.Context, session *SessionStore) {

@@ -14,6 +14,7 @@ type Session struct {
 	Email       string
 	OTPVerified bool
 	SessionID   string `gorm:"unique"`
+	IsCurrent   bool `gorm:"-"`
 }
 
 type SessionStore struct {
