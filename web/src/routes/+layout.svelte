@@ -1,7 +1,7 @@
 <script>
 	export const ssr = false;
 	import { onMount } from 'svelte';
-  import { initializeApiEndpoint, isLoading } from '$lib/stores/configStore';
+  import { initializeApiEndpoint, isLoading, isAuthenticated } from '$lib/stores/configStore';
 	import '@tabler/core/dist/css/tabler.min.css';
 	import { theme } from '$lib/stores/themeStore';
 	import { notification } from '$lib/stores/notificationStore';
@@ -37,7 +37,7 @@
 {#if isInitialized}
 {#if $isLoginPage || $isAuthPage}
   <slot/>
-{:else}
+{:else if $isAuthenticated}
 <div class="alert-container">
 	{#each $notification as alert (alert.id)}
 		<div class="alert alert-{alert.type} alert-dismissible" role="alert">

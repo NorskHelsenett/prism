@@ -1,7 +1,6 @@
 <script>
 	import { Fetch } from '$lib/fetchUtil';
   import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
 
   let otpInputs = [];
   const otpLength = 6;
@@ -27,13 +26,12 @@
   const submitOTP = async () => {
     const otp = otpCode.join('');
     if (otp.length === otpLength && !submitting) {
-        console.log("Submitting OTP: ", otp); // Replace with your submission logic
         // Add fetch API call here
         submitting = true
         try{
           const response = await Fetch("/api/session/otp/validate", {method: "POST", body: JSON.stringify({"otp_code": otp})})
           if (!response.error) {
-            goto('/');
+            window.location.href = '/';
           }
           setTimeout(() => {
             submitting = false
