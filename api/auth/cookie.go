@@ -1,23 +1,24 @@
 package auth
 
 import (
-	"github.com/gin-gonic/gin"
-	"github.com/gorilla/securecookie"
 	"net/http"
 	"net/url"
 	"os"
 	"prism/config"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/gorilla/securecookie"
 )
 
 var hashKey = securecookie.GenerateRandomKey(64)
 var blockKey = securecookie.GenerateRandomKey(32)
 var secure = securecookie.New(hashKey, blockKey)
 
-func SetSignedCookie(c *gin.Context, name, value string) {
+func SetSignedCookie(c *gin.Context, cookieName string, userInfo UserInfo) {
 
 	// Encode the base64 string using securecookie
-	encoded, err := secure.Encode(name, value)
+	encoded, err := secure.Encode(cookieName, userInfo)
 	if err != nil {
 		// handle secure encoding error
 		return
@@ -35,10 +36,10 @@ func SetSignedCookie(c *gin.Context, name, value string) {
 	}
 
 	cookie := &http.Cookie{
-		Name:   name,
-		Value:  encoded,
-		Path:   "/",
-		Domain: domain,
+		Name:     cookieName,
+		Value:    encoded,
+		Path:     "/",
+		Domain:   domain,
 		SameSite: http.SameSiteStrictMode,
 		HttpOnly: true,       // Recommended
 		Secure:   secureFlag, // Set to true if using HTTPS, Required when SameSite=None
@@ -56,19 +57,21 @@ func getDomainFromURL(urlStr string) (string, error) {
 	return u.Hostname(), nil
 }
 
-func GetSignedCookie(c *gin.Context, name string) (string, error) {
+func GetSignedCookie(c *gin.Context, name string) (UserInfo, error) {
 	cookie, err := c.Request.Cookie(name)
 	if err != nil {
-		return "", err
+		return UserInfo{}, err
 	}
 
-	var value string
-	err = secure.Decode(name, cookie.Value, &value)
+	// Define a structure to hold the decoded values
+	var userInfo UserInfo
+
+	err = secure.Decode(cookieName, cookie.Value, &userInfo)
 	if err != nil {
-		return "", err
+		return UserInfo{}, err
 	}
 
-	return value, nil
+	return userInfo, nil
 }
 
 func ClearSignedCookie(c *gin.Context, name string) {

@@ -14,9 +14,81 @@ type otp struct {
 	url     string
 }
 
+func DeleteUserSession(c *gin.Context, session *SessionStore) {
+	sessionID := c.Param("uuid")
+	email, shouldReturn := emailFromContext(c)
+	if shouldReturn {
+		return
+	}
+
+	err := session.DeleteUserSessionsFor(email, sessionID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update session"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "Session Deleted successfully"})
+}
+
+func GetUserSessions(c *gin.Context, session *SessionStore) {
+	email, shouldReturn := emailFromContext(c)
+	if shouldReturn {
+		return
+	}
+
+	sessions, err := session.GetUserSessionsFor(email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update session"})
+		return
+	}
+
+	c.JSON(http.StatusOK, sessions)
+}
+
 func HandleOTPReset(c *gin.Context, session *SessionStore) {
+	email, shouldReturn := emailFromContext(c)
+	if shouldReturn {
+		return
+	}
+
+	// Persist the session with OTP verified status
+	if err := session.InvalidateSession(email); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update session"})
+			return
+	}
+
+	err := database.DeleteOTPCode(email)
+	if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve OTP data"})
+			return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "OTP reset successfully"})
+}
+
+func emailFromContext(c *gin.Context) (string, bool) {
 	emailInterface, exists := c.Get("email")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return "", true
+	}
+
+	email, ok := emailInterface.(string)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email format"})
+		return "", true
+	}
+	return email, false
+}
+
+func HandleOTPValidate(c *gin.Context, session *SessionStore) {
+    emailInterface, exists := c.Get("email")
     if !exists {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+        return
+    }
+
+		sessionIdInterface, exists := c.Get("sessionID")
+		if !exists {
         c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
         return
     }
@@ -27,28 +99,7 @@ func HandleOTPReset(c *gin.Context, session *SessionStore) {
         return
     }
 
-		// Persist the session with OTP verified status
-    if err := session.InvalidateSession(email); err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update session"})
-        return
-    }
-
-		err := database.DeleteOTPCode(email)
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve OTP data"})
-        return
-    }
-		c.JSON(http.StatusOK, gin.H{"message": "OTP reset successfully"})
-}
-
-func HandleOTPValidate(c *gin.Context, session *SessionStore) {
-    emailInterface, exists := c.Get("email")
-    if !exists {
-        c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-        return
-    }
-
-    email, ok := emailInterface.(string)
+    sessionID, ok := sessionIdInterface.(string)
     if !ok {
         c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email format"})
         return
@@ -78,7 +129,7 @@ func HandleOTPValidate(c *gin.Context, session *SessionStore) {
     }
 
     // Persist the session with OTP verified status
-    if err := session.PersistSession(email, true); err != nil {
+    if err := session.PersistSession(email, sessionID, true); err != nil {
         c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update session"})
         return
     }

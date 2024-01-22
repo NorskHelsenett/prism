@@ -34,26 +34,18 @@ func AuditMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		cookie, err := auth.GetSignedCookie(c, "session_cookie")
+		userInfo, err := auth.GetSignedCookie(c, "session_cookie")
 		if err != nil {
 			fmt.Println(err)
 		}
 
-		var email = ""
-
-		userInfo, err := auth.DecodeCookieAndUnmarshal(c, cookie)
-		if err != nil {
-			email = ""
-		} else {
-			email = userInfo.Email
-		}
 
 		// Initialize your audit log with HTTP method
 		auditLog := database.AuditLog{
 			Timestamp: time.Now(),
 			Action:    c.Request.URL.Path,
 			Method:    c.Request.Method, // Capture the HTTP method
-			UserEmail: email,
+			UserEmail: userInfo.Email,
 		}
 
 		// Process request

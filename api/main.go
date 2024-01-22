@@ -40,6 +40,8 @@ func main() {
 	apiRoutes := r.Group("/api")
 	{
 		apiRoutes.GET("/user", auth.HandleUserRequest)
+		apiRoutes.GET("/user/session/all", func(c *gin.Context) { session.GetUserSessions(c, sessionStore) })
+		apiRoutes.DELETE("/user/session/:uuid", func(c *gin.Context) { session.DeleteUserSession(c, sessionStore) })
 		apiRoutes.GET("/userinfo/:email", routes.GetUserInfo)
 		apiRoutes.GET("/logout", func(c *gin.Context) { auth.HandleLogout(c, sessionStore) })
 		apiRoutes.GET("/dashboard", routes.HandleDashboard)

@@ -8,11 +8,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt"
 	"golang.org/x/oauth2"
+	"github.com/google/uuid"
 
 	"net/http"
 
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/url"
@@ -32,6 +32,7 @@ var (
 const (
 	cookieName      = "session_cookie"
 	EmailContextKey = "email"
+	SessionIDContextKey = "sessionID"
 )
 
 func init() {
@@ -71,14 +72,14 @@ func AdminMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		emailInterface, exists := c.Get(EmailContextKey)
 		if !exists {
-				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "user email not found in context"})
-				return
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"message": "user email not found in context"})
+			return
 		}
 
 		email, ok := emailInterface.(string)
 		if !ok {
-				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"message": "invalid email format in context"})
-				return
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"message": "invalid email format in context"})
+			return
 		}
 
 		appConfig, _ := config.LoadConfig()
@@ -105,48 +106,41 @@ func AdminMiddleware() gin.HandlerFunc {
 }
 
 func AuthMiddleware(store *session.SessionStore) gin.HandlerFunc {
-    return func(c *gin.Context) {
-        cookie, err := GetSignedCookie(c, cookieName)
-        if err != nil {
-            // Handle error or invalid session
-            c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized - no valid cookie"})
-            fmt.Println(err)
-            return
-        }
+	return func(c *gin.Context) {
+		userInfo, err := GetSignedCookie(c, cookieName)
+		if err != nil {
+			// Handle error or invalid session
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized - no valid cookie"})
+			fmt.Println(err)
+			return
+		}
 
-        userInfo, err := DecodeCookieAndUnmarshal(c, cookie)
-        if err != nil {
-            c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
-            fmt.Println(err)
-            return
-        }
+		validation, err := store.ValidateSession(userInfo.Email, userInfo.SessionID)
+		if err != nil {
+			// Handle invalid session
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized - invalid session"})
+			return
+		}
 
-        validation, err := store.ValidateSession(userInfo.Email)
-        if err != nil {
-            // Handle invalid session
-            c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized - invalid session"})
-            return
-        }
+		if !validation.IsValid {
+			// Handle completely invalid session
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized - session not found"})
+			return
+		}
 
-        if !validation.IsValid {
-            // Handle completely invalid session
-            c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized - session not found"})
-            return
-        }
+		if !validation.IsOTPVerified && c.Request.URL.Path != "/api/session/otp/generate" && c.Request.URL.Path != "/api/session/otp/validate" {
+			// OTP is not verified, initiate OTP verification process
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "OTP is not verified", "initiateOTP": true})
+			return
+		}
 
-        if !validation.IsOTPVerified && c.Request.URL.Path != "/api/session/otp/generate"  && c.Request.URL.Path != "/api/session/otp/validate" {
-            // OTP is not verified, initiate OTP verification process
-            c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "OTP is not verified", "initiateOTP": true})
-            return
-        }
+		// Add email to Gin context for easier access in subsequent handlers
+		c.Set(EmailContextKey, userInfo.Email)
+		c.Set(SessionIDContextKey, userInfo.SessionID)
 
-        // Add email to Gin context for easier access in subsequent handlers
-        c.Set(EmailContextKey, userInfo.Email)
-
-        c.Next()
-    }
+		c.Next()
+	}
 }
-
 
 func HandleLogin(c *gin.Context) {
 	// Redirect to the OIDC provider's login page
@@ -158,34 +152,14 @@ func HandleLogin(c *gin.Context) {
 }
 
 type UserInfo struct {
-	Name    string `json:"name"`
-	Email   string `json:"email"`
-	Picture string `json:"picture"`
-}
-
-// Extracted function to decode the cookie and unmarshal JSON
-func DecodeCookieAndUnmarshal(c *gin.Context, cookie string) (UserInfo, error) {
-	decodedBytes, err := base64.StdEncoding.DecodeString(cookie)
-	if err != nil {
-		// handle base64 decoding error
-		fmt.Println(err)
-		return UserInfo{}, err
-	}
-
-	decodedValue := string(decodedBytes)
-
-	var userInfo UserInfo
-	err = json.Unmarshal([]byte(decodedValue), &userInfo)
-	if err != nil {
-		fmt.Println("Error unmarshaling JSON:", err)
-		return UserInfo{}, err
-	}
-
-	return userInfo, nil
+	Name      string `json:"name"`
+	Email     string `json:"email"`
+	Picture   string `json:"picture"`
+	SessionID string `json:"sessionId"`
 }
 
 func HandleUserRequest(c *gin.Context) {
-	cookie, err := GetSignedCookie(c, cookieName)
+	userInfo, err := GetSignedCookie(c, cookieName)
 	if err != nil {
 		// Handle error or invalid session
 		c.AbortWithStatus(http.StatusUnauthorized)
@@ -193,11 +167,11 @@ func HandleUserRequest(c *gin.Context) {
 		return
 	}
 
-	userInfo, err := DecodeCookieAndUnmarshal(c, cookie)
-	if err != nil {
-		c.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
+	// userInfo, err := DecodeCookieAndUnmarshal(c, cookie)
+	// if err != nil {
+	// 	c.AbortWithStatus(http.StatusInternalServerError)
+	// 	return
+	// }
 
 	user, _ := database.GetUserDataByEmail(userInfo.Email)
 
@@ -208,13 +182,13 @@ func HandleLogout(c *gin.Context, store *session.SessionStore) {
 	// Retrieve email from Gin context
 	emailInterface, exists := c.Get(EmailContextKey)
 	if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "user email not found in context"})
-			return
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user email not found in context"})
+		return
 	}
 	email, ok := emailInterface.(string)
 	if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid email format in context"})
-			return
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid email format in context"})
+		return
 	}
 
 	ClearSignedCookie(c, cookieName)
@@ -275,25 +249,27 @@ func HandleCallback(c *gin.Context, store *session.SessionStore) {
 	}
 
 	if claims, ok := tokenClaims.Claims.(jwt.MapClaims); ok {
-		userInfo := UserInfo{
+		userInfo := UserInfo {
 			Name:    getStringFromMapClaims(claims, "name"),
 			Email:   getStringFromMapClaims(claims, "email"),
 			Picture: getStringFromMapClaims(claims, "picture"),
 		}
 
+		userInfo.SessionID = uuid.New().String()
+
 		database.SaveOrUpdateUserData(userInfo.Name, userInfo.Email, userInfo.Picture)
 
-		jsonValue, err := json.Marshal(userInfo)
-		if err != nil {
-			// handle JSON marshaling error
-			return
-		}
+		// jsonValue, err := json.Marshal(userInfo)
+		// if err != nil {
+		// 	// handle JSON marshaling error
+		// 	return
+		// }
 
-		store.PersistSession(userInfo.Email)
+		store.PersistSession(userInfo.Email, userInfo.SessionID)
 
-		// Base64 encode the JSON string
-		encodedJSON := base64.StdEncoding.EncodeToString(jsonValue)
-		SetSignedCookie(c, cookieName, encodedJSON)
+		// // Base64 encode the JSON string
+		// encodedJSON := base64.StdEncoding.EncodeToString(jsonValue)
+		SetSignedCookie(c, cookieName, userInfo)
 		appConfig, err := config.LoadConfig()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to load configuration: %v\n", err)
@@ -314,18 +290,18 @@ func getStringFromMapClaims(claims jwt.MapClaims, key string) string {
 }
 
 func setSecureStateCookie(c *gin.Context, state string) {
-    expirationTime := time.Now().Add(5 * time.Minute)
+	expirationTime := time.Now().Add(5 * time.Minute)
 
-    cookie := &http.Cookie{
-        Name:     "oidc_state",
-        Value:    state,
-        Expires:  expirationTime,
-        Path:     "/api/callback",
-        Domain:   "", // Current domain
-        Secure:   true,
-        HttpOnly: true,
-        SameSite: http.SameSiteLaxMode, // Setting SameSite to Strict
-    }
+	cookie := &http.Cookie{
+		Name:     "oidc_state",
+		Value:    state,
+		Expires:  expirationTime,
+		Path:     "/api/callback",
+		Domain:   "", // Current domain
+		Secure:   true,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode, // Setting SameSite to Strict
+	}
 
-    http.SetCookie(c.Writer, cookie)
+	http.SetCookie(c.Writer, cookie)
 }
