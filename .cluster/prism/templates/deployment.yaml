@@ -18,6 +18,10 @@ spec:
     spec:
       automountServiceAccountToken: false
       securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+        supplementalGroups:
+          - 100
         runAsNonRoot: true
         runAsUser: 1000
       containers:
@@ -55,10 +59,17 @@ spec:
           readOnly: {{ .readOnly | default false }}
         {{- end }}
         securityContext:
+          capabilities:
+            drop:
+              - ALL
+          seccompProfile:
+            type: RuntimeDefault
+          privileged: false
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
           runAsNonRoot: true
           runAsUser: 1000
+          runAsGroup: 101
+          readOnlyRootFilesystem: true
           capabilities:
             drop:
               - ALL
