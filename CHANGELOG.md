@@ -24,7 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 
 - Completion of penetration testing, leading to the identification and resolution of security vulnerabilities.
-
 - Addressed several vulnerabilities to strengthen system integrity and user data protection.
 
 ## [0.0.4] - 2024-01-10
