@@ -113,11 +113,11 @@ web:
 
               # Add Content Security Policy
               add_header Content-Security-Policy "
-                  default-src 'self' 'unsafe-inline' helsegitlab.nhn.no htsecure.gravatar.com/;
+                  default-src 'self';
                   script-src 'self' 'unsafe-inline';
                   connect-src 'self';
                   style-src 'self' 'unsafe-inline';
-                  img-src 'self' data: helsegitlab.nhn.no secure.gravatar.com/;
+                  img-src 'self' data: helsegitlab.nhn.no secure.gravatar.com/avatar;
                   font-src 'self';
                   object-src 'none';
                   frame-src 'self';
