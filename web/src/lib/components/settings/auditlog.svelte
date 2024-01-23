@@ -3,6 +3,8 @@
   import { onMount, onDestroy } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import { quintIn } from 'svelte/easing';
+  import formatNumber from '$lib/formatNumber';
+
 
   let auditLogs = [];
   let intervalId; // Declare intervalId in the component scope
@@ -66,7 +68,7 @@
         </div>
         <div class="col">
           <div class="font-weight-medium">
-            Total {totalAudits} audits
+            Total {formatNumber(totalAudits)} audits
           </div>
           <div class="text-secondary">
             50 shown here
