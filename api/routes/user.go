@@ -16,8 +16,18 @@ func GetUserInfo(c *gin.Context) {
 
 func UpdateUser(c *gin.Context) {
 	var user database.UserData
-	email, _ := c.Request.Context().Value("email").(string)
+	emailInterface, exists := c.Get("email")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
 
+	email, ok := emailInterface.(string)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email format"})
+		return
+	}
+	
 	// Parse the incoming JSON to newSettings
 	if err := c.BindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data format"})

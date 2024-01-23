@@ -10,8 +10,8 @@ import (
 )
 
 type otp struct {
-	secret  string
-	url     string
+	secret string
+	url    string
 }
 
 func DeleteUserSession(c *gin.Context, session *SessionStore) {
@@ -55,6 +55,24 @@ func GetUserSessions(c *gin.Context, session *SessionStore) {
 	c.JSON(http.StatusOK, sessionsArray)
 }
 
+func HandleOTPResetForUser(c *gin.Context, session *SessionStore) {
+	email := c.Param("email")
+
+	// Persist the session with OTP verified status
+	if err := session.InvalidateSession(email); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update session"})
+		return
+	}
+
+	err := database.DeleteOTPCode(email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve OTP data"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "OTP reset successfully"})
+}
+
 func HandleOTPReset(c *gin.Context, session *SessionStore) {
 	email, shouldReturn := emailFromContext(c)
 	if shouldReturn {
@@ -63,14 +81,14 @@ func HandleOTPReset(c *gin.Context, session *SessionStore) {
 
 	// Persist the session with OTP verified status
 	if err := session.InvalidateSession(email); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update session"})
-			return
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update session"})
+		return
 	}
 
 	err := database.DeleteOTPCode(email)
 	if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve OTP data"})
-			return
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve OTP data"})
+		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "OTP reset successfully"})
 }
@@ -91,69 +109,68 @@ func emailFromContext(c *gin.Context) (string, bool) {
 }
 
 func HandleOTPValidate(c *gin.Context, session *SessionStore) {
-    emailInterface, exists := c.Get("email")
-    if !exists {
-        c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-        return
-    }
+	emailInterface, exists := c.Get("email")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
 
-		sessionIdInterface, exists := c.Get("sessionID")
-		if !exists {
-        c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-        return
-    }
+	sessionIdInterface, exists := c.Get("sessionID")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
 
-    email, ok := emailInterface.(string)
-    if !ok {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email format"})
-        return
-    }
+	email, ok := emailInterface.(string)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email format"})
+		return
+	}
 
-    sessionID, ok := sessionIdInterface.(string)
-    if !ok {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email format"})
-        return
-    }
+	sessionID, ok := sessionIdInterface.(string)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email format"})
+		return
+	}
 
-    var otpInput struct {
-			Code string `json:"otp_code"`
-    }
+	var otpInput struct {
+		Code string `json:"otp_code"`
+	}
 
-    // Parse the incoming JSON to otpInput
-    if err := c.BindJSON(&otpInput); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data format"})
-        return
-    }
+	// Parse the incoming JSON to otpInput
+	if err := c.BindJSON(&otpInput); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data format"})
+		return
+	}
 
-    // Retrieve the OTP secret from the database for the user
-    otpSecret, err := database.GetOTPCode(email)
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve OTP data"})
-        return
-    }
+	// Retrieve the OTP secret from the database for the user
+	otpSecret, err := database.GetOTPCode(email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve OTP data"})
+		return
+	}
 
-    // Validate the OTP code
-    if !totp.Validate(otpInput.Code, otpSecret) {
-        c.JSON(406, gin.H{"error": "Invalid OTP code"})
-        return
-    }
+	// Validate the OTP code
+	if !totp.Validate(otpInput.Code, otpSecret) {
+		c.JSON(406, gin.H{"error": "Invalid OTP code"})
+		return
+	}
 
-    // Persist the session with OTP verified status
-    if err := session.PersistSession(email, sessionID, true); err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update session"})
-        return
-    }
+	// Persist the session with OTP verified status
+	if err := session.PersistSession(email, sessionID, true); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update session"})
+		return
+	}
 
-    // Respond with success
-    c.JSON(http.StatusOK, gin.H{"message": "OTP validated successfully"})
+	// Respond with success
+	c.JSON(http.StatusOK, gin.H{"message": "OTP validated successfully"})
 }
-
 
 func HandleOTPGenerate(c *gin.Context) {
 	email, exists := c.Get("email")
 	if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
-			return
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
 	}
 
 	exists, err := database.CheckForOtpEnabled(email.(string))
@@ -169,14 +186,14 @@ func HandleOTPGenerate(c *gin.Context) {
 
 	secret, err := generateOTP(email.(string))
 	if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate OTP"})
-			return
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate OTP"})
+		return
 	}
 
 	// Check if secret is not nil before dereferencing
 	if secret == nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "OTP generation resulted in nil"})
-			return
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "OTP generation resulted in nil"})
+		return
 	}
 
 	err = database.PersistOTPSecret(email.(string), secret.secret)
@@ -187,8 +204,8 @@ func HandleOTPGenerate(c *gin.Context) {
 
 	// Dereference secret to access its fields
 	c.JSON(http.StatusOK, gin.H{
-			"secret": secret.secret,
-			"url":    secret.url,
+		"secret": secret.secret,
+		"url":    secret.url,
 	})
 }
 
@@ -199,12 +216,12 @@ func generateOTP(email string) (*otp, error) {
 	})
 
 	if err != nil {
-			return nil, err
+		return nil, err
 	}
 
-	otp := &otp {
+	otp := &otp{
 		secret: secret.Secret(),
-		url: secret.URL(),
+		url:    secret.URL(),
 	}
 
 	return otp, nil

@@ -14,6 +14,7 @@
   });
 
   const logo = "/favicon.png"
+  let warningAccepted = true
 
 </script>
 
@@ -38,21 +39,18 @@
           </div>
         </div>
         <div class="row align-items-center mt-3">
-          <div class="col-4">
+          <div class="col-2">
             <div class="progress" hidden>
               <div class="progress-bar" style="width: 50%" role="progressbar" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100" aria-label="25% Complete">
                 <span class="visually-hidden">50% Complete</span>
               </div>
             </div>
           </div>
-          <div class="col">
+          <div class="col-12">
             <div class="btn-list justify-content-end">
-              <a href="#" class="btn btn-link link-secondary" hidden>
-                Set up later
-              </a>
-              <a href="#" class="btn btn-primary" on:click={() => alreadyActivated = true}>
-                Finish
-              </a>
+
+                <button disabled={!warningAccepted} class="btn btn-teal btn-ghost-teal d-none d-sm-inline-block" on:click={() => alreadyActivated = true}>Continue</button>
+
             </div>
           </div>
         </div>

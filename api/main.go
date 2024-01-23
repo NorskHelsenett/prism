@@ -13,8 +13,8 @@ import (
 	"prism/routes"
 	"prism/session"
 
-	"net/http"
 	"fmt"
+	"net/http"
 	"time"
 )
 
@@ -31,7 +31,7 @@ func main() {
 
 	r.GET("/api/login", auth.HandleLogin)
 	r.GET("/api/callback", func(c *gin.Context) {
-			auth.HandleCallback(c, sessionStore)
+		auth.HandleCallback(c, sessionStore)
 	})
 
 	// Authenticated users
@@ -59,6 +59,8 @@ func main() {
 
 		// Admin users
 		apiRoutes.Use(auth.AdminMiddleware())
+
+		apiRoutes.DELETE("/session/otp/reset/:email", func(c *gin.Context) { session.HandleOTPResetForUser(c, sessionStore) })
 
 		apiRoutes.PUT("/user", routes.UpdateUser)
 		apiRoutes.GET("/user/all", routes.GetAllUsers)
@@ -140,7 +142,7 @@ func initSessionDatabase() {
 	var err error // Declare err separately
 	session_db, err = gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
 	if err != nil {
-			panic("failed to connect to the database")
+		panic("failed to connect to the database")
 	}
 
 	// Perform database migrations
