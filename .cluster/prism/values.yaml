@@ -121,23 +121,23 @@ web:
           add_header Cross-Origin-Opener-Policy "same-origin" always;
 
           add_header Content-Security-Policy "
-              default-src 'self' 'unsafe-inline' data: https://helsegitlab.nhn.no https://secure.gravatar.com;
-              script-src 'self' 'unsafe-inline';
-              connect-src 'self';
-              style-src 'self' 'unsafe-inline';
-              img-src 'self' data: https://helsegitlab.nhn.no https://secure.gravatar.com;
-              font-src 'self';
-              object-src 'none';
-              frame-src 'self';
-              media-src 'self';
-              child-src 'self';
-              worker-src 'self';
-              manifest-src 'self';
-              form-action 'self';
-              frame-ancestors 'self';
-              base-uri 'self';
-              require-sri-for script style;
-              upgrade-insecure-requests;
+            default-src 'self';
+            script-src 'self';
+            connect-src 'self';
+            style-src 'self' 'unsafe-inline';
+            img-src 'self' data: https://helsegitlab.nhn.no https://secure.gravatar.com;
+            font-src 'self';
+            object-src 'none';
+            frame-src 'self';
+            media-src 'self';
+            child-src 'self';
+            worker-src 'self';
+            manifest-src 'self';
+            form-action 'self';
+            frame-ancestors 'self';
+            base-uri 'self';
+            require-sri-for script style;
+            upgrade-insecure-requests;
           ";
 
 
