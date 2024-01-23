@@ -3,7 +3,7 @@ const cspDirectives = {
   'child-src': ["'self'"],
   'connect-src': ["'self'", 'ws://localhost:*'],
   // 'connect-src': ["'self'", 'ws://localhost:*', 'https://hcaptcha.com', 'https://*.hcaptcha.com'],
-  'img-src': ["'self'", "https://helsegitlab.nhn.no","https://secure.gravatar.com/avatar", 'data:'],
+  'img-src': ["'self'", "https://helsegitlab.nhn.no","https://secure.gravatar.com", 'data:'],
   'font-src': ["'self'", 'data:'],
   'form-action': ["'self'"],
   'frame-ancestors': ["'self'"],
