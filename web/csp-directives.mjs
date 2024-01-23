@@ -1,7 +1,7 @@
 const cspDirectives = {
   'base-uri': ["'self'"],
   'child-src': ["'self'"],
-  'connect-src': ["'self'", 'ws://localhost:*'],
+  'connect-src': ["'self'"],
   // 'connect-src': ["'self'", 'ws://localhost:*', 'https://hcaptcha.com', 'https://*.hcaptcha.com'],
   'img-src': ["'self'", "https://helsegitlab.nhn.no","https://secure.gravatar.com", 'data:'],
   'font-src': ["'self'", 'data:'],
