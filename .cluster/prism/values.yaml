@@ -111,26 +111,12 @@ web:
           root /usr/share/nginx/html;
           index index.html;
 
-          # Add Content Security Policy
-          add_header Content-Security-Policy "
-            default-src 'self';
-            script-src 'self';
-            connect-src 'self';
-            style-src 'self' 'unsafe-inline';
-            img-src 'self' data: helsegitlab.nhn.no secure.gravatar.com/avatar;
-            font-src 'self';
-            object-src 'none';
-            frame-src 'self';
-            media-src 'self';
-            child-src 'self';
-            worker-src 'self';
-            manifest-src 'self';
-            form-action 'self';
-            frame-ancestors 'self';
-            base-uri 'self';
-            require-sri-for script style;
-            upgrade-insecure-requests;
-          ";
+          add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+          add_header X-Content-Type-Options "nosniff";
+          add_header X-Frame-Options "SAMEORIGIN";
+          add_header X-XSS-Protection "1; mode=block";
+          add_header Referrer-Policy "no-referrer-when-downgrade";
+          add_header Feature-Policy "accelerometer 'none'; camera 'none'; geolocation 'none';";
 
           location / {
             try_files $uri $uri/ /index.html;
