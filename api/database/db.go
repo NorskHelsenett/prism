@@ -255,6 +255,17 @@ func optimizeSQLite(db *gorm.DB) error {
     return nil
 }
 
+func CountAllAudits() (uint, error) {
+    var count int64
+    result := db.Model(&AuditLog{}).Count(&count)
+
+    if result.Error != nil {
+        return 0, result.Error
+    }
+
+    return uint(count), nil
+}
+
 func GetAllAudits(limit int) (*[]AuditLog, error) {
 	var auditLog []AuditLog
 

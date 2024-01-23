@@ -76,5 +76,12 @@ func GetAllAudits(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, audit)
+	countAudit, err := database.CountAllAudits()
+	if err != nil {
+		log.Printf("%v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count audits"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"total": countAudit, "audits": audit})
 }

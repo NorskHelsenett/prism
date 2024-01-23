@@ -7,10 +7,13 @@
   let auditLogs = [];
   let intervalId; // Declare intervalId in the component scope
   let newLogIds = new Set(); // Set to track new log IDs
+  let totalAudits = 0
 
   async function fetchEvents() {
     try {
-      const newLogs = await Fetch("/api/settings/audit");
+      const result = await Fetch("/api/settings/audit");
+      const newLogs = result.audits;
+      totalAudits = result.total;
       const existingLogTimestamps = new Set(auditLogs.map(log => log.Timestamp));
 
       const logsToAdd = newLogs.filter(log => !existingLogTimestamps.has(log.Timestamp));
@@ -33,11 +36,8 @@
   }
 
   onMount(() => {
-
     fetchEvents(); // Initial fetch when component mounts
-
     intervalId = setInterval(fetchEvents, 5000); // Set up the interval
-
     return () => {
       clearInterval(intervalId); // Clear the interval when the component is destroyed
     };
@@ -47,14 +47,36 @@
     clearInterval(intervalId);
   });
 
-
   function formatDate(dateString) {
     const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false };
     return new Date(dateString).toLocaleDateString('en-US', options).replace(/\//g, '.').replace(',', '');
   }
 </script>
-
 <div class="card-body">
+
+<div class="row">
+  <div class="col-9"></div>
+  <div class="card-sm col-3">
+    <div class="card-body">
+      <div class="row align-items-center">
+        <div class="col-auto">
+          <span class="bg-info text-white avatar"><!-- Download SVG icon from http://tabler-icons.io/i/currency-dollar -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-file-text" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M9 9l1 0" /><path d="M9 13l6 0" /><path d="M9 17l6 0" /></svg>
+          </span>
+        </div>
+        <div class="col">
+          <div class="font-weight-medium">
+            Total {totalAudits} audits
+          </div>
+          <div class="text-secondary">
+            50 shown here
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="table-responsive">
   <table class="table table-vcenter card-table table-striped">
     <thead>
