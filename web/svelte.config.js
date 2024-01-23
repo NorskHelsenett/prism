@@ -1,4 +1,5 @@
 import adapter from '@sveltejs/adapter-static';
+import cspDirectives from './csp-directives.mjs';
 
 export default {
 	kit: {
@@ -7,9 +8,7 @@ export default {
 		}),
 		csp: {
 			mode: "hash",
-			directives: {
-				"script-src": ["self"],
-			}
+			directives: cspDirectives
 		},
 	}
 };

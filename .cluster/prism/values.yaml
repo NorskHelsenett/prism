@@ -111,21 +111,13 @@ web:
           root /usr/share/nginx/html;
           index index.html;
 
-          add_header X-Frame-Options "SAMEORIGIN" always;
-          add_header X-Content-Type-Options "nosniff" always;
-          add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-          add_header Referrer-Policy "no-referrer-when-downgrade" always;
-          add_header Feature-Policy "geolocation 'none'; midi 'none'; sync-xhr 'none';" always;
-          add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
-          add_header Cross-Origin-Embedder-Policy "require-corp" always;
-          add_header Cross-Origin-Opener-Policy "same-origin" always;
-
+          # Add Content Security Policy
           add_header Content-Security-Policy "
             default-src 'self';
             script-src 'self';
             connect-src 'self';
             style-src 'self' 'unsafe-inline';
-            img-src 'self' data: https://helsegitlab.nhn.no https://secure.gravatar.com;
+            img-src 'self' data: helsegitlab.nhn.no secure.gravatar.com/avatar;
             font-src 'self';
             object-src 'none';
             frame-src 'self';
@@ -140,14 +132,8 @@ web:
             upgrade-insecure-requests;
           ";
 
-
           location / {
             try_files $uri $uri/ /index.html;
-            add_header Cross-Origin-Resource-Policy "same-origin" always;
-          }
-
-          location ~* \.(png|jpg|jpeg|gif)$ {
-            add_header Cross-Origin-Resource-Policy "cross-origin" always;
           }
 
           location ~* ^/.well-known/(CHANGELOG\.md|buildinfo\.json)$ {
