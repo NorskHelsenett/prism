@@ -9,8 +9,8 @@ metadata:
 data:
   {{ .config.fileName }}: |-
 {{ .config.data | nindent 4 }}
+---
       {{- end }}
     {{- end }}
   {{- end }}
----
 {{- end }}
