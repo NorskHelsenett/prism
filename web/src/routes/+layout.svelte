@@ -16,23 +16,14 @@
     goto('/'); // Navigate to the specified path
   }
 
-	(function () {
-		const theme = localStorage.getItem('theme') || 'dark';
-		document.body.setAttribute('data-bs-theme', theme);
-	})();
-
-	// Listen for theme changes
-	window.addEventListener('themeChange', (event) => {
-		document.body.setAttribute('data-bs-theme', event.detail);
-	});
-
 	function toggleTheme() {
 		$theme = $theme === 'light' ? 'dark' : 'light';
-		// Optionally, save the theme to localStorage or similar
 	}
+
 	function dismissAlert(id) {
 		notification.update((notification) => notification.filter((a) => a.id !== id));
 	}
+
 	const isLoginPage = derived(page, $page => $page.url.pathname === '/login');
 	const isAuthPage = derived(page, $page => $page.url.pathname === '/auth');
 
