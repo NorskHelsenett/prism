@@ -60,12 +60,17 @@
   </span>
   <div class="text-secondary">This task will execute the following</div>
   <ul class="text-secondary">
-    <li>Permanently delete all soft-deleted <strong>vulnerabilities</strong></li>
-    <li>Permanently delete all soft-deleted <strong>projects</strong></li>
-    <li>Permanently delete all soft-deleted <strong>user data</strong></li>
-    <li><strong>VACUUM</strong> the database</li>
-    <li><strong>REINDEX</strong> the database</li>
-    <li><strong>ANALYZE</strong> the database</li>
+    <li>Permanently delete all <strong class="text-azure">soft-deleted</strong> resources
+      <ul>
+        <li>Vulnerabilities</li>
+        <li>Projects</li>
+        <li>Users</li>
+        <li>Images</li>
+      </ul>
+    </li>
+    <li><strong class="text-azure">VACUUM</strong> the database</li>
+    <li><strong class="text-azure">REINDEX</strong> the database</li>
+    <li><strong class="text-azure">ANALYZE</strong> the database</li>
   </ul>
 
   <div class="btn-list justify-content-end">
