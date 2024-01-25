@@ -17,7 +17,7 @@
   }
 
 	(function () {
-		const theme = localStorage.getItem('theme') || 'dark'; // Default to 'light'
+		const theme = localStorage.getItem('theme') || 'dark';
 		document.body.setAttribute('data-bs-theme', theme);
 	})();
 
