@@ -1,48 +1,60 @@
 package routes
 
 import (
+	"io"
 	"net/http"
-	"os"
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"prism/config"
+	"prism/database"
 )
 
 func GetBlob(c *gin.Context) {
-	appConfig, _ := config.LoadConfig()
-
 	filename := c.Param("filename")
-	filepath := filepath.Join(appConfig.Database.Path+"/images", filename)
 
-	// Serve the file
-	c.File(filepath)
+	imgData, err := database.GetImage(filename)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error retrieving file"})
+		return
+	}
+
+	c.Data(http.StatusOK, "image/jpeg", imgData.Data)
 }
 
 func HandleBlobUpload(c *gin.Context) {
-	// Multipart form
 	form, err := c.MultipartForm()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	files := form.File["image"] // "image" is the field name in your FormData
+	files := form.File["image"]
 	var filenames []string
 	for _, file := range files {
-		// Generate a unique filename, for example using a UUID:
 		filename := generateUniqueFilename(file.Filename)
-		appConfig, _ := config.LoadConfig()
 
-		filepath := filepath.Join(appConfig.Database.Path+"/images", filename)
-
-		// Save the file
-		if err := c.SaveUploadedFile(file, filepath); err != nil {
+		// Read file data
+		fileData, err := file.Open()
+		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		defer fileData.Close()
+
+		data, err := io.ReadAll(fileData)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		// Save the file data to the database
+		if err := database.SaveImage(filename, data); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
 		filenames = append(filenames, filename)
 	}
 
@@ -52,18 +64,9 @@ func HandleBlobUpload(c *gin.Context) {
 func HandleBlobDelete(c *gin.Context) {
 	filename := c.Param("filename") // Get the filename from the URL parameter
 
-	// Construct the full path to the image file
-	appConfig, _ := config.LoadConfig()
-	filepath := filepath.Join(appConfig.Database.Path+"/images", filename)
-
-	// Check if the file exists
-	if _, err := os.Stat(filepath); os.IsNotExist(err) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "File not found"})
-		return
-	}
-
-	// Attempt to delete the file
-	if err := os.Remove(filepath); err != nil {
+	// Attempt to delete the image record from the database
+	err := database.DeleteImage(filename)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error deleting file"})
 		return
 	}
