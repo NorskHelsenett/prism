@@ -1,11 +1,10 @@
 <script>
 	import { Fetch } from "$lib/fetchUtil";
-	import { onMount } from "svelte";
 	import DebouncedInput from "../DebouncedInput.svelte";
 	import { notification } from "$lib/stores/notificationStore";
 
   let persisting = false;
-  let settings = {
+  export let settings = {
     ID: 0,
     slack: {
       channelID: "",
@@ -16,10 +15,6 @@
       enabled: false
     }
   }
-
-  onMount(async () => {
-    settings = await Fetch("/api/settings")
-  })
 
   function debounce(func, wait) {
       let timeout;

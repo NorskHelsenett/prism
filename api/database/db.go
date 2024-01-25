@@ -3,12 +3,14 @@ package database
 import (
 	"encoding/json"
 	"errors"
+	"os"
+
+	"runtime"
+	"time"
 
 	"gorm.io/datatypes"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-
-	"time"
 
 	"prism/config"
 )
@@ -97,6 +99,12 @@ type Settings struct {
 	Slack        SlackSettings        `gorm:"-" json:"slack"`
 	AuditLogData string               `json:"-" gorm:"column:auditlog_settings"`
 	AuditLog     AuditLoggingSettings `gorm:"-" json:"auditlog"`
+	Metrics      Metrics              `gorm:"-" json:"metrics"`
+}
+
+type Metrics struct {
+	Memory       float64
+	DatabaseSize float64
 }
 
 type UserData struct {
@@ -377,7 +385,28 @@ func GetSettings() (*Settings, error) {
 	// After unmarshalling
 	_ = json.Unmarshal([]byte(settings.AuditLogData), &settings.AuditLog)
 
+	// calculate database size in MB, RAM Size AND CPU Usage
+	settings.Metrics.DatabaseSize, _ = getDatabaseSize()
+	settings.Metrics.Memory = getMemoryUsage()
+
 	return &settings, nil
+}
+
+func getMemoryUsage() float64 {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	return float64(m.Sys)
+}
+
+func getDatabaseSize() (float64, error) {
+	appConfig, _ := config.LoadConfig()
+	dbPath := appConfig.Database.Path + "/prism.db"
+	fileInfo, err := os.Stat(dbPath)
+	if err != nil {
+		return 0, err
+	}
+	sizeInMB := float64(fileInfo.Size())
+	return sizeInMB, nil
 }
 
 func UpdateSettings(updatedSettings *Settings) error {
