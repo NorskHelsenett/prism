@@ -49,6 +49,24 @@ export async function Fetch(endpoint, options = {}) {
   }
 }
 
+export async function FetchBlob(endpoint, filename = "") {
+  const apiUrl = get(apiEndpoint);
+  const url = `${apiUrl}${endpoint}`;
+
+  try {
+    const response = await fetch(url, { credentials: 'include' });
+
+    if (!response.ok) {
+      console.error(`Error: ${response.status}`);
+      return;
+    }
+
+    return await response.blob();
+  } catch (error) {
+    console.error('Error downloading file:', error);
+  }
+}
+
 export async function FetchFile(endpoint, filename = "") {
   const apiUrl = get(apiEndpoint);
   const url = `${apiUrl}${endpoint}`;
