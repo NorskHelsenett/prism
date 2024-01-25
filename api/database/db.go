@@ -8,8 +8,6 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
-	"os"
-	"path/filepath"
 	"time"
 
 	"prism/config"
@@ -74,6 +72,13 @@ type JSONData struct {
 	Project       *ProjectData // The associated project
 	Status        string       `gorm:"default:Reported"`
 	SlackUrl      string
+}
+
+// ImageData is a model for storing image metadata and binary data
+type ImageData struct {
+	gorm.Model
+	Filename string
+	Data     []byte
 }
 
 type SlackSettings struct {
@@ -176,6 +181,7 @@ func InitDB() {
 	db.AutoMigrate(&EventQueue{})
 	db.AutoMigrate(&Settings{})
 	db.AutoMigrate(&AuditLog{})
+	db.AutoMigrate(&ImageData{})
 
 	db.Exec(`
     CREATE TRIGGER IF NOT EXISTS jsondata_insert AFTER INSERT ON json_data
@@ -203,67 +209,67 @@ func SetEventProcessed(event *EventQueue) {
 }
 
 func CleanUpDatabase() error {
-	    // Wrap the cleanup in a transaction
-    tx := db.Begin()
-    defer func() {
-        if r := recover(); r != nil {
-            tx.Rollback()
-        }
-    }()
+	// Wrap the cleanup in a transaction
+	tx := db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
 
-		// List of models to be hard-deleted
-    models := []interface{}{&JSONData{}, &ProjectData{},&UserData{}}
+	// List of models to be hard-deleted
+	models := []interface{}{&JSONData{}, &ProjectData{}, &UserData{}, &ImageData{}}
 
-    for _, model := range models {
-        // Perform hard delete on each model
-        if err := tx.Unscoped().Where("deleted_at IS NOT NULL").Delete(model).Error; err != nil {
-            tx.Rollback() // Rollback the transaction in case of error
-            return err
-        }
-    }
+	for _, model := range models {
+		// Perform hard delete on each model
+		if err := tx.Unscoped().Where("deleted_at IS NOT NULL").Delete(model).Error; err != nil {
+			tx.Rollback() // Rollback the transaction in case of error
+			return err
+		}
+	}
 
-		// Commit the transaction for hard deletes
-    if err := tx.Commit().Error; err != nil {
-        return err
-    }
+	// Commit the transaction for hard deletes
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
 
-    // SQLite specific optimizations
-    if err := optimizeSQLite(db); err != nil {
-        tx.Rollback()
-        return err
-    }
+	// SQLite specific optimizations
+	if err := optimizeSQLite(db); err != nil {
+		tx.Rollback()
+		return err
+	}
 
-    // Commit the transaction
-    return nil
+	// Commit the transaction
+	return nil
 }
 
 func optimizeSQLite(db *gorm.DB) error {
-    // List of SQL commands for maintenance and optimization
-    commands := []string{
-        "VACUUM;",                  // Clean up the database, reduce file size
-        "REINDEX;",                 // Rebuild all indices
-        "ANALYZE;",                 // Analyze the database, gather statistics
-        // Add more commands as necessary
-    }
+	// List of SQL commands for maintenance and optimization
+	commands := []string{
+		"VACUUM;",  // Clean up the database, reduce file size
+		"REINDEX;", // Rebuild all indices
+		"ANALYZE;", // Analyze the database, gather statistics
+		// Add more commands as necessary
+	}
 
-    for _, cmd := range commands {
-        if err := db.Exec(cmd).Error; err != nil {
-            return err
-        }
-    }
+	for _, cmd := range commands {
+		if err := db.Exec(cmd).Error; err != nil {
+			return err
+		}
+	}
 
-    return nil
+	return nil
 }
 
 func CountAllAudits() (uint, error) {
-    var count int64
-    result := db.Model(&AuditLog{}).Count(&count)
+	var count int64
+	result := db.Model(&AuditLog{}).Count(&count)
 
-    if result.Error != nil {
-        return 0, result.Error
-    }
+	if result.Error != nil {
+		return 0, result.Error
+	}
 
-    return uint(count), nil
+	return uint(count), nil
 }
 
 func GetAllAudits(limit int) (*[]AuditLog, error) {
@@ -291,14 +297,14 @@ func DeleteOTPCode(email string) error {
 }
 
 func GetOTPCode(email string) (string, error) {
-    var user UserData
-    result := db.Where("email = ?", email).First(&user)
+	var user UserData
+	result := db.Where("email = ?", email).First(&user)
 
-    if result.Error != nil {
-        return "", result.Error
-    }
+	if result.Error != nil {
+		return "", result.Error
+	}
 
-    return user.OTPSecret, nil
+	return user.OTPSecret, nil
 }
 
 func CheckForOtpEnabled(email string) (bool, error) {
@@ -307,12 +313,12 @@ func CheckForOtpEnabled(email string) (bool, error) {
 
 	// Check for database-related errors
 	if result.Error != nil {
-			if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-					// No record found is not an error in this context
-					return false, nil
-			}
-			// Some other error occurred
-			return false, result.Error
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			// No record found is not an error in this context
+			return false, nil
+		}
+		// Some other error occurred
+		return false, result.Error
 	}
 
 	// If OTPSecret is not empty, OTP is enabled
@@ -729,9 +735,26 @@ func GetProjectVulnerabilities(projectID uint) ([]JSONData, error) {
 	return jsonData, err
 }
 
+func SaveImage(filename string, data []byte) error {
+	// Create an ImageData instance
+	img := ImageData{Filename: filename, Data: data}
+	// Save to database
+	return db.Create(&img).Error
+}
+
+func DeleteImage(filename string) error {
+	// Delete the record
+	return db.Where("filename = ?", filename).Delete(&ImageData{}).Error
+}
+
+func GetImage(filename string) (*ImageData, error) {
+	var img ImageData
+	err := db.Where("filename = ?", filename).First(&img).Error
+	return &img, err
+}
+
 func deleteVulnerabilitiesAndImages(tx *gorm.DB, projectID *uint, ID *uint) error {
 	var jsonData []JSONData
-	appConfig, _ := config.LoadConfig()
 
 	// Determine the query based on the provided IDs
 	var err error
@@ -769,10 +792,8 @@ func deleteVulnerabilitiesAndImages(tx *gorm.DB, projectID *uint, ID *uint) erro
 		if images, ok := vulnerability["images"].([]interface{}); ok {
 			for _, img := range images {
 				if imageName, ok := img.(string); ok {
-					imagePath := filepath.Join(appConfig.Database.Path, "/images", imageName)
-					if err := os.Remove(imagePath); err != nil {
-						return err
-					}
+					// Delete the image using the database package method
+					tx.Where("filename = ?", imageName).Delete(&ImageData{})
 				}
 			}
 		}
