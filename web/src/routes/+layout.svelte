@@ -16,6 +16,16 @@
     goto('/'); // Navigate to the specified path
   }
 
+	(function () {
+		const theme = localStorage.getItem('theme') || 'dark'; // Default to 'light'
+		document.body.setAttribute('data-bs-theme', theme);
+	})();
+
+	// Listen for theme changes
+	window.addEventListener('themeChange', (event) => {
+		document.body.setAttribute('data-bs-theme', event.detail);
+	});
+
 	function toggleTheme() {
 		$theme = $theme === 'light' ? 'dark' : 'light';
 		// Optionally, save the theme to localStorage or similar
