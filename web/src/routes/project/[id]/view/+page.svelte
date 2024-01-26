@@ -14,6 +14,7 @@
 	import Create from '$lib/components/project/Create.svelte';
 	import OwaspTable from '$lib/components/dashboard/OwaspTable.svelte';
 	import EndpointVulnerability from '$lib/components/dashboard/EndpointVulnerability.svelte';
+	import Markdown from '$lib/components/Markdown.svelte';
 
   export let data;
 
@@ -105,6 +106,11 @@ let severityData = {
   let showDropdown = false
   let showDeleteModal = false
   let unresolvedCount = 0;
+
+  async function handleeMarkdownChange(event) {
+    project.Description = event.detail.updatedMarkdown
+    await Fetch(`/api/project/${data.id}`, {method: "PUT", body: JSON.stringify(project)})
+  }
 
 </script>
 
@@ -205,7 +211,7 @@ let severityData = {
             </div>
             <div class="row mt-3">
                 <div class="datagrid-title">Description</div>
-                <div class="datagrid-content">{@html DOMPurify.sanitize(marked.parse(project.Description)) || 'N/A'}</div>
+                  <Markdown markdown={project.Description} on:markdownChanged={handleeMarkdownChange}/>
             </div>
 					</div>
 				</div>
