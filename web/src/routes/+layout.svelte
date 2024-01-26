@@ -463,13 +463,4 @@
 		z-index: 10000 !important;
 	}
 
-  /* Remove bullets from all li elements */
-  :global(li) {
-      list-style-type: none;
-  }
-
-  /* Add bullets back for li elements that do not contain a checkbox */
-  :global(li:not(:has(> input[type="checkbox"]))) {
-      list-style-type: disc; /* or 'circle', 'square', etc., depending on your needs */
-  }
 </style>
