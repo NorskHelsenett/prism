@@ -78,3 +78,8 @@ func GetAllUsers(c *gin.Context, s *session.SessionStore) {
 	users, _ := session.GetAllUsers(s)
 	c.JSON(http.StatusOK, users)
 }
+
+func GetAllProfilesEmailOnly(c *gin.Context, s *session.SessionStore) {
+	users, _ := session.GetAllProfiles(s)
+	c.JSON(http.StatusOK, users)
+}

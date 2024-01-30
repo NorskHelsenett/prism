@@ -69,6 +69,7 @@ func main() {
 			protectedRoutes.GET("/vulnerability/:findingsID", routes.GetVulnerability)
 		}
 
+		apiRoutes.GET("/profile/all", func(c *gin.Context) { routes.GetAllProfilesEmailOnly(c, sessionStore) })
 		apiRoutes.GET("/project/all", routes.GetProjects)
 		apiRoutes.GET("/vulnerability/all", routes.GetAllVulnerabilities)
 
@@ -78,7 +79,7 @@ func main() {
 
 		apiRoutes.PUT("/settings/profile", func(c *gin.Context) { routes.UpdateUser(c, sessionStore) })
 
-		apiRoutes.GET("/users/all", func(c *gin.Context) { routes.GetAllUsers(c, sessionStore) })
+		apiRoutes.GET("/settings/users/all", func(c *gin.Context) { routes.GetAllUsers(c, sessionStore) })
 		apiRoutes.DELETE("/vulnerability/:id", routes.DeleteVulnerability)
 		apiRoutes.DELETE("/project/:projectID", routes.DeleteProject)
 		apiRoutes.PUT("/project/:projectID", routes.HandleProjectPut)

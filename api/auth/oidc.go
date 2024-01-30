@@ -419,6 +419,7 @@ func HandleCallback(c *gin.Context, store *session.SessionStore) {
 		userInfo.SessionID = uuid.New().String()
 
 		database.SaveOrUpdateUserData(userInfo.Name, userInfo.Email, userInfo.Picture)
+		store.SaveOrUpdateUserData(userInfo.Name, userInfo.Email, userInfo.Picture)
 
 		store.PersistSession(userInfo.Email, userInfo.SessionID)
 

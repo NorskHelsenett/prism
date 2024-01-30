@@ -545,7 +545,7 @@ func ChangeVulnerabilityStatus(id uint, status string) error {
 func GetUserDataByEmail(email string) (*UserData, error) {
 	var userData UserData
 
-	result := db.Select("Name", "Picture", "Email", "Role").Where("email = ?", email).First(&userData)
+	result := db.Select("Name", "Picture", "Email").Where("email = ?", email).First(&userData)
 
 	if result.Error != nil {
 		return nil, result.Error

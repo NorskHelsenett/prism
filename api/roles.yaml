@@ -16,12 +16,10 @@ roles:
       - resource: "/project"
         action: ["read", "write", "delete"]
       - resource: "/project/:id"
-        action: ["read"]
+        action: ["*"]
       - resource: "/slack"
         action: ["read"]
       - resource: "/profile"
-        action: ["read"]
-      - resource: "/users"
         action: ["read"]
       - resource: "/blob"
         action: ["read", "write", "delete"]

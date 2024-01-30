@@ -59,6 +59,32 @@ func (s *SessionStore) GetRole(email string) string {
 	return user.Role
 }
 
+func (s *SessionStore) SaveOrUpdateUserData(name string, email string, picture string) error {
+	var existingUserData database.UserData
+
+	// First, try to find the existing user data by email
+	result := s.DB.Where("email = ?", email).First(&existingUserData)
+
+	// Handle the case where the user data might not exist
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		// If not found, create a new record
+		newUserData := &database.UserData{
+			Name:    name,
+			Email:   email,
+			Picture: picture,
+		}
+		return s.DB.Create(newUserData).Error
+	} else if result.Error != nil {
+		// Handle other potential errors
+		return result.Error
+	}
+
+	// If found, update the existing record
+	existingUserData.Name = name
+	existingUserData.Picture = picture
+	return s.DB.Save(&existingUserData).Error
+}
+
 func (s *SessionStore) GetUserSessionsFor(email string) (*[]Session, error) {
 	var sessions []Session
 	currentTime := time.Now()
@@ -131,6 +157,17 @@ func (s *SessionStore) PersistSession(email, sessionID string, verified ...bool)
 func (s *SessionStore) GetUserDataByEmail(email string) (*database.UserData, error) {
 	var userData database.UserData
 	result := s.DB.Where("email = ?", email).First(&userData)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &userData, nil
+}
+
+func GetAllProfiles(s *SessionStore) (*[]database.UserData, error) {
+	var userData []database.UserData
+	result := s.DB.Select("Name", "Picture", "Email").Find(&userData)
 
 	if result.Error != nil {
 		return nil, result.Error

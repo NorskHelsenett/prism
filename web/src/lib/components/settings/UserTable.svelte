@@ -6,7 +6,7 @@
   let roles = []
 
   onMount(async () => {
-    users = await Fetch("/api/users/all")
+    users = await Fetch("/api/settings/users/all")
     roles = await Fetch("/api/settings/roles-list")
 
     users.sort((a, b) => a.Role.localeCompare(b.Role));
