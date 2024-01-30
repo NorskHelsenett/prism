@@ -10,6 +10,7 @@
   let intervalId; // Declare intervalId in the component scope
   let newLogIds = new Set(); // Set to track new log IDs
   let totalAudits = 0
+  let filterLogsBasedOnPath = false
 
   async function fetchEvents() {
     try {
@@ -18,7 +19,14 @@
       totalAudits = result.total;
       const existingLogTimestamps = new Set(auditLogs.map(log => log.Timestamp));
 
-      const logsToAdd = newLogs.filter(log => !existingLogTimestamps.has(log.Timestamp));
+      const currentPath = "/api/settings/audit"; // Get the current URL path
+
+      const logsToAdd = newLogs.filter(log => {
+        // Check if we should filter based on the path and if the log's timestamp is new
+        const isNewLog = !existingLogTimestamps.has(log.Timestamp);
+        const isPathDifferent = filterLogsBasedOnPath ? log.Action != currentPath : true;
+        return isNewLog && isPathDifferent;
+      });
 
       const fetchedLogIds = new Set(newLogs.map(log => log.Timestamp));
       newLogIds = new Set([...fetchedLogIds].filter(id => !existingLogTimestamps.has(id)));
@@ -56,8 +64,25 @@
 </script>
 <div class="card-body">
 
-<div class="row">
-  <div class="col-9"></div>
+<div class="row mb-0">
+  <div class="col-9">
+    <div class="card-body">
+    <div class="row align-items-center">
+      <div class="col">
+        <label class="form-check">
+                <input class="form-check-input" type="checkbox" on:click={() => filterLogsBasedOnPath = !filterLogsBasedOnPath} value="{filterLogsBasedOnPath}">
+                <span class="form-check-label">
+                  Filter current path
+                </span>
+                <span class="form-check-description">
+                  Do not show `/api/settints/audit` entries
+                </span>
+              </label>
+    </div>
+  </div>
+  </div>
+
+  </div>
   <div class="card-sm col-3">
     <div class="card-body">
       <div class="row align-items-center">

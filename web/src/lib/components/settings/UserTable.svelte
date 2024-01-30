@@ -1,8 +1,6 @@
 <script>
 	import { Fetch } from "$lib/fetchUtil";
 	import { onMount } from "svelte";
-	import TomSelect from 'tom-select';
-  import 'tom-select/dist/css/tom-select.bootstrap5.min.css';
 
   let users = []
   let roles = []
@@ -10,6 +8,8 @@
   onMount(async () => {
     users = await Fetch("/api/users/all")
     roles = await Fetch("/api/settings/roles-list")
+
+    users.sort((a, b) => a.Role.localeCompare(b.Role));
   });
 
   function isRole(userRole, role){
@@ -30,6 +30,12 @@
       });
     };
   }
+
+function formatDate(dateString) {
+  const options = { day: '2-digit', month: 'short', year: 'numeric' };
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', options);
+}
 </script>
 
 <div class="card me-3 mb-3 mt-3">
@@ -38,6 +44,7 @@
       <thead>
         <tr>
           <th>Name</th>
+          <th>Created</th>
           <th>Role</th>
           <th class="w-1"></th>
         </tr>
@@ -54,6 +61,7 @@
               </div>
             </div>
           </td>
+          <td class="text-secondary">{formatDate(user.CreatedAt)}</td>
           <td data-label="Role">
             <select class="form-select" disabled={userIsAdmin(user.Role)} on:change={updateUser(user)}>
               {#each roles as role}
