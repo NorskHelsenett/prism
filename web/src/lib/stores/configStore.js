@@ -21,8 +21,8 @@ export async function initializeApiEndpoint() {
         isLoading.set(false);
         const redirectPath = localStorage.getItem('redirectToAfterLogin');
         if (redirectPath) {
-          localStorage.removeItem('redirectToAfterLogin');  // Clear the stored path
-          window.location.href = redirectPath;  // Use SvelteKit's goto function to redirect
+          localStorage.removeItem('redirectToAfterLogin');
+          window.location.href = redirectPath != "/login" ? redirectPath : "/";
         }
       }
 
