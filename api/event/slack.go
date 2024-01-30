@@ -37,7 +37,6 @@ func (v *Vulnerability) replaceQuotes() {
 }
 
 func sendSlackMessage(data VulnerabilityData, channel string) (string, error) {
-	appConfig, _ := config.LoadConfig()
 
 	// Check if the channel is empty
 	if channel == "" {
@@ -69,7 +68,7 @@ func sendSlackMessage(data VulnerabilityData, channel string) (string, error) {
 		return "", fmt.Errorf("Error unmarshaling blocks: %v", err)
 	}
 
-	api := slack.New(appConfig.Slack.Token)
+	api := slack.New(config.AppConfig.Slack.Token)
 
 	channelID, timestamp, err := api.PostMessage(
 		channel,
@@ -133,8 +132,7 @@ func readTemplateFile(filePath string) (string, error) {
 }
 
 func findUserIDByEmail(email string) (string, error) {
-	appConfig, _ := config.LoadConfig()
-	api := slack.New(appConfig.Slack.Token)
+	api := slack.New(config.AppConfig.Slack.Token)
 
 	user, err := api.GetUserByEmail(email)
 	if err != nil {

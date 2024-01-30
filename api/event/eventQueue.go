@@ -85,8 +85,7 @@ func UpdateEventQueues(c *gin.Context) {
 
 // move this functionality to its own function, handle all errors, and mark events as processed, but failed.
 func handleEvent(event database.EventQueue) error {
-	appConfig, _ := config.LoadConfig()
-	settings, _ := database.GetSettings()
+	settings, _ := database.GetSettings(false)
 
 	if !settings.Slack.Enabled {
 		return fmt.Errorf("Slack is disabled")
@@ -94,7 +93,7 @@ func handleEvent(event database.EventQueue) error {
 
 	finding, err := database.GetJSONData(event.TableID)
 
-	if(err != nil) {
+	if err != nil {
 		return fmt.Errorf("Error vulnerability not found: %v", err)
 	}
 
@@ -106,7 +105,7 @@ func handleEvent(event database.EventQueue) error {
 
 	var data VulnerabilityData
 	data.Vulnerability = vulnData
-	data.URL = appConfig.Cors.Origin + "/vulnerability/" + strconv.FormatUint(uint64(finding.ID), 10) + "/view"
+	data.URL = config.AppConfig.Cors.Origin + "/vulnerability/" + strconv.FormatUint(uint64(finding.ID), 10) + "/view"
 	var imageUrl string
 
 	userID, _ := findUserIDByEmail(finding.FoundBy)
@@ -140,7 +139,7 @@ func handleEvent(event database.EventQueue) error {
 
 	slackChannel := settings.Slack.ChannelID
 
-	if (finding.ProjectID != nil) {
+	if finding.ProjectID != nil {
 		project, _ := database.GetProject(*finding.ProjectID)
 
 		// Check if the channel is empty
@@ -154,7 +153,7 @@ func handleEvent(event database.EventQueue) error {
 
 	timestamp, err := sendSlackMessage(data, slackChannel)
 	if err != nil { //timestamp comes from here
-		return fmt.Errorf("Failed to send Slack message for channel %s: %v",slackChannel, err)
+		return fmt.Errorf("Failed to send Slack message for channel %s: %v", slackChannel, err)
 	} else {
 		// Mark event as processed
 		url := getUrlFor(slackChannel, timestamp, settings.Slack.Workspace)
@@ -174,24 +173,23 @@ func getUrlFor(channel string, timestamp string, workspace string) string {
 }
 
 func prepareAndSendSlackMessage(event database.EventQueue) {
-    err := handleEvent(event)
-    if err != nil {
-        // Log the error and mark the event as processed with an error
-        log.Printf("Error processing event: %v", err)
-        event.Error = fmt.Sprintf("Error processing event: %v", err)
-        database.SetEventProcessed(&event)
-    } else {
-        // If no error, mark the event as processed normally
-        database.SetEventProcessed(&event)
-    }
+	err := handleEvent(event)
+	if err != nil {
+		// Log the error and mark the event as processed with an error
+		log.Printf("Error processing event: %v", err)
+		event.Error = fmt.Sprintf("Error processing event: %v", err)
+		database.SetEventProcessed(&event)
+	} else {
+		// If no error, mark the event as processed normally
+		database.SetEventProcessed(&event)
+	}
 }
 
 func PollEventQueue() {
-	appConfig, _ := config.LoadConfig()
 	log.Println("Starting polling for queue events")
 
 	for {
-		time.Sleep(time.Duration(appConfig.Events.Interval) * time.Second)
+		time.Sleep(time.Duration(config.AppConfig.Events.Interval) * time.Second)
 
 		eventsPtr, err := database.GetOpenEvents()
 		if err != nil {

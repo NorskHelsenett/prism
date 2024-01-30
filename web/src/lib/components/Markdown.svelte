@@ -1,4 +1,6 @@
 <script>
+	import { accessLevels } from '$lib/userStore';
+
 
 import DOMPurify from 'dompurify'
 import { marked } from 'marked';
@@ -14,6 +16,8 @@ const renderer = new marked.Renderer();
 let todo = 0
 let checked = 0
 
+export let writeAccess = false
+
 renderer.listitem = function(text) {
   if (text.includes("type=\"checkbox\"") == false){
     return "<li>" + text + "</li>"
@@ -23,7 +27,7 @@ renderer.listitem = function(text) {
   if (isChecked) {
     checked++
   }
-  const isDisabled = false; // Modify as needed
+  const isDisabled = !writeAccess; // Modify as needed
   let itemText = text.replace(/^\[\s?x?\]\s?/, '');
   itemText = itemText.replace(/<input [^>]*type="checkbox"[^>]*>\s*/, '');
 
@@ -44,6 +48,7 @@ let renderedMarkdown = ""
   }
 
 onMount(() => {
+  if (!writeAccess) { return }
     container.addEventListener('click', (event) => {
       const label = event.target.closest('.form-check');
       if (label) {
@@ -89,3 +94,12 @@ function updateText(index) {
 {/if}
 </div>
 <div class="" bind:this={container}>{@html renderedMarkdown || 'N/A'}</div>
+
+<style>
+  :global(.form-check-input:disabled){
+    opacity: 1 !important;
+  }
+  :global(form-check-input:disabled ~ .form-check-label, .form-check-input[disabled] ~ .form-check-label) {
+    opacity: 1 !important;
+  }
+</style>

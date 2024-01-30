@@ -13,7 +13,7 @@
   let users = [];
 
   onMount(async () => {
-    users = await Fetch(`/api/user/all`);
+    users = await Fetch(`/api/users/all`);
 
     // We must check if users are not undefined or null
     if (users) {

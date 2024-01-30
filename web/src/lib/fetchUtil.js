@@ -1,8 +1,6 @@
-// src/lib/fetchUtil.js
 import { get } from 'svelte/store';
 import { apiEndpoint } from '$lib/stores/configStore';
-import { error } from '@sveltejs/kit';
-// import { goto } from '$app/navigation';
+import { goto } from '$app/navigation'; // for declarative redirects
 
 export async function Fetch(endpoint, options = {}) {
   const apiUrl = get(apiEndpoint);
@@ -15,19 +13,21 @@ export async function Fetch(endpoint, options = {}) {
       console.error(`Error: ${response.status}`);
 
       if (response.status === 401) {
+        const returnPath = window.location.pathname + window.location.search;
+        localStorage.setItem('redirectToAfterLogin', returnPath);
         window.location.href = '/login';
         return Promise.resolve(null);
       }
 
       if (response.status === 403) {
-        const errormessage = await response.json()
+        const errormessage = await response.json();
 
         if (errormessage?.initiateOTP === true) {
           window.location.href = "/auth"
           return Promise.resolve(null);
         }
 
-        window.location.href = '/403';
+        goto('/403');
         return Promise.resolve(null);
       }
 

@@ -1,24 +1,36 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { Fetch } from '$lib/fetchUtil.js';
 	import DebouncedInput from '../DebouncedInput.svelte';
 	import { goto } from '$app/navigation';
+	import { userStore } from '$lib/userStore';
 
-  let user;
   let persisting = false
   let sessions = []
 
-  onMount(async () => {
-    user = await Fetch(`/api/user`);
-    sessions = await Fetch("/api/user/session/all")
+  let user = {
+      Picture: "",
+      Title: "",
+      Name: ""
+  }
+
+  // Subscribe to the user store
+  const unsubscribe = userStore.subscribe(storeUser => {
+      if (!storeUser.loading) {
+          user.Picture = storeUser.Picture;
+          user.Title = storeUser.Title;
+          user.Name = storeUser.Name;
+          user.Email = storeUser.Email;
+          user.ID = storeUser.ID;
+      }
   });
 
-  async function handleTitleChange(newVal) {
-    persisting = true
-    user.title = newVal.detail
-    const response = await Fetch("/api/user", {method: "PUT", body: JSON.stringify(user)})
-    persisting = false
-  }
+  // Remember to unsubscribe when the component is destroyed
+  onDestroy(unsubscribe);
+
+  onMount(async () => {
+    sessions = await Fetch("/api/profile/session/all")
+  });
 
   async function resetMFA() {
     await Fetch("/api/session/otp/reset")
@@ -26,9 +38,9 @@
   }
 
   async function endSession(id) {
-    const response = await Fetch(`/api/user/session/${id}`, {method: "DELETE"})
+    const response = await Fetch(`/api/profile/session/${id}`, {method: "DELETE"})
     if (!response?.error){
-      sessions = await Fetch("/api/user/session/all")
+      sessions = await Fetch("/api/profile/session/all")
     }
   }
 
@@ -36,7 +48,8 @@
     const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false };
     return new Date(dateString).toLocaleDateString('en-US', options).replace(/\//g, '.').replace(',', '');
   }
-function formatDateText(expiresAt) {
+
+  function formatDateText(expiresAt) {
     const now = new Date();
     const expiry = new Date(expiresAt);
     let difference = expiry - now;
@@ -65,7 +78,7 @@ function formatDateText(expiresAt) {
     }
 
     return formattedDate.trim();
-}
+  }
 
 </script>
 
@@ -82,17 +95,6 @@ function formatDateText(expiresAt) {
       <div class="row text-secondary">{user.Name}</div>
       <strong class="row">Email</strong>
       <a href="mailto:{user.Email}" class="row">{user.Email}</a>
-    </div>
-  </div>
-  <h3 class="card-title mt-4">Profile</h3>
-  <div class="row g-3">
-    <div class="col-md">
-      <DebouncedInput
-          id="userTitle"
-          placeholder="Title"
-          bind:value={user.Title}
-          on:change={handleTitleChange}
-          persisting={persisting} />
     </div>
   </div>
 
@@ -133,11 +135,17 @@ function formatDateText(expiresAt) {
     </table>
   </div>
 
-  <h3 class="card-title mt-4">Multi factor authentication <span class="badge bg-green-lt">On</span></h3>
-  <p class="card-subtitle">Your account is currently safeguarded by a One-Time Password (OTP) mechanism, an essential part of our multi-factor authentication process. This additional layer of security ensures that only you have access to your account, even if someone knows your password.</p>
+  <h3 class="card-title mt-4">Multi factor authentication
+    {#if sessions.some(session => session.OTPVerified)}
+    <span class="badge bg-green-lt">On</span>
+    {:else}
+    <span class="badge bg-orange-lt">Off</span>
+    {/if}
+  </h3>
+  <p class="card-subtitle">When enabled your account is safeguarded by a One-Time Password (OTP) mechanism, an essential part of our multi-factor authentication process. This additional layer of security ensures that only you have access to your account, even if someone knows your password.</p>
   <p class="text-secondary">Remember, this will log you out, and you will be required to go through the OTP generation flow before being able to log in again.</p>
   <div class="btn-list justify-content-start">
-    <button class="btn btn-ghost-warning d-none d-sm-inline-block" on:click={resetMFA}>Reset 2MFA</button>
+    <button class="btn btn-ghost-warning d-none d-sm-inline-block" on:click={resetMFA} disabled={sessions.every(session => !session.OTPVerified)}>Reset MFA</button>
   </div>
 
 </div>

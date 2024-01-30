@@ -1,41 +1,65 @@
 package routes
 
 import (
+	"prism/config"
 	"prism/database"
+	"prism/session"
+
+	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"net/http"
 )
 
 func GetUserInfo(c *gin.Context) {
 	email := c.Param("email")
 	user, _ := database.GetUserDataByEmail(email)
+	if user != nil {
+		user.Role = "" // limit data to viewer
+	}
 	c.Header("Cache-Control", "public, max-age=3600")
 	c.JSON(http.StatusOK, user)
 }
 
-func UpdateUser(c *gin.Context) {
-	var user database.UserData
-	emailInterface, exists := c.Get("email")
+func GetAccessListRoutes(c *gin.Context) {
+	// Retrieve the role from the context
+	role, exists := c.Get("role")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	email, ok := emailInterface.(string)
-	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email format"})
+	// Find the role in the appConfig
+	roleConfig, roleExists := config.AppConfig.Roles[role.(string)]
+	if !roleExists {
+		c.JSON(http.StatusForbidden, gin.H{"error": "role not found"})
 		return
 	}
-	
+	// Return the accessible paths with their actions
+	c.JSON(http.StatusOK, roleConfig)
+}
+
+// Helper function to check if a slice contains a string
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}
+
+func UpdateUser(c *gin.Context, s *session.SessionStore) {
+	var user database.UserData
+
 	// Parse the incoming JSON to newSettings
 	if err := c.BindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data format"})
 		return
 	}
 
-	if user.Email != email {
-		c.JSON(http.StatusMethodNotAllowed, gin.H{"error": "Wrong data values"})
+	if user.Role == "admin" {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
 	}
 
 	err := database.UpdateUser(&user)
@@ -45,10 +69,12 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
+	err = s.UpdateUser(&user)
+
 	c.JSON(http.StatusOK, gin.H{"message": "Settings updated successfully"})
 }
 
-func GetAllUsers(c *gin.Context) {
-	users, _ := database.GetAllUsers()
+func GetAllUsers(c *gin.Context, s *session.SessionStore) {
+	users, _ := session.GetAllUsers(s)
 	c.JSON(http.StatusOK, users)
 }

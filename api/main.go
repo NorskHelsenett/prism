@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -21,9 +23,13 @@ import (
 var session_db *gorm.DB // Global variable for the database
 
 func main() {
+	if config.AppConfig == nil {
+		log.Fatalf("Configuration is loaded from auth.OIDC.init()")
+	}
+	database.InitDB()
 	initSessionDatabase()
 	sessionStore := session.NewSessionStore(session_db)
-	database.InitDB()
+	session.LoadSessionStore(sessionStore)
 	// Set up the primary Gin router for the main application
 	r := gin.Default()
 	r.Use(CORSMiddleware())
@@ -39,10 +45,10 @@ func main() {
 
 	apiRoutes := r.Group("/api")
 	{
-		apiRoutes.GET("/user", auth.HandleUserRequest)
-		apiRoutes.GET("/user/session/all", func(c *gin.Context) { session.GetUserSessions(c, sessionStore) })
-		apiRoutes.DELETE("/user/session/:uuid", func(c *gin.Context) { session.DeleteUserSession(c, sessionStore) })
-		apiRoutes.GET("/userinfo/:email", routes.GetUserInfo)
+		apiRoutes.GET("/profile", func(c *gin.Context) { auth.HandleUserRequest(c, sessionStore) })
+		apiRoutes.GET("/profile/session/all", func(c *gin.Context) { session.GetUserSessions(c, sessionStore) })
+		apiRoutes.DELETE("/profile/session/:uuid", func(c *gin.Context) { session.DeleteUserSession(c, sessionStore) })
+		apiRoutes.GET("/profile/:email", routes.GetUserInfo) //handle when a user logs in, store in both databases
 		apiRoutes.GET("/logout", func(c *gin.Context) { auth.HandleLogout(c, sessionStore) })
 		apiRoutes.GET("/dashboard", routes.HandleDashboard)
 
@@ -50,35 +56,43 @@ func main() {
 		apiRoutes.POST("/session/otp/validate", func(c *gin.Context) { session.HandleOTPValidate(c, sessionStore) })
 		apiRoutes.GET("/session/otp/reset", func(c *gin.Context) { session.HandleOTPReset(c, sessionStore) })
 
-		// ACL Routes
+		apiRoutes.Use(auth.RBACMiddleware())
+		apiRoutes.GET("/profile/access-list", routes.GetAccessListRoutes)
+
+		// Group with ACL middleware
+		protectedRoutes := apiRoutes.Group("/")
+		{
+			protectedRoutes.Use(auth.ACLMiddleware())
+			protectedRoutes.GET("/project/:projectID", routes.GetProject)
+			protectedRoutes.GET("/project/:projectID/vulnerabilities/total", routes.GetProjectVulnerabilitiesTotal)
+			protectedRoutes.GET("/project/:projectID/vulnerabilities", routes.GetProjectVulnerabilitiesForProject)
+			protectedRoutes.GET("/vulnerability/:findingsID", routes.GetVulnerability)
+		}
+
+		apiRoutes.GET("/project/all", routes.GetProjects)
+		apiRoutes.GET("/vulnerability/all", routes.GetAllVulnerabilities)
+
 		apiRoutes.GET("/blob/:filename", routes.GetBlob)
-		apiRoutes.GET("/project/:projectID", routes.GetProject)
-		apiRoutes.GET("/vulnerabilityfinding/:id", routes.GetVulnerability)
-		apiRoutes.GET("/project/:projectID/vulnerabilities/total", routes.GetProjectVulnerabilitiesTotal)
-		apiRoutes.GET("/project/:projectID/vulnerabilities", routes.GetProjectVulnerabilitiesForProject)
 
-		// Admin users
-		apiRoutes.Use(auth.AdminMiddleware())
+		apiRoutes.DELETE("/settings/session/otp/reset/:email", func(c *gin.Context) { session.HandleOTPResetForUser(c, sessionStore) })
 
-		apiRoutes.DELETE("/session/otp/reset/:email", func(c *gin.Context) { session.HandleOTPResetForUser(c, sessionStore) })
+		apiRoutes.PUT("/settings/profile", func(c *gin.Context) { routes.UpdateUser(c, sessionStore) })
 
-		apiRoutes.PUT("/user", routes.UpdateUser)
-		apiRoutes.GET("/user/all", routes.GetAllUsers)
+		apiRoutes.GET("/users/all", func(c *gin.Context) { routes.GetAllUsers(c, sessionStore) })
 		apiRoutes.DELETE("/vulnerability/:id", routes.DeleteVulnerability)
 		apiRoutes.DELETE("/project/:projectID", routes.DeleteProject)
 		apiRoutes.PUT("/project/:projectID", routes.HandleProjectPut)
-		apiRoutes.GET("/project/all", routes.GetProjects)
 		apiRoutes.POST("/project", routes.HandleProjectPost)
 		apiRoutes.POST("/blob/upload", routes.HandleBlobUpload)
 		apiRoutes.DELETE("/blob/:filename", routes.HandleBlobDelete)
 
-		apiRoutes.POST("/vulnerabilityfinding", routes.PostVulnerability)
-		apiRoutes.PUT("/vulnerabilityfinding/:id", routes.PutVulnerability)
-		apiRoutes.PUT("/vulnerabilityfinding/:id/status/:status", routes.ChangeStatusVulnerability)
-		apiRoutes.GET("/vulnerabilityfinding/all", routes.GetAllVulnerabilities)
+		apiRoutes.POST("/vulnerability", routes.PostVulnerability)
+		apiRoutes.PUT("/vulnerability/:id", routes.PutVulnerability)
+		apiRoutes.PUT("/vulnerability/:id/status/:status", routes.ChangeStatusVulnerability)
 
 		apiRoutes.GET("/settings/events", event.EventQueues)
 		apiRoutes.GET("/settings", routes.GetSettings)
+		apiRoutes.GET("/settings/roles-list", routes.GetAllRoles)
 		apiRoutes.GET("/settings/cleanup", routes.CleanUpDatabase)
 		apiRoutes.POST("/settings", routes.PostSettings)
 		apiRoutes.PUT("/settings/events/:id/update/:status", event.UpdateEventQueues)
@@ -119,11 +133,8 @@ func main() {
 }
 
 func CORSMiddleware() gin.HandlerFunc {
-	appConfig, err := config.LoadConfig()
-	if err != nil {
-	}
 	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", appConfig.Cors.Origin)
+		c.Writer.Header().Set("Access-Control-Allow-Origin", config.AppConfig.Cors.Origin)
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE, UPDATE")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Cookie")
 		c.Writer.Header().Set("Access-Control-Expose-Headers", "Content-Length")
@@ -147,4 +158,5 @@ func initSessionDatabase() {
 
 	// Perform database migrations
 	session_db.AutoMigrate(&session.Session{})
+	session_db.AutoMigrate(&database.UserData{})
 }

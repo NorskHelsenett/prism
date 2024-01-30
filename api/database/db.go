@@ -12,6 +12,8 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
+	"strings"
+
 	"prism/config"
 )
 
@@ -100,6 +102,7 @@ type Settings struct {
 	AuditLogData string               `json:"-" gorm:"column:auditlog_settings"`
 	AuditLog     AuditLoggingSettings `gorm:"-" json:"auditlog"`
 	Metrics      Metrics              `gorm:"-" json:"metrics"`
+	MFAEnabled   bool                 `gorm:"default:false"`
 }
 
 type Metrics struct {
@@ -112,7 +115,7 @@ type UserData struct {
 	Email     string
 	Name      string
 	Picture   string
-	Role      string
+	Role      string `gorm:"default:visitor"`
 	Title     string `gorm:"default:My title"`
 	OTPSecret string `json:"-"`
 }
@@ -145,9 +148,8 @@ type AuditLog struct {
 var db *gorm.DB
 
 func InitDB() {
-	appConfig, _ := config.LoadConfig()
 	var err error
-	db, err = gorm.Open(sqlite.Open(appConfig.Database.Path+"/prism.db?cache=shared&_synchronous=FULL"), &gorm.Config{})
+	db, err = gorm.Open(sqlite.Open(config.AppConfig.Database.Path+"/prism.db?cache=shared&_synchronous=FULL"), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect to the database")
 	}
@@ -269,6 +271,41 @@ func optimizeSQLite(db *gorm.DB) error {
 	return nil
 }
 
+func GetProjectIdFromVulnerabilityID(findingsID uint) (uint, error) {
+	var projectID struct {
+		ProjectID *uint
+	}
+
+	result := db.Model(&JSONData{}).Select("project_id").Where("id = ?", findingsID).First(&projectID)
+
+	if result.Error != nil {
+		return 0, result.Error
+	}
+
+	if projectID.ProjectID == nil {
+		return 0, errors.New("project ID not found for the given vulnerability ID")
+	}
+
+	return *projectID.ProjectID, nil
+}
+
+func HasClientAccessToProject(email, projectID string) (bool, error) {
+	var project ProjectData
+	result := db.First(&project, projectID)
+
+	if result.Error != nil {
+		return false, result.Error
+	}
+
+	emails := strings.Split(project.ClientEmail, ",")
+	for _, clientEmail := range emails {
+		if strings.TrimSpace(clientEmail) == email {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func CountAllAudits() (uint, error) {
 	var count int64
 	result := db.Model(&AuditLog{}).Count(&count)
@@ -333,7 +370,7 @@ func CheckForOtpEnabled(email string) (bool, error) {
 	return user.OTPSecret != "", nil
 }
 
-func GetSettings() (*Settings, error) {
+func GetSettings(calculateMetrics bool) (*Settings, error) {
 	var settings Settings
 	result := db.First(&settings)
 
@@ -385,9 +422,11 @@ func GetSettings() (*Settings, error) {
 	// After unmarshalling
 	_ = json.Unmarshal([]byte(settings.AuditLogData), &settings.AuditLog)
 
-	// calculate database size in MB, RAM Size AND CPU Usage
-	settings.Metrics.DatabaseSize, _ = getDatabaseSize()
-	settings.Metrics.Memory = getMemoryUsage()
+	if calculateMetrics {
+		// calculate database size in MB, RAM Size AND CPU Usage
+		settings.Metrics.DatabaseSize, _ = getDatabaseSize()
+		settings.Metrics.Memory = getMemoryUsage()
+	}
 
 	return &settings, nil
 }
@@ -399,8 +438,7 @@ func getMemoryUsage() float64 {
 }
 
 func getDatabaseSize() (float64, error) {
-	appConfig, _ := config.LoadConfig()
-	dbPath := appConfig.Database.Path + "/prism.db"
+	dbPath := config.AppConfig.Database.Path + "/prism.db"
 	fileInfo, err := os.Stat(dbPath)
 	if err != nil {
 		return 0, err
@@ -410,7 +448,7 @@ func getDatabaseSize() (float64, error) {
 }
 
 func UpdateSettings(updatedSettings *Settings) error {
-	settingsDb, err := GetSettings()
+	settingsDb, err := GetSettings(false)
 	if err != nil {
 		return err
 	}
@@ -431,11 +469,11 @@ func UpdateSettings(updatedSettings *Settings) error {
 
 	// Update the existing record with new SlackData
 	// @todo fix this db.Model(settingsDb) updates ALL fields, db.Model(&Settings{}) will only update updates fields, if that is what i want
-	return db.Model(settingsDb).Update("SlackData", settingsDb.SlackData).Update("AuditLogData", settingsDb.AuditLogData).Error
+	return db.Model(settingsDb).Update("SlackData", settingsDb.SlackData).Update("AuditLogData", settingsDb.AuditLogData).Update("mfa_enabled", updatedSettings.MFAEnabled).Error
 }
 
 func UpdateUser(user *UserData) error {
-	return db.Model(&UserData{}).Where("email = ?", user.Email).Update("title", user.Title).Error
+	return db.Model(&UserData{}).Where("email = ?", user.Email).Update("role", user.Role).Error
 }
 
 func UpdateEvent(id uint, processed bool) error {
@@ -506,7 +544,8 @@ func ChangeVulnerabilityStatus(id uint, status string) error {
 
 func GetUserDataByEmail(email string) (*UserData, error) {
 	var userData UserData
-	result := db.Where("email = ?", email).First(&userData)
+
+	result := db.Select("Name", "Picture", "Email", "Role").Where("email = ?", email).First(&userData)
 
 	if result.Error != nil {
 		return nil, result.Error
@@ -514,7 +553,6 @@ func GetUserDataByEmail(email string) (*UserData, error) {
 
 	return &userData, nil
 }
-
 func GetAllUsers() (*[]UserData, error) {
 	var userData []UserData
 	result := db.Find(&userData)
@@ -558,10 +596,30 @@ func UpdateVulnerability(jsonData *JSONData) error {
 	return nil // Return nil if no error occurred
 }
 
-func AllVulnerabilities() ([]JSONData, error) {
+func AllVulnerabilities(all bool, email string) ([]JSONData, error) {
 	var jsonData []JSONData
-	result := db.Preload("Project").Order("created_at desc").Find(&jsonData) // Preload Project data
-	return jsonData, result.Error
+
+	if all {
+		// Admin: Get all vulnerabilities
+		result := db.Preload("Project").Order("json_data.created_at desc").Find(&jsonData)
+		return jsonData, result.Error
+	} else {
+		// Non-admin: Find all project IDs where the email is in "client_email"
+		var projectIDs []uint
+		db.Model(&ProjectData{}).Where("(',' || client_email || ',') LIKE ?", "%,"+email+",%").Pluck("id", &projectIDs)
+
+		if len(projectIDs) == 0 {
+			// No projects found for this email, return empty jsonData
+			return jsonData, nil
+		}
+
+		// Get vulnerabilities for those projects
+		result := db.Preload("Project").
+			Where("project_id IN ?", projectIDs).
+			Order("json_data.created_at desc").
+			Find(&jsonData)
+		return jsonData, result.Error
+	}
 }
 
 func CountOWASPCategories() (map[string]int, error) {
@@ -728,20 +786,30 @@ func GetProject(id uint) (ProjectData, error) {
 	return project, result.Error
 }
 
-func GetProjects(query string) ([]ProjectData, error) {
+func GetProjectsFor(email string) ([]ProjectData, error) {
 	var projects []ProjectData
 
-	// Prepare the database query
-	db := db
-	if query != "" {
-		db = db.Where("project_name LIKE ?", "%"+query+"%")
-	}
+	// Prepare the database query to find projects where the email is in the ClientEmail list
+	emailPattern := "%" + email + "%"
+	db := db.Where("client_email LIKE ?", emailPattern)
 
-	// Sort the results by ProjectName in ascending order
+	// Execute the query and sort the results by ProjectName in ascending order
 	db = db.Order("project_name ASC").Find(&projects)
 
 	if db.Error != nil {
 		return nil, db.Error
+	}
+	return projects, nil
+}
+
+func GetProjects() ([]ProjectData, error) {
+	var projects []ProjectData
+
+	// Sort the results by ProjectName in ascending order
+	result := db.Order("project_name ASC").Find(&projects)
+
+	if result.Error != nil {
+		return nil, result.Error
 	}
 
 	return projects, nil

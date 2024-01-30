@@ -1,4 +1,6 @@
 <script>
+	import { accessLevels } from "$lib/userStore";
+
 	let hoveredItem = null;
   export let activeItem = ''
 
@@ -26,9 +28,10 @@
   ];
 </script>
 
+{#if $accessLevels["/vulnerability"]?.write}
 <ul class="steps steps-vertical">
 	{#each steps as step, index}
-		<li class="step-item"
+		<li class="step-item cursor-pointer"
     on:click={() => activeItem = step.title}
     class:active={activeItem === step.title}
     >
@@ -45,11 +48,26 @@
 		</li>
 	{/each}
 </ul>
+{:else}
+<ul class="steps steps-vertical">
+	{#each steps as step, index}
+		<li class="step-item"
+    class:active={activeItem === step.title}
+    >
+			<div
+				class="padding"
+				class:bg-primary-lt={hoveredItem === index}
+				class:card-active={hoveredItem === index}
+			>
+				<div class="h4 m-0">{step.title}</div>
+				<div class="text-secondary">{step.description}</div>
+			</div>
+		</li>
+	{/each}
+</ul>
+{/if}
 
 <style>
-	.step-item {
-		cursor: pointer;
-	}
   .padding {
     padding: 5px;
     transition: padding 0.3s ease-in-out;

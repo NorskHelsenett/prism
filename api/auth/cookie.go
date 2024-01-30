@@ -24,8 +24,7 @@ func SetSignedCookie(c *gin.Context, cookieName string, userInfo UserInfo) {
 		return
 	}
 
-	appConfig, _ := config.LoadConfig()
-	domain, err := getDomainFromURL(appConfig.Cors.Origin)
+	domain, err := getDomainFromURL(config.AppConfig.Cors.Origin)
 	if err != nil {
 		// handle error
 	}
@@ -75,8 +74,7 @@ func GetSignedCookie(c *gin.Context, name string) (UserInfo, error) {
 }
 
 func ClearSignedCookie(c *gin.Context, name string) {
-	appConfig, _ := config.LoadConfig()
-	domain, _ := getDomainFromURL(appConfig.Cors.Origin)
+	domain, _ := getDomainFromURL(config.AppConfig.Cors.Origin)
 
 	// Set a cookie with the same name, but with an expiration date in the past
 	// c.SetCookie(name, "", -1, "/", "", false, true)

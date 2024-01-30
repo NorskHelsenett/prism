@@ -80,7 +80,7 @@
         <td>{event.TableID}</td>
         <td>{event.TableName}</td>
         <td>
-          {#if event.Error}
+          {#if event.Error && event.Processed}
             <span class="badge bg-danger me-1"></span> <span class="badge bg-red-lt">Error</span>
           {:else if event.Processed}
             <span class="badge bg-success me-1"></span> <span class="badge bg-green-lt">Success</span>
@@ -88,15 +88,8 @@
             <span class="badge bg-warning me-1 badge-blink"></span> <span class="badge bg-yellow-lt">Pending</span>
           {/if}
         </td>
-        <td>
-          {#if event.UpdatedAt == "0001-01-01T00:00:00Z" || event.Error}
-            <span></span>
-          {:else}
-            {formatDate(event.UpdatedAt)}
-          {/if}
-        </td>
         <td class="text-center">
-          {#if event.Error}
+          {#if event.UpdatedAt == "0001-01-01T00:00:00Z" || (event.Error && event.Processed)}
             <svg on:mouseover={() => event.showTooltip = true} on:mouseout={() => event.showTooltip = false} xmlns="http://www.w3.org/2000/svg" class="cursor-pointer text-danger icon icon-tabler icon-tabler-alert-triangle" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></svg>
               {#if event.showTooltip}
                     <div class="rounded-2 alert alert-danger bg-body hover-alert" role="alert">
@@ -112,12 +105,17 @@
                       </div>
                     </div>
               {/if}
-          {:else if event.Processed}
+          {:else if !event.Error}
+            {formatDate(event.UpdatedAt)}
+          {/if}
+        </td>
+        <td class="text-center">
+          {#if event.Processed}
             <a href="#" class="btn btn-sm btn-pill text-cyan" on:click={updateEvent(event.ID)}>retry</a>
             <a href="#" class="btn btn-sm btn-pill text-red" on:click={deleteEvent(event.ID)}>delete</a>
           {:else}
             <a href="#" class="btn btn-sm btn-pill text-green" on:click={updateEvent(event.ID, true)}>finish</a>
-            <a href="#" class="btn btn-sm btn-pill text-red" on:click={deleteEvent(event.ID)}>delete</a>
+            <!-- <a href="#" class="btn btn-sm btn-pill text-red" on:click={deleteEvent(event.ID)}>delete</a> -->
           {/if}
         </td>
       </tr>

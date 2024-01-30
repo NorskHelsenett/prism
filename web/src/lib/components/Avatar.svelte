@@ -6,7 +6,7 @@
   let user = null;
 
   async function getUser(email) {
-    return await Fetch(`/api/userinfo/${email}`);
+    return await Fetch(`/api/profile/${email}`);
   }
 
   $: if (email) {

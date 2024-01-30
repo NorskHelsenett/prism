@@ -2,6 +2,8 @@ package session
 
 import (
 	"errors"
+	"prism/config"
+	"prism/database"
 	"time"
 
 	"gorm.io/gorm"
@@ -14,7 +16,7 @@ type Session struct {
 	Email       string
 	OTPVerified bool
 	SessionID   string `gorm:"unique"`
-	IsCurrent   bool `gorm:"-"`
+	IsCurrent   bool   `gorm:"-"`
 }
 
 type SessionStore struct {
@@ -32,6 +34,29 @@ func (s *SessionStore) DeleteUserSessionsFor(email, sessionID string) error {
 		return result.Error
 	}
 	return nil
+}
+
+func (s *SessionStore) IsAdmin(email string) bool {
+	var user database.UserData
+	result := s.DB.Where("email = ?", email).First(&user)
+
+	// Directly return false if any error (including not found) occurs
+	if result.Error != nil {
+		return false
+	}
+
+	return user.Role == "admin"
+}
+
+func (s *SessionStore) GetRole(email string) string {
+	var user database.UserData
+	result := s.DB.Where("email = ?", email).First(&user)
+
+	if result.Error != nil {
+		return ""
+	}
+
+	return user.Role
 }
 
 func (s *SessionStore) GetUserSessionsFor(email string) (*[]Session, error) {
@@ -87,8 +112,8 @@ func (s *SessionStore) PersistSession(email, sessionID string, verified ...bool)
 		// If not found, create a new session
 		newSession := Session{
 			Email:       email,
-			OTPVerified: verifiedValue,                  // or true, depending on your logic
-			ExpiresAt:   time.Now().Add(24 * time.Hour), // Example: 24 hours from now
+			OTPVerified: verifiedValue,
+			ExpiresAt:   time.Now().Add(8 * time.Hour),
 			SessionID:   sessionID,
 		}
 		return s.DB.Create(&newSession).Error
@@ -98,7 +123,69 @@ func (s *SessionStore) PersistSession(email, sessionID string, verified ...bool)
 	}
 
 	// If a session already exists, you can update it if necessary
-	session.OTPVerified = verifiedValue               // or true, depending on your logic
-	session.ExpiresAt = time.Now().Add(8 * time.Hour) // Example: 8 hours from now
+	session.OTPVerified = verifiedValue
+	session.ExpiresAt = time.Now().Add(8 * time.Hour)
 	return s.DB.Model(&session).Where("email = ?", email).Updates(Session{OTPVerified: session.OTPVerified, ExpiresAt: session.ExpiresAt}).Error
+}
+
+func (s *SessionStore) GetUserDataByEmail(email string) (*database.UserData, error) {
+	var userData database.UserData
+	result := s.DB.Where("email = ?", email).First(&userData)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &userData, nil
+}
+
+func GetAllUsers(s *SessionStore) (*[]database.UserData, error) {
+	var userData []database.UserData
+	result := s.DB.Find(&userData)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &userData, nil
+}
+
+func (s *SessionStore) UpdateUser(user *database.UserData) error {
+	return s.DB.Model(&database.UserData{}).Where("email = ?", user.Email).Update("role", user.Role).Error
+}
+
+func LoadSessionStore(s *SessionStore) {
+	// Load users from the main database
+	users, err := database.GetAllUsers()
+	if err != nil {
+		panic("failed to load users from the main database")
+	}
+
+	// Prepare a set of admin emails for quick lookup
+	adminEmails := make(map[string]struct{})
+	for _, adminEmail := range config.AppConfig.Admins {
+		adminEmails[adminEmail] = struct{}{}
+	}
+
+	// Insert users into the session database
+	for _, user := range *users {
+		if _, isAdmin := adminEmails[user.Email]; isAdmin || user.Role == "admin" {
+			user.Role = "admin"
+		}
+		s.DB.Create(&user)
+	}
+}
+
+func isAdmin(email string) bool {
+
+	admins := config.AppConfig.Admins
+
+	isAdmin := false
+	for _, adminEmail := range admins {
+		if email == adminEmail {
+			isAdmin = true
+			break
+		}
+	}
+	return isAdmin
 }
