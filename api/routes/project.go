@@ -10,16 +10,25 @@ import (
 )
 
 func GetProjects(c *gin.Context) {
-	// Get the query parameter
-	query := c.Query("query")
+	isGlobal, _ := c.Get("isGlobalProject")
 
-	projects, err := database.GetProjects(query)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if isGlobal.(bool) == true {
+		projects, err := database.GetProjects()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, projects)
 		return
+	} else {
+		email, _ := c.Get("email")
+		projects, err := database.GetProjectsFor(email.(string))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, projects)
 	}
-
-	c.JSON(http.StatusOK, projects)
 }
 
 func HandleProjectPut(c *gin.Context) {

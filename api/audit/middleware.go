@@ -5,11 +5,12 @@ import (
 	"prism/database"
 
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
 type WrappedResponseWriter struct {
@@ -28,7 +29,7 @@ func (wrw *WrappedResponseWriter) WriteHeader(code int) {
 
 func AuditMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		settings, _ := database.GetSettings()
+		settings, _ := database.GetSettings(false)
 		if settings == nil || !settings.AuditLog.Enabled {
 			c.Next()
 			return
@@ -38,7 +39,6 @@ func AuditMiddleware() gin.HandlerFunc {
 		if err != nil {
 			fmt.Println(err)
 		}
-
 
 		// Initialize your audit log with HTTP method
 		auditLog := database.AuditLog{

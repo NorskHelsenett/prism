@@ -30,7 +30,11 @@ stages:
     cp CHANGELOG.md web/static/.well-known/CHANGELOG.md
 
     IMAGE="$GITLAB_REGISTRY/$IMAGE_REPOSITORY"
-    DESTINATION="--destination $IMAGE:latest --destination $IMAGE:$(date '+%Y%m%d')"
+    if [ "$CI_COMMIT_BRANCH" = "main" ]; then
+      DESTINATION="--destination $IMAGE:latest --destination $IMAGE:$(date '+%Y%m%d')"
+    else
+      DESTINATION="--destination $IMAGE:dev"
+    fi
 
     echo $DESTINATION
 
@@ -101,8 +105,21 @@ helm-push:
   stage: deploy
   image: ncr.sky.nhn.no/nhn/ci-deploy:0.0.2
   script: |
+    # Set the Helm repository based on the branch
+    if [ "$CI_COMMIT_BRANCH" = "main" ]; then
+      export HELM_REPO="jonasbg/prism/helm"
+    else
+      export HELM_REPO="jonasbg/prism/dev"
+    fi
+
+    if [ "$CI_COMMIT_BRANCH" = "main" ]; then
+      export TAG_SUFFIX="$(date '+%Y%m%d')"
+    else
+      export TAG_SUFFIX="dev"
+    fi
+
     echo $CI_REGISTRY_PASSWORD | helm registry login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
-    helm pull oci://$CI_REGISTRY/jonasbg/prism/helm/prism
+    helm pull oci://$CI_REGISTRY/$HELM_REPO/prism
     file=$(ls prism-*.tgz)
     CURRENT_VERSION=$(echo $file | sed 's/prism-\([0-9]\+\.[0-9]\+\.[0-9]\+\).tgz/\1/')
     export NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. '{print $1"."$2"."$3+1}')
@@ -111,14 +128,16 @@ helm-push:
     echo "APP VERSION" $APP_VERSION
     yq e -i '.version = strenv(NEW_VERSION), .appVersion = strenv(APP_VERSION)' $CHART_DIR/Chart.yaml
 
-    export API_TAG="$(date '+%Y%m%d')@$API_DIGEST"
+    export API_TAG="${TAG_SUFFIX}@$API_DIGEST"
     yq e -i '.api.tag = strenv(API_TAG)' $CHART_DIR/values.yaml
 
-    export WEB_TAG="$(date '+%Y%m%d')@$WEB_DIGEST"
+    export WEB_TAG="${TAG_SUFFIX}@$WEB_DIGEST"
     yq e -i '.web.tag = strenv(WEB_TAG)' $CHART_DIR/values.yaml
 
     helm package $CHART_DIR
-    helm push "${CHART_NAME}-${NEW_VERSION}.tgz" oci://$CI_REGISTRY/jonasbg/prism/helm
+
+    # Push the packaged Helm chart
+    helm push "${CHART_NAME}-${NEW_VERSION}.tgz" oci://$CI_REGISTRY/$HELM_REPO
   variables:
     CHART_NAME: "prism"
     CHART_DIR: ".cluster/prism"
@@ -129,4 +148,6 @@ helm-push:
     - deploy-web
     - deploy-api
   rules:
-  - if: $CI_COMMIT_BRANCH == "main"
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: never

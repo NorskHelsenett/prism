@@ -2,6 +2,7 @@
 <script>
   import CreateProject from '$lib/components/project/Create.svelte'
 	import List from '$lib/components/project/List.svelte';
+	import { accessLevels } from '$lib/userStore';
   let listComponent;
   const title = "Project"
   const pretitle = "Project"
@@ -19,6 +20,7 @@
     function closeModal() {
       showModal = false;
     }
+
 </script>
 
 <div class="row g-2 align-items-center">
@@ -30,6 +32,7 @@
   </div>
   <div class="col-auto ms-auto d-print-non">
     <div class="btn-list">
+      {#if $accessLevels["/project"]?.write}
       <a
         href="#"
         class="btn btn-primary d-none d-sm-inline-block"
@@ -51,6 +54,7 @@
           >
           Add project</a
           >
+          {/if}
         </div>
       </div>
 </div>

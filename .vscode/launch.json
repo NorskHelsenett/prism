@@ -9,7 +9,9 @@
       "program": "${workspaceFolder}/api",
       "env": {
         "SLACK_PATH": "tmp/slackMessage.json",
-        "GO_ENV": "dev"
+        "GO_ENV": "dev",
+        "CONFIG_PATH" : "tmp/config.yaml",
+        "ROLES_PATH" : "roles.yaml"
       },
       "args": []
     },

@@ -1,0 +1,53 @@
+roles:
+  admin:
+    description: "Full access to all resources"
+    permissions:
+      - resource: "*"
+        action: ["*"]
+      - resource: "/settings"
+        action: ["*"]
+      - resource: "/users"
+        action: ["*"]
+      - resource: "/vulnerability"
+        action: ["*"]
+  pentester:
+    description: "Access to projects and findings"
+    permissions:
+      - resource: "/project"
+        action: ["read", "write", "delete"]
+      - resource: "/project/:id"
+        action: ["read"]
+      - resource: "/slack"
+        action: ["read"]
+      - resource: "/profile"
+        action: ["read"]
+      - resource: "/blob"
+        action: ["read", "write", "delete"]
+      - resource: "/vulnerability"
+        action: ["*"]
+  visitor:
+    description: "Default access to read only"
+    permissions:
+      - resource: "/project"
+        action: ["read"]
+      - resource: "/vulnerability"
+        action: ["read"]
+      - resource: "/profile"
+        action: ["read"]
+      - resource: "/blob"
+        action: ["read"]
+  global_viewer:
+    description: "Read-only access to all resources"
+    permissions:
+      - resource: "/project"
+        action: ["read"]
+      - resource: "/project/:id"
+        action: ["read"]
+      - resource: "/vulnerability"
+        action: ["read"]
+      - resource: "/vulnerability/:id"
+        action: ["read"]
+      - resource: "/settings"
+        action: [""]
+      - resource: "/profile"
+        action: ["read"]

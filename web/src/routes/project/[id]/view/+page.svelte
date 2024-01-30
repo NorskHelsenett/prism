@@ -1,8 +1,5 @@
 <script>
   import { Fetch } from '$lib/fetchUtil'
-	import { formatDateToYYYYMMDD } from '$lib/utils';
-  import { marked } from 'marked';
-  import DOMPurify from 'dompurify'
 	import CriticalityPie from '$lib/components/charts/CriticalityPie.svelte';
 	import Criticality from '$lib/components/dashboard/Criticality.svelte';
 	import CountVulnerabilities from '$lib/components/dashboard/countVulnerabilities.svelte';
@@ -14,7 +11,9 @@
 	import Create from '$lib/components/project/Create.svelte';
 	import OwaspTable from '$lib/components/dashboard/OwaspTable.svelte';
 	import EndpointVulnerability from '$lib/components/dashboard/EndpointVulnerability.svelte';
+	import { accessLevels } from '$lib/userStore';
 	import Markdown from '$lib/components/Markdown.svelte';
+	import { goto } from '$app/navigation';
 
   export let data;
 
@@ -99,7 +98,7 @@ let severityData = {
   async function deleteProject(id){
     showDeleteModal = true
     await Fetch(`/api/project/${id}`, {method: "DELETE"})
-    window.location.href ="/project"
+    goto("/project")
   }
 
   let assessments = 0;
@@ -126,7 +125,7 @@ let severityData = {
               {/if}
             </h2>
 					</div>
-
+{#if $accessLevels["/project"]?.write}
           <div class="col-auto ms-auto d-print-non">
 						<div class="btn-list">
 							<a
@@ -149,7 +148,7 @@ let severityData = {
                 </Dropdown>
 
 					</div>
-
+{/if}
               <div class="page-body">
 						<div class="container-xl">
 						</div>
@@ -211,7 +210,7 @@ let severityData = {
             </div>
             <div class="row mt-3">
                 <div class="datagrid-title">Description</div>
-                  <Markdown markdown={project.Description} on:markdownChanged={handleeMarkdownChange}/>
+                  <Markdown markdown={project.Description} on:markdownChanged={handleeMarkdownChange} writeAccess={$accessLevels["/project"]?.write}/>
             </div>
 					</div>
 				</div>

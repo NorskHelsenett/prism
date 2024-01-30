@@ -13,16 +13,23 @@ export async function initializeApiEndpoint() {
       const config = await response.json();
       apiEndpoint.set(config.apiEndpoint);
 
-      const url = `${config.apiEndpoint}/api/user`;
+      const url = `${config.apiEndpoint}/api/profile`;
       const responseAuth = await fetch(url, { credentials: 'include' });
 
       if (responseAuth.ok) {
         isAuthenticated.set(true)
         isLoading.set(false);
+        const redirectPath = localStorage.getItem('redirectToAfterLogin');
+        if (redirectPath) {
+          localStorage.removeItem('redirectToAfterLogin');  // Clear the stored path
+          window.location.href = redirectPath;  // Use SvelteKit's goto function to redirect
+        }
       }
 
       if (responseAuth.status === 401) {
         isLoading.set(false);
+        const returnPath = window.location.pathname + window.location.search;
+        localStorage.setItem('redirectToAfterLogin', returnPath);
         goto("/login")
       }
 

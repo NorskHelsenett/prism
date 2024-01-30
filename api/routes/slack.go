@@ -67,9 +67,8 @@ func updateChannels(api *slack.Client) {
 }
 
 func GetSlackChannels(c *gin.Context) {
-	appConfig, _ := config.LoadConfig()
 
-	slackAPI := slack.New(appConfig.Slack.Token)
+	slackAPI := slack.New(config.AppConfig.Slack.Token)
 
 	query := c.Query("query")
 	channelData := GetChannelDataInstance(slackAPI)

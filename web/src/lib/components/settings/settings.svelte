@@ -4,6 +4,7 @@
 	import DatabaseCleanup from "./databaseCleanup.svelte";
 	import { Fetch } from "$lib/fetchUtil";
 	import { onMount } from "svelte";
+	import Multifactor from "./Multifactor.svelte";
 
 	let settings
 	onMount(async () => {
@@ -12,5 +13,6 @@
 </script>
 
 <Slack {settings} />
+<Multifactor {settings} />
 <DatabaseCleanup {settings}/>
 <Export />

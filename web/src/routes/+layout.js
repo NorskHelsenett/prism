@@ -1,5 +1,6 @@
 
 import {baseUrl} from '$lib/stores';
+export const ssr = false;
 export async function load() {
   try {
     const response = await fetch('/.well-known/config.json');

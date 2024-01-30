@@ -7,7 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.1] - 2024-01-26 - Morris Release
+## [0.1.1] - 2024-01-30
+
+### Added
+
+- RBAC and ReBAC added. Roles are managed with `roles.yaml` and each access is fine-tuned to each resource and action (`read`, `write`, `delete`) which translates to `GET`, `POST/PUT/PATCH`, `DELETE` HTTP methods.
+- User View in Settings, now you can assign roles in the settings if you have RBAC access
+- OTP is now a switch in the settings panel, turn it on-off again.
+- [CI] Pipeline produces helm artifacts for PROD and feature branches respectively
+
+### Fixed
+
+- Bug in images are fixed, now edited vulnerabilites does not delete images
+
+### Changed
+
+- Config is now loaded into memory at init
+
+## [0.1.1] - 2024-01-26
 
 ### Added
 

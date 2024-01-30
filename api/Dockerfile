@@ -28,6 +28,7 @@ RUN GOOS=linux go build -a -ldflags '-linkmode external -extldflags "-static"' -
 # Start from a scratch (empty) image
 FROM scratch
 ENV CONFIG_PATH="/config"
+ENV ROLES_PATH="/app/roles.yaml"
 ENV GIN_MODE="release"
 
 # Set the working directory to /app
@@ -35,6 +36,7 @@ WORKDIR /app
 
 # Copy the compiled application from the previous stage
 COPY --from=builder /app/main .
+COPY --from=builder /app/roles.yaml .
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 # Copy static files for the server
 #COPY ./index.html .

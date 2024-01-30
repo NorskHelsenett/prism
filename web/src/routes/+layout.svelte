@@ -1,5 +1,4 @@
 <script>
-	export const ssr = false;
 	import { onMount } from 'svelte';
   import { initializeApiEndpoint, isLoading, isAuthenticated } from '$lib/stores/configStore';
 	import '@tabler/core/dist/css/tabler.min.css';
@@ -7,13 +6,16 @@
 	import { notification } from '$lib/stores/notificationStore';
 	import { page } from '$app/stores';
   import { derived } from 'svelte/store';
+  import { accessLevels } from '$lib/userStore';
 	import User from '$lib/components/User.svelte';
 	import Loader from '$lib/components/Loader.svelte';
-	import { goto } from '$app/navigation';
+  import { goto } from '$app/navigation';
 
-  function goHome(event) {
-    event.preventDefault(); // Prevent default anchor behavior
-    goto('/'); // Navigate to the specified path
+  function navigate(url) {
+    return (event) => {
+      event.preventDefault(); // Prevent the default anchor navigation
+      goto(url);              // Use goto for navigation
+    };
   }
 
 	function toggleTheme() {
@@ -346,7 +348,7 @@
 				>
 					<ul class="navbar-nav">
 						<li class="nav-item">
-							<a class="nav-link" href="/" on:click={goHome}>
+							<a class="nav-link" href="/" on:click={navigate("/")}>
 								<span class="nav-link-icon d-md-none d-lg-inline-block"
 									><!-- Download SVG icon from http://tabler-icons.io/i/home -->
 									<svg
@@ -371,7 +373,7 @@
 							</a>
 						</li>
 						<li class="nav-item">
-							<a href="/vulnerability" class="nav-link">
+							<a href="/vulnerability" class="nav-link" on:click={navigate("/vulnerability")}>
 								<span class="nav-link-icon d-md-none d-lg-inline-block">
 									<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-flag" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 5a5 5 0 0 1 7 0a5 5 0 0 0 7 0v9a5 5 0 0 1 -7 0a5 5 0 0 0 -7 0v-9z" /><path d="M5 21v-7" /></svg>
 								</span>
@@ -379,15 +381,16 @@
 							</a>
 						</li>
 						<li class="nav-item">
-							<a href="/project" class="nav-link">
+							<a href="/project" class="nav-link" on:click={navigate("/project")}>
 								<span class="nav-link-icon d-md-none d-lg-inline-block">
 									<svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-briefcase" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 7m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z" /><path d="M8 7v-2a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v2" /><path d="M12 12l0 .01" /><path d="M3 13a20 20 0 0 0 18 0" /></svg>
 								</span>
 								<span class="nav-link-title"> Projects </span>
 							</a>
 						</li>
+            {#if $accessLevels['/report']}
 						<li class="nav-item">
-							<a href="/report" class="nav-link">
+							<a href="/report" class="nav-link" on:click={navigate("/report")}>
 								<span class="nav-link-icon d-md-none d-lg-inline-block">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
@@ -410,8 +413,9 @@
 								<span class="nav-link-title"> Report </span>
 							</a>
 						</li>
+            {/if}
 						<li class="nav-item" hidden>
-							<a href="/planning" class="nav-link">
+							<a href="/planning" class="nav-link" on:click={navigate("/planning")}>
 								<span class="nav-link-icon d-md-none d-lg-inline-block">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"

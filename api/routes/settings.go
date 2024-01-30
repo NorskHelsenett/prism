@@ -101,13 +101,6 @@ func ImportData(c *gin.Context) {
 		return
 	}
 
-	// Load app config for database path
-	appConfig, err := config.LoadConfig()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load configuration"})
-		return
-	}
-
 	// Assuming db is your database connection object
 	// and there is a function to get this object
 	err = database.CloseConnection()
@@ -115,7 +108,7 @@ func ImportData(c *gin.Context) {
 		// handle error
 	}
 
-	dbFilePath := filepath.Join(appConfig.Database.Path, "prism.db")
+	dbFilePath := filepath.Join(config.AppConfig.Database.Path, "prism.db")
 
 	// Save the file directly
 	err = c.SaveUploadedFile(file, dbFilePath)
@@ -135,19 +128,14 @@ func ImportData(c *gin.Context) {
 
 // ExportAllData handles the downloading of the prism.db database file.
 func ExportAllData(c *gin.Context) {
-	appConfig, err := config.LoadConfig()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load configuration"})
-		return
-	}
 
-	dbFilePath := filepath.Join(appConfig.Database.Path, "prism.db")
+	dbFilePath := filepath.Join(config.AppConfig.Database.Path, "prism.db")
 	c.Header("Content-Disposition", "attachment; filename=prism.db")
 	c.FileAttachment(dbFilePath, "prism.db")
 }
 
 func GetSettings(c *gin.Context) {
-	settings, err := database.GetSettings()
+	settings, err := database.GetSettings(true)
 	if err != nil {
 		log.Printf("%v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load settings"})
@@ -174,4 +162,18 @@ func PostSettings(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Settings updated successfully"})
+}
+
+// GetAllRoles retrieves all role names from the application configuration and
+// returns them as an array of strings.
+func GetAllRoles(c *gin.Context) {
+	var roleNames []string
+
+	// Assuming AppConfig is an instance of Config that has been initialized,
+	// and it is globally accessible within this context.
+	for roleName := range config.AppConfig.Roles {
+		roleNames = append(roleNames, roleName)
+	}
+
+	c.JSON(http.StatusOK, roleNames)
 }

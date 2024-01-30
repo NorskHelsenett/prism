@@ -33,6 +33,7 @@
 	import OwaspTable from '$lib/components/dashboard/OwaspTable.svelte';
 	import EndpointVulnerability from '$lib/components/dashboard/EndpointVulnerability.svelte';
 	import StatusVulnerability from '$lib/components/dashboard/StatusVulnerability.svelte';
+	import { accessLevels } from '$lib/userStore';
 	let severityData;
 	onMount(() => {
 			pageMeta.set({ pretitle: 'Overview',title: 'Pentest Report Information Security Management' });
@@ -63,6 +64,7 @@
 							<span class="d-none d-sm-inline">
 								<a href="#" class="btn" on:click={handleRefresh}>refresh</a>
 							</span>
+							{#if $accessLevels["/vulnerability"]?.write}
 							<a
 								href="#"
 								class="btn btn-primary d-none d-sm-inline-block"
@@ -84,6 +86,7 @@
                   >
                   Create new vulnerability</a
                   >
+									{/if}
                 </div>
 					</div>
 					<div class="page-body">
