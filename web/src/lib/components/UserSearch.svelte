@@ -15,31 +15,39 @@
   onMount(async () => {
     users = await Fetch(`/api/profile/all`);
 
-    // We must check if users are not undefined or null
     if (users) {
-      // Initialize TomSelect after users have been fetched
       let tomSelect = new TomSelect(selectElement, {
         plugins: ['remove_button'],
         persist: false,
         createOnBlur: true,
         createFilter: /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/,
-        create: true, // Change to 'false' if you do not want users to add new entries
-        onItemAdd: function() {
-          // update your value binding here if necessary
-          this.setTextboxValue('');
+        create: function(input) {
+          // Returnerer et nytt alternativobjekt for input som ikke eksisterer som alternativ
+          return {
+            value: input,
+            text: input // Viser input som tekst for nye alternativer (f.eks. e-postadresser)
+          };
         },
-        onItemRemove: function() {
-          // update your value binding here if necessary
+        onItemAdd: function() {
+          this.setTextboxValue('');
         }
       });
 
-      // Add options to TomSelect
       users.forEach(user => {
         tomSelect.addOption({ value: user.Email, text: user.Name });
       });
 
-      // Refresh the TomSelect instance to show the new options
-      tomSelect.setValue(selectedValues.split(","));
+      // Splitt selectedValues og sjekk hver e-post
+      let selectedEmails = selectedValues.split(",");
+      selectedEmails.forEach(email => {
+        // Sjekk om e-posten allerede finnes som et alternativ, hvis ikke, legg til som nytt alternativ
+        if (!tomSelect.options[email]) {
+          tomSelect.addOption({ value: email, text: email });
+        }
+      });
+
+      // Sett de valgte verdiene, inkludert de som ikke fantes i brukerlisten
+      tomSelect.setValue(selectedEmails);
       tomSelect.refreshOptions(false);
     }
   });
