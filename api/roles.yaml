@@ -6,10 +6,6 @@ roles:
         action: ["*"]
       - resource: "/settings"
         action: ["*"]
-      - resource: "/users"
-        action: ["*"]
-      - resource: "/vulnerability"
-        action: ["*"]
   pentester:
     description: "Access to projects and findings"
     permissions:

@@ -67,42 +67,40 @@ func main() {
 			protectedRoutes.GET("/project/:projectID/vulnerabilities/total", routes.GetProjectVulnerabilitiesTotal)
 			protectedRoutes.GET("/project/:projectID/vulnerabilities", routes.GetProjectVulnerabilitiesForProject)
 			protectedRoutes.GET("/vulnerability/:findingsID", routes.GetVulnerability)
+
+			apiRoutes.GET("/project/all", routes.GetProjects)
+			apiRoutes.GET("/vulnerability/all", routes.GetAllVulnerabilities)
 		}
 
 		apiRoutes.GET("/profile/all", func(c *gin.Context) { routes.GetAllProfilesEmailOnly(c, sessionStore) })
-		apiRoutes.GET("/project/all", routes.GetProjects)
-		apiRoutes.GET("/vulnerability/all", routes.GetAllVulnerabilities)
+		apiRoutes.GET("/slack/channels", routes.GetSlackChannels)
 
 		apiRoutes.GET("/blob/:filename", routes.GetBlob)
-
-		apiRoutes.DELETE("/settings/session/otp/reset/:email", func(c *gin.Context) { session.HandleOTPResetForUser(c, sessionStore) })
-
-		apiRoutes.PUT("/settings/profile", func(c *gin.Context) { routes.UpdateUser(c, sessionStore) })
-
-		apiRoutes.GET("/settings/users/all", func(c *gin.Context) { routes.GetAllUsers(c, sessionStore) })
-		apiRoutes.DELETE("/vulnerability/:id", routes.DeleteVulnerability)
-		apiRoutes.DELETE("/project/:projectID", routes.DeleteProject)
-		apiRoutes.PUT("/project/:projectID", routes.HandleProjectPut)
-		apiRoutes.POST("/project", routes.HandleProjectPost)
 		apiRoutes.POST("/blob/upload", routes.HandleBlobUpload)
 		apiRoutes.DELETE("/blob/:filename", routes.HandleBlobDelete)
 
+		apiRoutes.POST("/project", routes.HandleProjectPost)
+		apiRoutes.PUT("/project/:projectID", routes.HandleProjectPut)
+		apiRoutes.DELETE("/project/:projectID", routes.DeleteProject)
+
 		apiRoutes.POST("/vulnerability", routes.PostVulnerability)
 		apiRoutes.PUT("/vulnerability/:id", routes.PutVulnerability)
+		apiRoutes.DELETE("/vulnerability/:id", routes.DeleteVulnerability)
 		apiRoutes.PUT("/vulnerability/:id/status/:status", routes.ChangeStatusVulnerability)
 
+		apiRoutes.GET("/settings/users/all", func(c *gin.Context) { routes.GetAllUsers(c, sessionStore) })
+		apiRoutes.PUT("/settings/profile", func(c *gin.Context) { routes.UpdateUser(c, sessionStore) })
 		apiRoutes.GET("/settings/events", event.EventQueues)
 		apiRoutes.GET("/settings", routes.GetSettings)
+		apiRoutes.POST("/settings", routes.PostSettings)
 		apiRoutes.GET("/settings/roles-list", routes.GetAllRoles)
 		apiRoutes.GET("/settings/cleanup", routes.CleanUpDatabase)
-		apiRoutes.POST("/settings", routes.PostSettings)
 		apiRoutes.PUT("/settings/events/:id/update/:status", event.UpdateEventQueues)
 		apiRoutes.DELETE("/settings/events/:id", event.DeleteEventQueue)
 		apiRoutes.GET("/settings/export", routes.ExportAllData)
 		apiRoutes.GET("/settings/audit", audit.GetAllAudits)
 		apiRoutes.POST("/settings/import", routes.ImportData)
-
-		apiRoutes.GET("/slack/channels", routes.GetSlackChannels)
+		apiRoutes.DELETE("/settings/session/otp/reset/:email", func(c *gin.Context) { session.HandleOTPResetForUser(c, sessionStore) })
 	}
 
 	go event.PollEventQueue()
