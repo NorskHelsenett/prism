@@ -68,6 +68,9 @@
         <li>Images</li>
       </ul>
     </li>
+    <li>
+      <span class="text-azure">Dangling</span>  images will be marked as <span class="text-orange">deleted.</span>
+    </li>
     <li><strong class="text-azure">VACUUM</strong> the database</li>
     <li><strong class="text-azure">REINDEX</strong> the database</li>
     <li><strong class="text-azure">ANALYZE</strong> the database</li>

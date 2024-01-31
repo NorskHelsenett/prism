@@ -238,6 +238,46 @@ func CleanUpDatabase() error {
 		}
 	}
 
+	// Step 1: Collect all image references from JSONData
+	var jsonDataList []JSONData
+	if err := tx.Find(&jsonDataList).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	imageRefs := make(map[string]bool)
+	for _, jsonData := range jsonDataList {
+		var vulnerability struct {
+			Images []string `json:"images"`
+		}
+
+		if err := json.Unmarshal(jsonData.Vulnerability, &vulnerability); err != nil {
+			continue // Handle error or log as needed
+		}
+
+		for _, imageRef := range vulnerability.Images {
+			imageRefs[imageRef] = true
+		}
+	}
+
+	// Step 2: Fetch all ImageData records
+	var images []ImageData
+	if err := tx.Find(&images).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	// Step 3: Mark images as deleted if not found in imageRefs
+	for _, image := range images {
+		if _, found := imageRefs[image.Filename]; !found {
+			// Image not found in JSONData references, mark as deleted
+			if err := tx.Model(&ImageData{}).Where("filename = ?", image.Filename).Update("deleted_at", time.Now()).Error; err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+	}
+
 	// Commit the transaction for hard deletes
 	if err := tx.Commit().Error; err != nil {
 		return err
