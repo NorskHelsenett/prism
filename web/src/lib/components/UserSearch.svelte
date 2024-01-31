@@ -12,45 +12,48 @@
 
   let users = [];
 
-  onMount(async () => {
-    users = await Fetch(`/api/profile/all`);
+onMount(async () => {
+  users = await Fetch(`/api/profile/all`);
 
-    if (users) {
-      let tomSelect = new TomSelect(selectElement, {
-        plugins: ['remove_button'],
-        persist: false,
-        createOnBlur: true,
-        createFilter: /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/,
-        create: function(input) {
-          // Returnerer et nytt alternativobjekt for input som ikke eksisterer som alternativ
-          return {
-            value: input,
-            text: input // Viser input som tekst for nye alternativer (f.eks. e-postadresser)
-          };
-        },
-        onItemAdd: function() {
-          this.setTextboxValue('');
-        }
-      });
+  if (users) {
+    let tomSelect = new TomSelect(selectElement, {
+      plugins: ['remove_button'],
+      persist: false,
+      createOnBlur: true,
+      createFilter: /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/,
+      create: function(input) {
+        // Returnerer et nytt alternativobjekt for input som ikke eksisterer som alternativ
+        return {
+          value: input,
+          text: input // Viser input som tekst for nye alternativer (f.eks. e-postadresser)
+        };
+      },
+      onItemAdd: function() {
+        this.setTextboxValue('');
+      }
+    });
 
-      users.forEach(user => {
-        tomSelect.addOption({ value: user.Email, text: user.Name });
-      });
+    users.forEach(user => {
+      tomSelect.addOption({ value: user.Email, text: user.Name });
+    });
 
-      // Splitt selectedValues og sjekk hver e-post
-      let selectedEmails = selectedValues.split(",");
-      selectedEmails.forEach(email => {
-        // Sjekk om e-posten allerede finnes som et alternativ, hvis ikke, legg til som nytt alternativ
-        if (!tomSelect.options[email]) {
-          tomSelect.addOption({ value: email, text: email });
-        }
-      });
+    // Splitt selectedValues og sjekk hver e-post
+    let selectedEmails = selectedValues.split(",").filter(email => email.trim() !== ""); // Fjerner tomme strenger
+    selectedEmails.forEach(email => {
+      // Sjekk om e-posten allerede finnes som et alternativ, hvis ikke, legg til som nytt alternativ
+      if (email && !tomSelect.options[email]) { // Sjekker at e-posten ikke er tom
+        tomSelect.addOption({ value: email, text: email });
+      }
+    });
 
-      // Sett de valgte verdiene, inkludert de som ikke fantes i brukerlisten
+    // Sett de valgte verdiene, men ignorer tomme strenger
+    if (selectedEmails.length > 0) {
       tomSelect.setValue(selectedEmails);
-      tomSelect.refreshOptions(false);
     }
-  });
+    tomSelect.refreshOptions(false);
+  }
+});
+
 
   function handleSelectChange(event) {
     const selectedValues = Array.from(event.target.selectedOptions).map(o => o.value);
