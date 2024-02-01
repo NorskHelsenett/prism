@@ -115,6 +115,7 @@
 												type="text"
 												class="form-control"
 												name="projectname"
+                        autofocus
 												bind:value={projectName}
 											/>
 										</div>
