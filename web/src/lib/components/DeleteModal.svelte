@@ -1,13 +1,13 @@
 <script>
   export let showDeleteModal = false;
-  export let onDelete; // Function to be executed on delete
+  export let onDelete;
   export let text = "If you proceed, vulnerability and attachments will be deleted. What you've done cannot be undone."
-  export let deleteButtonText = "Yes, delete it"; // Optional prop with default value
+  export let deleteButtonText = "Yes, delete it";
 
   function handleDelete() {
     if (typeof onDelete === 'function') {
       onDelete();
-      showDeleteModal = false; // Close modal after delete action
+      showDeleteModal = false;
     }
   }
 </script>
