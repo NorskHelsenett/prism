@@ -14,6 +14,7 @@
 	import { accessLevels } from '$lib/userStore';
 	import Markdown from '$lib/components/Markdown.svelte';
 	import { goto } from '$app/navigation';
+	import DeleteModal from '$lib/components/DeleteModal.svelte';
 
   export let data;
 
@@ -95,9 +96,9 @@ let severityData = {
     unresolvedCount = vulnerabilities.filter(vulnerability => vulnerability.Status !== "Resolved" && vulnerability.Status !== "Rejected").length;
   }
 
-  async function deleteProject(id){
+  async function deleteProject(){
     showDeleteModal = true
-    await Fetch(`/api/project/${id}`, {method: "DELETE"})
+    await Fetch(`/api/project/${data.id}`, {method: "DELETE"})
     goto("/project")
   }
 
@@ -255,22 +256,7 @@ let severityData = {
       </div>
     </div>
 
-{#if showDeleteModal}
-<div class="modal modal-blur fade show" id="modal-small" tabindex="-1" role="dialog" style="display: block;" aria-modal="true">
-  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-body">
-        <div class="modal-title">Are you sure?</div>
-        <div>If you proceed, all data related to this project will be permanently lost. This action is irreversible.</div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-link link-secondary me-auto" data-bs-dismiss="modal" on:click={showDeleteModal = false}>Cancel</button>
-        <button type="button" class="btn btn-danger" data-bs-dismiss="modal" on:click={deleteProject(project.ID)}>Yes, delete the project</button>
-      </div>
-    </div>
-  </div>
-</div>
-{/if}
+<DeleteModal bind:showDeleteModal onDelete={deleteProject} deleteButtonText="Yes, delete it!" text="If you proceed, all data related to this project will be permanently lost. This action is irreversible."/>
 
 {:else}
   <p>Loading project details...</p>
