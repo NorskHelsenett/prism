@@ -4,6 +4,7 @@
 	import { Fetch } from '$lib/fetchUtil.js';
 	import Modal from '../Modal.svelte';
 	import UserSearch from '../UserSearch.svelte';
+	import { textAreaListHelper } from "$lib/textAreaListHelper";
 	export let showModal = false;
 	export let model;
 
@@ -183,6 +184,7 @@
 										rows="6"
 										bind:value={description}
 										placeholder="Content.."
+                    use:textAreaListHelper
 									></textarea>
 								</div>
 							</div>
