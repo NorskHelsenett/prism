@@ -177,7 +177,7 @@
 							<div class="col-xl-12">
 								<div class="mb-3">
 									<label class="form-label"
-										>Description <span class="form-label-description">56/100</span></label
+										>Description <span class="form-label-description">{description.length}</span></label
 									>
 									<textarea
 										class="form-control"
