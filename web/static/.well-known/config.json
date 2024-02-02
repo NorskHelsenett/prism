@@ -1,3 +1,11 @@
 {
-  "apiEndpoint": "http://localhost:8080"
+  "apiEndpoint": "http://localhost:8080",
+  "providers": [{
+    "name": "Helsegitlab",
+    "type": "gitlab"
+    }, {
+      "name": "Microsoft AD",
+      "type": "azure"
+    }
+  ]
 }

@@ -1,8 +1,14 @@
 oidc:
-  clientID: ""
-  clientSecret: ""
-  redirectUri: "http://localhost:8080/api/callback"
-  providerUri: ""
+  gitlab:
+    clientID: ""
+    clientSecret: ""
+    redirectUri: "http://localhost:8080/api/callback"
+    providerUri: ""
+  github:
+    clientID: ""
+    clientSecret: ""
+    redirectUri: "http://localhost:8080/api/callback"
+    providerUri: ""
 cors:
   origin: "http://localhost:5173"
 admins:
