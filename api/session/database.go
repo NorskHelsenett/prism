@@ -204,6 +204,16 @@ func LoadSessionStore(s *SessionStore) {
 		adminEmails[adminEmail] = struct{}{}
 	}
 
+	// 2. Check if the database is empty
+	if len(*users) == 0 {
+		// Database is empty, create new admin users
+		for _, adminEmail := range config.AppConfig.Admins {
+			newUser := database.UserData{Email: adminEmail, Role: "admin"}
+			s.DB.Create(&newUser)
+		}
+		return // Exit after creating admin users as there are no existing users to update
+	}
+
 	// Insert users into the session database
 	for _, user := range *users {
 		if _, isAdmin := adminEmails[user.Email]; isAdmin || user.Role == "admin" {
