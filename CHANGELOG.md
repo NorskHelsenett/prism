@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Copy title and text formatted for external issue systems
 - Copy one image. Only one image is allowed in the Clipboard API for browsers. Firefox is not supported, only Chromium.
 - Image carousel for images in vulnerability
+- Copy markdown image format when clicking on images
 
 ### Fixed
 
