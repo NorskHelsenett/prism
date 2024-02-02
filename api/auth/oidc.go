@@ -429,7 +429,7 @@ func HandleCallback(c *gin.Context, store *session.SessionStore) {
 	if claims, ok := tokenClaims.Claims.(jwt.MapClaims); ok {
 		userInfo := UserInfo{
 			Name:    getStringFromMapClaims(claims, "name"),
-			Email:   getStringFromMapClaims(claims, "email"),
+			Email:   strings.ToLower(getStringFromMapClaims(claims, "email")),
 			Picture: getStringFromMapClaims(claims, "picture"),
 		}
 
