@@ -29,13 +29,13 @@ type Cors struct {
 
 // Config represents the application configuration.
 type Config struct {
-	OIDC     OIDCConfig      `yaml:"oidc"`
-	Cors     Cors            `yaml:"cors"`
-	Database Database        `yaml:"database"`
-	Admins   []string        `yaml:"admins"`
-	Events   Events          `yaml:"events"`
-	Slack    Slack           `yaml:"slack"`
-	Roles    map[string]Role `yaml:"-"`
+	OIDC     map[string]OIDCConfig `yaml:"oidc"`
+	Cors     Cors                  `yaml:"cors"`
+	Database Database              `yaml:"database"`
+	Admins   []string              `yaml:"admins"`
+	Events   Events                `yaml:"events"`
+	Slack    Slack                 `yaml:"slack"`
+	Roles    map[string]Role       `yaml:"-"`
 }
 
 type RolesFile struct {

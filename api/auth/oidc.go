@@ -3,6 +3,7 @@ package auth
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -19,7 +20,6 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	"os"
 	"time"
 
 	"prism/config"
@@ -29,7 +29,7 @@ import (
 
 var (
 	oidcProvider *oidc.Provider
-	oauth2Config oauth2.Config
+	oauth2Config map[string]*oauth2.Config
 )
 
 const (
@@ -44,30 +44,35 @@ func init() {
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
+	//it was here
+	oauth2Config = make(map[string]*oauth2.Config)
 
-	oidcProvider, err := oidc.NewProvider(context.Background(), config.AppConfig.OIDC.ProviderURI)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to get provider: %v\n", err)
-		os.Exit(1)
-	}
+	for name, oidcConfig := range config.AppConfig.OIDC {
+		oidcProvider, err := oidc.NewProvider(context.Background(), oidcConfig.ProviderURI)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to get provider: %v\n", err)
+			os.Exit(1)
+		}
 
-	// OAuth2 configuration
-	oauth2Config = oauth2.Config{
-		ClientID:     config.AppConfig.OIDC.ClientID,
-		ClientSecret: config.AppConfig.OIDC.ClientSecret,
-		RedirectURL:  config.AppConfig.OIDC.RedirectURI,
-		Endpoint:     oidcProvider.Endpoint(),
-		Scopes:       []string{oidc.ScopeOpenID, "profile", "email"},
+		oauth2Config[name] = &oauth2.Config{
+			ClientID:     oidcConfig.ClientID,
+			ClientSecret: oidcConfig.ClientSecret,
+			RedirectURL:  oidcConfig.RedirectURI,
+			Endpoint:     oidcProvider.Endpoint(),
+			// You might need to specify Scopes depending on your provider
+			Scopes: []string{oidc.ScopeOpenID, "profile", "email"},
+		}
 	}
 }
 
-func generateState() string {
+func generateState(provider string) string {
 	b := make([]byte, 32) // Creates a slice with 32 random bytes
 	_, err := rand.Read(b)
 	if err != nil {
 		log.Fatalf("Failed to generate random state: %v", err)
 	}
-	return base64.URLEncoding.EncodeToString(b) // Converts bytes to a base64 URL-safe string
+	stateToken := base64.URLEncoding.EncodeToString(b) // Converts bytes to a base64 URL-safe string
+	return stateToken + ":" + provider
 }
 
 func RBACMiddleware() gin.HandlerFunc {
@@ -316,12 +321,19 @@ func AuthMiddleware(store *session.SessionStore) gin.HandlerFunc {
 }
 
 func HandleLogin(c *gin.Context) {
+	provider := c.Query("provider")
 	// Redirect to the OIDC provider's login page
-	state := generateState()
+	state := generateState(provider)
 
 	setSecureStateCookie(c, state)
 
-	c.Redirect(http.StatusTemporaryRedirect, oauth2Config.AuthCodeURL(state))
+	if oauthConfig, ok := oauth2Config[provider]; ok {
+		// Redirect to the OIDC provider's login page
+		c.Redirect(http.StatusTemporaryRedirect, oauthConfig.AuthCodeURL(state))
+	} else {
+		// Handle error: provider not configured
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid provider"})
+	}
 }
 
 type UserInfo struct {
@@ -383,12 +395,17 @@ func HandleCallback(c *gin.Context, store *session.SessionStore) {
 		c.Redirect(http.StatusFound, config.AppConfig.Cors.Origin+"/error.html?message="+url.QueryEscape("Cookie state does not match. Contact administrator. You could be a victim of a CSRF attack!"))
 		return
 	}
+	stateParts := strings.SplitN(queryState, ":", 2)
+
+	// Now you know the provider
+	provider := stateParts[1]
+	oauthConfig, _ := oauth2Config[provider]
 
 	// Extract code and state from query parameters
 	code := c.Query("code")
 
 	// Exchange the code for a token
-	token, err := oauth2Config.Exchange(context.Background(), code)
+	token, err := oauthConfig.Exchange(context.Background(), code)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to exchange token"})
 		return

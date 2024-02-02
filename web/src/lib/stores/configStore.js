@@ -2,6 +2,7 @@ import { goto } from '$app/navigation';
 import { writable } from 'svelte/store';
 
 export const apiEndpoint = writable('');
+export const providers = writable('')
 export const isLoading = writable(true);
 export const isAuthenticated = writable(false);
 
@@ -12,6 +13,7 @@ export async function initializeApiEndpoint() {
     if (response.ok) {
       const config = await response.json();
       apiEndpoint.set(config.apiEndpoint);
+      providers.set(config.providers)
 
       const url = `${config.apiEndpoint}/api/profile`;
       const responseAuth = await fetch(url, { credentials: 'include' });
