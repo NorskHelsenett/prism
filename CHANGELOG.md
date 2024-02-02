@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Field for issue tracker url in vulnerabilities
+- Copy title and text formatted for external issue systems
+- Copy one image. Only one image is allowed in the Clipboard API for browsers. Firefox is not supported, only Chromium.
+- Image carousel for images in vulnerability
+
+### Fixed
+
+- Images are now stored at maximum 2160px - up from 1280px.
 
 ## [0.1.1] - 2024-01-30
 
