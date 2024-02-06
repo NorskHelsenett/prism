@@ -322,13 +322,11 @@ func AuthMiddleware(store *session.SessionStore) gin.HandlerFunc {
 
 func HandleLogin(c *gin.Context) {
 	provider := c.Query("provider")
-	// Redirect to the OIDC provider's login page
-	state := generateState(provider)
-
-	setSecureStateCookie(c, state)
 
 	if oauthConfig, ok := oauth2Config[provider]; ok {
 		// Redirect to the OIDC provider's login page
+		state := generateState(provider)
+		setSecureStateCookie(c, state)
 		c.Redirect(http.StatusTemporaryRedirect, oauthConfig.AuthCodeURL(state))
 	} else {
 		// Handle error: provider not configured
