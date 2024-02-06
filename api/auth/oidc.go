@@ -348,6 +348,7 @@ func HandleLogin(c *gin.Context) {
 		SetSignedCookieFor(c, "code_verifier", "/api/callback", codeVerifier, 69, true)
 		authURL := oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.SetAuthURLParam("code_challenge", codeChallenge), oauth2.SetAuthURLParam("code_challenge_method", "S256"))
 
+		c.Header("Referrer-Policy", "no-referrer")
 		c.Redirect(http.StatusTemporaryRedirect, authURL)
 	} else {
 		// Handle error: provider not configured
