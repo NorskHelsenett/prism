@@ -73,6 +73,55 @@ func GetSignedCookie(c *gin.Context, name string) (UserInfo, error) {
 	return userInfo, nil
 }
 
+func SetSignedCookieFor(c *gin.Context, cookieName, path, value string, maxAge int, laxMode ...bool) {
+
+	laxModeValue := false
+	if len(laxMode) > 0 {
+		laxModeValue = laxMode[0]
+	}
+
+	sameSiteMode := http.SameSiteStrictMode
+	if laxModeValue {
+		sameSiteMode = http.SameSiteLaxMode
+	}
+
+	encoded, err := secure.Encode(cookieName, value)
+	if err != nil {
+		return
+	}
+
+	secureFlag := true
+	if os.Getenv("GO_ENV") == "dev" {
+		secureFlag = false
+	}
+
+	cookie := &http.Cookie{
+		Name:     cookieName,
+		Value:    encoded,
+		Path:     path,
+		Domain:   "",
+		SameSite: sameSiteMode,
+		HttpOnly: true,
+		Secure:   secureFlag,
+		MaxAge:   maxAge,
+	}
+
+	http.SetCookie(c.Writer, cookie)
+}
+func GetSignedCookieFor(c *gin.Context, cookieName string) (string, error) {
+	cookie, err := c.Request.Cookie(cookieName)
+	if err != nil {
+		return "", err
+	}
+	var value string
+	err = secure.Decode(cookieName, cookie.Value, &value)
+	if err != nil {
+		return "", err
+	}
+
+	return value, nil
+}
+
 func ClearSignedCookie(c *gin.Context, name string) {
 	domain, _ := getDomainFromURL(config.AppConfig.Cors.Origin)
 

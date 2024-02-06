@@ -14,13 +14,13 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 
+	"crypto/sha256"
 	"net/http"
 
 	"context"
 	"fmt"
 	"log"
 	"net/url"
-	"time"
 
 	"prism/config"
 	"prism/database"
@@ -320,14 +320,35 @@ func AuthMiddleware(store *session.SessionStore) gin.HandlerFunc {
 	}
 }
 
+func generateCodeVerifier() string {
+	b := make([]byte, 32) // 32 bytes gir 256 bits entropi
+	_, err := rand.Read(b)
+	if err != nil {
+		return ""
+	}
+	return base64.RawURLEncoding.EncodeToString(b)
+}
+
+// Beregn Code Challenge basert på Code Verifier
+func generateCodeChallenge(codeVerifier string) string {
+	s256 := sha256.Sum256([]byte(codeVerifier))
+	return base64.RawURLEncoding.EncodeToString(s256[:])
+}
+
 func HandleLogin(c *gin.Context) {
 	provider := c.Query("provider")
 
 	if oauthConfig, ok := oauth2Config[provider]; ok {
 		// Redirect to the OIDC provider's login page
 		state := generateState(provider)
-		setSecureStateCookie(c, state)
-		c.Redirect(http.StatusTemporaryRedirect, oauthConfig.AuthCodeURL(state))
+		SetSignedCookieFor(c, "oidc_state", "/api/callback", state, 69, true)
+
+		codeVerifier := generateCodeVerifier()
+		codeChallenge := generateCodeChallenge(codeVerifier)
+		SetSignedCookieFor(c, "code_verifier", "/api/callback", codeVerifier, 69, true)
+		authURL := oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.SetAuthURLParam("code_challenge", codeChallenge), oauth2.SetAuthURLParam("code_challenge_method", "S256"))
+
+		c.Redirect(http.StatusTemporaryRedirect, authURL)
 	} else {
 		// Handle error: provider not configured
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid provider"})
@@ -381,11 +402,14 @@ func HandleLogout(c *gin.Context, store *session.SessionStore) {
 
 func HandleCallback(c *gin.Context, store *session.SessionStore) {
 
-	receivedState, err := c.Cookie("oidc_state")
+	receivedState, err := GetSignedCookieFor(c, "oidc_state")
 	if err != nil {
 		c.Redirect(http.StatusFound, config.AppConfig.Cors.Origin+"/error.html?message="+url.QueryEscape("OIDC Cookie state is not found. Contact administrator. You could be a victim of a CSRF attack!"))
 		return
 	}
+
+	// Hent Code Verifier fra cookie eller annen lagring
+	codeVerifier, _ := GetSignedCookieFor(c, "code_verifier")
 
 	// Compare with the state in the query parameter
 	queryState := c.Query("state")
@@ -403,9 +427,9 @@ func HandleCallback(c *gin.Context, store *session.SessionStore) {
 	code := c.Query("code")
 
 	// Exchange the code for a token
-	token, err := oauthConfig.Exchange(context.Background(), code)
+	token, err := oauthConfig.Exchange(context.Background(), code, oauth2.SetAuthURLParam("code_verifier", codeVerifier))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to exchange token"})
+		c.AbortWithError(http.StatusBadRequest, err)
 		return
 	}
 
@@ -452,21 +476,4 @@ func getStringFromMapClaims(claims jwt.MapClaims, key string) string {
 		}
 	}
 	return ""
-}
-
-func setSecureStateCookie(c *gin.Context, state string) {
-	expirationTime := time.Now().Add(5 * time.Minute)
-
-	cookie := &http.Cookie{
-		Name:     "oidc_state",
-		Value:    state,
-		Expires:  expirationTime,
-		Path:     "/api/callback",
-		Domain:   "", // Current domain
-		Secure:   true,
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode, // Setting SameSite to Strict
-	}
-
-	http.SetCookie(c.Writer, cookie)
 }
