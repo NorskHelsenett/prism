@@ -5,9 +5,9 @@
   import { goto } from '$app/navigation';
 
   function navigate(url) {
-    return async (event) => {
+    return (event) => {
       event.preventDefault(); // Prevent the default anchor navigation
-      await closeDropdown();  // If closeDropdown is async, wait for it to complete
+      closeDropdown();  // If closeDropdown is async, wait for it to complete
       goto(url);              // Use goto for navigation
     };
   }
