@@ -70,9 +70,6 @@ spec:
           runAsUser: 1000
           runAsGroup: 101
           readOnlyRootFilesystem: true
-          capabilities:
-            drop:
-              - ALL
       volumes:
       {{- range $value.mounts }}
       - name: {{ .name }}

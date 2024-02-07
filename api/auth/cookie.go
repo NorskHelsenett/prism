@@ -42,7 +42,7 @@ func SetSignedCookie(c *gin.Context, cookieName string, userInfo UserInfo) {
 		SameSite: http.SameSiteStrictMode,
 		HttpOnly: true,       // Recommended
 		Secure:   secureFlag, // Set to true if using HTTPS, Required when SameSite=None
-		MaxAge:   3600 * 12,
+		MaxAge:   3600 * 8,
 	}
 
 	http.SetCookie(c.Writer, cookie)
