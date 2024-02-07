@@ -456,6 +456,8 @@
   <Loader />
 {/if}
 <style>
+  @import url("@tabler/icons-webfont/tabler-icons.min.css");
+
 	[data-bs-theme='dark'] .navbar-brand-autodark .navbar-brand-image {
 		filter: none !important;
 	}

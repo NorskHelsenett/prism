@@ -1,6 +1,8 @@
 <script>
 	import { Fetch } from "$lib/fetchUtil";
 	import { onMount } from "svelte";
+	import Dropdown from "../Dropdown.svelte";
+
 
   let users = []
   let roles = []
@@ -8,9 +10,26 @@
   onMount(async () => {
     users = await Fetch("/api/settings/users/all")
     roles = await Fetch("/api/settings/roles-list")
-
-    users.sort((a, b) => a.Role.localeCompare(b.Role));
   });
+
+  let desc = false
+
+  function orderBy(n) {
+    return (event) => {
+    switch (n) {
+      case "name":
+        users = users.sort((a, b) => a.Name.localeCompare(b.Name));
+        break;
+      case "role":
+        users = users.sort((a, b) => a.Role.localeCompare(b.Role));
+        break;
+      default:
+        users = users.sort((a, b) => a.Name.localeCompare(b.Name));
+        break;
+      }
+      desc = !desc
+      if (desc) users = users.reverse();
+  }}
 
   function isRole(userRole, role){
     return userRole == role
@@ -67,6 +86,15 @@ function formatDate(dateString) {
 
     return formattedDate.trim();
   }
+
+  let showDropdown = [false]
+
+  async function resetMFA(user){
+    showDropdown = [false]
+    // console.log(user)
+    await Fetch(`/api/settings/session/otp/reset/${user.Email}`, {method: "DELETE"})
+    //close all showDropdowns, iterate the array and set it to false
+  }
 </script>
 
 <div class="card me-3 mb-3 mt-3">
@@ -74,26 +102,31 @@ function formatDate(dateString) {
     <table class="table table-vcenter table-mobile-md card-table">
       <thead>
         <tr>
-          <th>Name</th>
+          <th on:click={orderBy("name", true)}><button class="table-sort" data-sort="sort-name">Name</button></th>
           <th>Created</th>
           <th>Last seen</th>
-          <th>Role</th>
+          <th><button on:click={orderBy("role", true)} class="table-sort" data-sort="sort-name">Role</button></th>
           <th class="w-1"></th>
         </tr>
       </thead>
       <tbody>
-      {#each users as user}
+      {#each users as user, index}
         <tr>
           <td data-label="name">
             <div class="d-flex py-1 align-items-center">
               <span class="avatar me-2" style="background-image: url({user.Picture})"></span>
               <div class="flex-fill">
                 <div class="font-weight-medium">{user.Name}</div>
-                <div class="text-secondary"><a href="#" class="text-reset">{user.Email}</a></div>
+                <!-- <div class="text-secondary"><a href="#" class="text-reset">{user.Email}</a></div> -->
+                <div class="mt-2 list-inline list-inline-dots mb-0 text-secondary d-sm-block d-none">
+                                  <div class="list-inline-item"><!-- Download SVG icon from http://tabler-icons.io/i/building-community -->
+                                    <i class="ti ti-mail"></i>
+                                    {user.Email}</div>
+                                </div>
               </div>
             </div>
           </td>
-          <td class="text-secondary" title={formatDateText(user.CreatedAt)}>{formatDate(user.CreatedAt)}</td>
+          <td class="text-secondary" title={formatDateText(user.CreatedAt)}><i class="ti ti-license"></i> {formatDate(user.CreatedAt)}</td>
           <td class="text-secondary" title={formatDateText(user.UpdatedAt)}>{formatDate(user.UpdatedAt)}</td>
           <td data-label="Role">
             <select class="form-select" disabled={userIsAdmin(user.Role)} on:change={updateUser(user)}>
@@ -101,6 +134,13 @@ function formatDate(dateString) {
                 <option value="{role}" class="text-capitalize" selected={isRole(user.Role, role)}>{role}</option>
               {/each}
             </select>
+          </td>
+          <td>
+            <i class="ti ti-dots cursor-pointer" on:click={() => showDropdown[index] = !showDropdown[index]}></i>
+            <Dropdown bind:show={showDropdown[index]}>
+              <a class="dropdown-item" href="#" on:click={()=> resetMFA(user)}>Reset MFA</a>
+              <!-- <div class="dropdown-divider"></div> -->
+            </Dropdown>
           </td>
         </tr>
       {/each}

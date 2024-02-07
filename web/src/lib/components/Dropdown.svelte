@@ -33,7 +33,7 @@
 <style>
   .dropdown-menu-right{
     top: 100%;
-    right: -12px;
+    right: -20px;
   }
 
   .dropdown {
