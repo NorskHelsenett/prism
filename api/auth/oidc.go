@@ -321,9 +321,8 @@ func AuthMiddleware(store *session.SessionStore) gin.HandlerFunc {
 }
 
 func generateCodeVerifier() string {
-	b := make([]byte, 32) // 32 bytes gir 256 bits entropi
-	_, err := rand.Read(b)
-	if err != nil {
+	b := make([]byte, 32) // 32 bytes give 256 bits entropy
+	if _, err := rand.Read(b); err != nil {
 		return ""
 	}
 	return base64.RawURLEncoding.EncodeToString(b)
@@ -344,6 +343,10 @@ func HandleLogin(c *gin.Context) {
 		SetSignedCookieFor(c, "oidc_state", "/api/callback", state, 69, true)
 
 		codeVerifier := generateCodeVerifier()
+		if codeVerifier == "" {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unable to complete request"})
+		}
+
 		codeChallenge := generateCodeChallenge(codeVerifier)
 		SetSignedCookieFor(c, "code_verifier", "/api/callback", codeVerifier, 69, true)
 		authURL := oauthConfig.AuthCodeURL(state, oauth2.AccessTypeOffline, oauth2.SetAuthURLParam("code_challenge", codeChallenge), oauth2.SetAuthURLParam("code_challenge_method", "S256"))
