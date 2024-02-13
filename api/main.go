@@ -87,6 +87,9 @@ func main() {
 		apiRoutes.POST("/vulnerability", routes.PostVulnerability)
 		apiRoutes.PUT("/vulnerability/:id", routes.PutVulnerability)
 		apiRoutes.DELETE("/vulnerability/:id", routes.DeleteVulnerability)
+		apiRoutes.POST("/vulnerability/:id/comment", routes.NewComment)
+		apiRoutes.PUT("/vulnerability/:id/comment", routes.UpdateComment)
+		apiRoutes.DELETE("/vulnerability/:id/comment/:cid", routes.DeleteComment)
 		apiRoutes.PUT("/vulnerability/:id/status/:status", routes.ChangeStatusVulnerability)
 
 		apiRoutes.GET("/settings/users/all", func(c *gin.Context) { routes.GetAllUsers(c, sessionStore) })
