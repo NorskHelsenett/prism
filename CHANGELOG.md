@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2024-02-13
+
+### Added
+
+- Comments are now implemented with edit, reply to and delete.
+- Activites, a historic view of the activities are shown
+
+## [0.1.2] - 2024-02-13
+
 ### Added
 
 - Field for issue tracker url in vulnerabilities
