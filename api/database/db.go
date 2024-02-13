@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"prism/config"
+	"prism/models"
 )
 
 var (
@@ -76,6 +77,8 @@ type JSONData struct {
 	Project       *ProjectData // The associated project
 	Status        string       `gorm:"default:Reported"`
 	SlackUrl      string
+	Comments      datatypes.JSON
+	Revisions     datatypes.JSON
 }
 
 // ImageData is a model for storing image metadata and binary data
@@ -577,8 +580,116 @@ func SaveOrUpdateUserData(name string, email string, picture string) error {
 	return db.Save(&existingUserData).Error
 }
 
-func ChangeVulnerabilityStatus(id uint, status string) error {
-	result := db.Model(&JSONData{}).Where("id = ?", id).Update("Status", status)
+func DeleteComment(id uint, cid string) error {
+	var jsonData JSONData
+	db.Where("id = ?", id).First(&jsonData)
+
+	var filteredComments []models.Comment
+	var comments []models.Comment
+	if jsonData.Comments != nil {
+		if err := json.Unmarshal(jsonData.Comments, &comments); err != nil {
+			return err
+		}
+	}
+	for _, comment := range comments {
+		if comment.ID != cid {
+			filteredComments = append(filteredComments, comment)
+		}
+	}
+
+	commentsJSON, err := json.Marshal(filteredComments)
+	if err != nil {
+		return err
+	}
+	jsonData.Comments = datatypes.JSON(commentsJSON)
+
+	result := db.Model(&JSONData{}).Where("id = ?", id).Update("Comments", jsonData.Comments)
+	return result.Error
+}
+
+func UpdateComment(id uint, comment models.Comment) error {
+	var jsonData JSONData
+	db.Where("id = ?", id).First(&jsonData)
+
+	var filteredComments []models.Comment
+	var comments []models.Comment
+	if jsonData.Comments != nil {
+		if err := json.Unmarshal(jsonData.Comments, &comments); err != nil {
+			return err
+		}
+	}
+	for _, oldComment := range comments {
+		if oldComment.ID != comment.ID {
+			filteredComments = append(filteredComments, oldComment)
+		} else {
+			comment.ParentID = oldComment.ParentID
+			filteredComments = append(filteredComments, comment)
+		}
+	}
+
+	commentsJSON, err := json.Marshal(filteredComments)
+	if err != nil {
+		return err
+	}
+	jsonData.Comments = datatypes.JSON(commentsJSON)
+
+	result := db.Model(&JSONData{}).Where("id = ?", id).Update("Comments", jsonData.Comments)
+	return result.Error
+}
+
+func PersistComment(id uint, comment models.Comment) error {
+
+	var jsonData JSONData
+	db.Where("id = ?", id).First(&jsonData)
+
+	var comments []models.Comment
+	if jsonData.Comments != nil {
+		if err := json.Unmarshal(jsonData.Comments, &comments); err != nil {
+			return err
+		}
+	}
+
+	comments = append(comments, comment)
+	commentsJSON, err := json.Marshal(comments)
+	if err != nil {
+		return err
+	}
+	jsonData.Comments = datatypes.JSON(commentsJSON)
+
+	result := db.Save(jsonData)
+	// result := db.Model(&JSONData{}).Where("id = ?", id).Update("Comments", jsonData.Comments)
+	return result.Error
+}
+
+func ChangeVulnerabilityStatus(id uint, status, email string) error {
+
+	var jsonData JSONData
+
+	db.Where("id = ?", id).First(&jsonData).Select("Status", "Revisions")
+
+	var revision = models.Revision{
+		UserEmail: email,
+		CreatedAt: time.Now(),
+		OldValue:  jsonData.Status,
+		NewValue:  status,
+		Property:  "status",
+	}
+
+	var revisions []models.Revision
+	if jsonData.Revisions != nil {
+		if err := json.Unmarshal(jsonData.Revisions, &revisions); err != nil {
+			return err
+		}
+	}
+	revisions = append(revisions, revision)
+
+	// Assuming j.RevisionsTemp is a []models.Revision
+	revisionsJSON, err := json.Marshal(revisions)
+	if err != nil {
+		return err
+	}
+
+	result := db.Model(&JSONData{}).Where("id = ?", id).Update("Status", status).Update("Revisions", revisionsJSON)
 	return result.Error
 }
 
