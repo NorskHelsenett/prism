@@ -346,6 +346,14 @@ func HasClientAccessToProject(email, projectID string) (bool, error) {
 			return true, nil
 		}
 	}
+
+	emails = strings.Split(project.HackerName, ",")
+	for _, hackerEmail := range emails {
+		if strings.TrimSpace(hackerEmail) == email {
+			return true, nil
+		}
+	}
+
 	return false, nil
 }
 
@@ -757,7 +765,8 @@ func AllVulnerabilities(all bool, email string) ([]JSONData, error) {
 	} else {
 		// Non-admin: Find all project IDs where the email is in "client_email"
 		var projectIDs []uint
-		db.Model(&ProjectData{}).Where("(',' || client_email || ',') LIKE ?", "%,"+email+",%").Pluck("id", &projectIDs)
+		emailPattern := "%" + email + "%"
+		db.Model(&ProjectData{}).Where("client_email LIKE ?", emailPattern).Or("hacker_name LIKE ?", emailPattern).Pluck("id", &projectIDs)
 
 		if len(projectIDs) == 0 {
 			// No projects found for this email, return empty jsonData
@@ -767,6 +776,7 @@ func AllVulnerabilities(all bool, email string) ([]JSONData, error) {
 		// Get vulnerabilities for those projects
 		result := db.Preload("Project").
 			Where("project_id IN ?", projectIDs).
+			Or("found_by LIKE ?", email).
 			Order("json_data.created_at desc").
 			Find(&jsonData)
 		return jsonData, result.Error
@@ -942,7 +952,7 @@ func GetProjectsFor(email string) ([]ProjectData, error) {
 
 	// Prepare the database query to find projects where the email is in the ClientEmail list
 	emailPattern := "%" + email + "%"
-	db := db.Where("client_email LIKE ?", emailPattern)
+	db := db.Where("client_email LIKE ?", emailPattern).Or("hacker_name LIKE ?", emailPattern)
 
 	// Execute the query and sort the results by ProjectName in ascending order
 	db = db.Order("project_name ASC").Find(&projects)

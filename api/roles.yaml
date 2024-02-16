@@ -49,3 +49,12 @@ roles:
         action: [""]
       - resource: "/profile"
         action: ["read"]
+  PET01:
+    description: "A new pentester team with write access to only a given project"
+    permissions:
+      - resource: "/project"
+        action: ["*"]
+      - resource: "/vulnerability"
+        action: ["*"]
+      - resource: "/profile"
+        action: ["read"]

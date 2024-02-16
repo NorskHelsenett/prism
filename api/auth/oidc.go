@@ -89,6 +89,7 @@ func RBACMiddleware() gin.HandlerFunc {
 
 		role, exists := config.AppConfig.Roles[userRoleInterface.(string)]
 		if !exists {
+			//@todo should this be soft-reset to visitor?
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Invalid role"})
 			return
 		}
