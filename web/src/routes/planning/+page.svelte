@@ -19,11 +19,11 @@
 
   let calendarEvents = []
 
-  let months =["Jan", "Feb","Mar", "Apr","May","Jun", "Aug", "Sep", "Oct", "Nov", "Dec"]
+  let months =["Jan", "Feb","Mar", "Apr","May","Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 function eventIn(month, dateFrom, dateTo) {
   // Parse the month string to get the month index
-  const monthIndex = months.indexOf(month) +1;
+  const monthIndex = months.indexOf(month);
 
   // Parse the dateFrom and dateTo strings to Date objects
   const fromDate = new Date(dateFrom);
