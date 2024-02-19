@@ -24,6 +24,7 @@
   async function postAssassment() {
     console.log(assassment)
     // await Fetch("/api/calendar/new", {method: "POST", body: JSON.stringify(assassment)})
+     await Fetch("/api/planning/new", {method: "POST", body: JSON.stringify(assassment)})
   }
 
 	onMount(async () => {
@@ -43,8 +44,8 @@
         // 'values' should be an array of selected IDs
         assassment.projects = values.map(value => {
           let project = projects.find(project => project.ID == value);
-          return project ? project.ID : null;
-        }).filter(id => id !== null); // Filter out any nulls in case a project wasn't found
+          return project ? { id: project.ID, name: project.ProjectName } : null;
+        }).filter(id => id !== null);
       }
 		});
 
@@ -132,7 +133,7 @@ function removeHacker(user) {
 			<div class="col-sm-5">
 				<div class="mb-3">
 					<input type="date" class="form-control" bind:value={assassment.dateFrom} />
-          <input type="date" class="form-control" bind:value={assassment.dateTo} />
+          <input type="date" class="form-control" bind:value={assassment.dateTo} min={assassment.dateFrom}/>
 				</div>
 			</div>
 		</div>

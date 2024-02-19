@@ -3,6 +3,7 @@ package database
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 
 	"runtime"
@@ -79,6 +80,11 @@ type JSONData struct {
 	SlackUrl      string
 	Comments      datatypes.JSON
 	Revisions     datatypes.JSON
+}
+
+type AssessmentJSON struct {
+	gorm.Model
+	Assessment datatypes.JSON
 }
 
 // ImageData is a model for storing image metadata and binary data
@@ -195,6 +201,7 @@ func InitDB() {
 	db.AutoMigrate(&Settings{})
 	db.AutoMigrate(&AuditLog{})
 	db.AutoMigrate(&ImageData{})
+	db.AutoMigrate(&AssessmentJSON{})
 
 	db.Exec(`
     CREATE TRIGGER IF NOT EXISTS jsondata_insert AFTER INSERT ON json_data
@@ -211,6 +218,49 @@ func CloseConnection() error {
 	}
 
 	return sqlDB.Close() // close the underlying SQL database
+}
+
+func PersistAssassment(assessment models.Assessment) error {
+	var assessmentJSON AssessmentJSON
+	data, err := json.Marshal(assessment)
+	if err != nil {
+		return err
+	}
+
+	assessmentJSON.Assessment = data
+
+	return db.Create(&assessmentJSON).Error
+}
+
+func PopulateProjectName(projectID uint) (string, error) {
+	var project ProjectData
+	result := db.First(&project, projectID).Select("project_name")
+	if result.Error != nil {
+		return "", result.Error
+	}
+	return project.ProjectName, nil
+}
+
+func RetrieveAssessments(startDate, endDate string, page, pageSize int) ([]AssessmentJSON, error) {
+	var assessments []AssessmentJSON
+
+	// Calculate offset for pagination
+	offset := (page - 1) * pageSize
+
+	// Build a query using json_extract to filter by dates within the JSON blob
+	query := fmt.Sprintf(`json_extract(assessment, '$.dateFrom') >= ? AND json_extract(assessment, '$.dateTo') <= ?`)
+
+	// Execute the query with pagination
+	result := db.Model(&AssessmentJSON{}).
+		Where(query, startDate, endDate).
+		Offset(offset).Limit(pageSize).
+		Find(&assessments)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return assessments, nil
 }
 
 func RecordAuditLog(log AuditLog) error {

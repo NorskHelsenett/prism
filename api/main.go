@@ -60,6 +60,9 @@ func main() {
 		apiRoutes.Use(auth.RBACMiddleware())
 		apiRoutes.GET("/profile/access-list", routes.GetAccessListRoutes)
 
+		apiRoutes.POST("/planning/new", routes.NewAssassment)
+		apiRoutes.GET("/planning", routes.RetrieveAssessmentsHandler)
+
 		// Group with ACL middleware
 		protectedRoutes := apiRoutes.Group("/")
 		{

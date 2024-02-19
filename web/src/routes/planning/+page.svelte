@@ -4,19 +4,42 @@
   import { onMount } from 'svelte';
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
+	import { Fetch } from '$lib/fetchUtil';
+	import Avatar from '$lib/components/Avatar.svelte';
 
-    onMount(() => {
-        pageMeta.set({ pretitle: 'Planning',title: 'Plan future world domination' });
-    });
+
+  onMount(async () => {
+      pageMeta.set({ pretitle: 'Planning',title: 'Plan future world domination' });
+
+      calendarEvents = await Fetch("/api/planning")
+  });
+
+  let calendarEvents = []
+
+  let months =["Jan", "Feb","Mar", "Apr","May","Jun", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+function eventIn(month, dateFrom, dateTo) {
+  // Parse the month string to get the month index
+  const monthIndex = months.indexOf(month);
+
+  // Parse the dateFrom and dateTo strings to Date objects
+  const fromDate = new Date(dateFrom);
+  const toDate = new Date(dateTo);
+
+  // Check if the month of dateFrom or dateTo matches the specified month
+  // Note: getMonth() returns a 0-based index, so January is 0, February is 1, etc.
+  return fromDate.getMonth() === monthIndex || toDate.getMonth() === monthIndex;
+}
 
 </script>
+
         <!-- Page header -->
         <div class="page-header d-print-none">
           <div class="container-xl">
             <div class="row g-2 align-items-center">
               <div class="col">
                 <h2 class="page-title">
-                  Tabler Inc. Tasks
+                  Planning
                 </h2>
               </div>
               <!-- Page title actions -->
@@ -38,13 +61,13 @@
                 <a class="nav-link" aria-current="page" href="#">Calendar</a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="#">List</a>
+                <a class="nav-link active" href="#">List</a>
               </li>
               <li class="nav-item">
-                <a class="nav-link active" href="#">Board</a>
+                <a class="nav-link" href="#">Board</a>
               </li>
             </ul>
-            <div class="row">
+            <div class="row" hidden>
               <div class="col-12 col-md-6 col-lg">
                 <h2 class="mb-3">To Do</h2>
                 <div class="mb-4">
@@ -634,6 +657,80 @@
                 </div>
               </div>
             </div>
+            <div class="card">
+              <div class="table-responsive small">
+                <table class="table table-vcenter card-table">
+                  <thead>
+                    <tr>
+                      <th class="sticky-col first-col">Title</th>
+                      <th>Estimate</th>
+                      <th>AO</th>
+                      <th>Project</th>
+                      <th>Ordered by</th>
+                      <th>Responsible</th>
+                      <th>Hackers</th>
+                      <th>Status</th>
+                      <th>From</th>
+                      <th>To</th>
+                      <th>Note</th>
+                      {#each months as month}
+                        <th>{month}</th>
+                      {/each}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {#each calendarEvents as event}
+                    <tr>
+                      <td class="sticky-col first-col">{event.description}</td>
+                      <td>40 h</td>
+                      <td>4096</td>
+                      <td>
+                        {#each event.projects as project}
+                          {project.name}
+                        {/each}
+                      </td>
+                      <td>Ordered by</td>
+                      <td>Responisble</td>
+                      <td>
+                        {#each event.hackers as hacker}
+                          <Avatar email="{hacker.email}" option={{ showName: false, size: "sm", emptyFields: false, circle: true}}/>
+                        {/each}
+                      </td>
+                      <td>status</td>
+                      <td>{event.dateFrom}</td>
+                      <td>{event.dateTo}</td>
+                      <td>
+                        {#if event.note}
+                          <i class="ti ti-notes" title="{event.note}"></i>
+                        {/if}
+                      </td>
+                      {#each months as month}
+                        {#if eventIn(month, event.dateFrom, event.dateTo)}
+                          <td>x</td>
+                        {:else}
+                          <td></td>
+                        {/if}
+                      {/each}
+                    </tr>
+                    {/each}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
 
+<style>
+  .sticky-col {
+    position: -webkit-sticky; /* For Safari */
+    position: sticky;
+    background-color: var(--tblr-body-bg); /* Background color is necessary to avoid content overlap */
+    left: 0;
+    z-index: 100; /* Ensure the sticky column is above other elements */
+}
+
+/* Add this if you want a border separation */
+.first-col {
+    border-right: solid 1px var(--tblr-body-bg); /* Bootstrap's default border color */
+}
+</style>
