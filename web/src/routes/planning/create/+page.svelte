@@ -14,7 +14,7 @@
 
   let assassment = {
     description: "",
-    projects: "",
+    projects: [],
     dateFrom: null,
     dateTo: null,
     note: "",
@@ -22,7 +22,8 @@
   }
 
   async function postAssassment() {
-    await Fetch("/api/calendar/new", {method: "POST", body: JSON.stringify(assassment)})
+    console.log(assassment)
+    // await Fetch("/api/calendar/new", {method: "POST", body: JSON.stringify(assassment)})
   }
 
 	onMount(async () => {
@@ -38,9 +39,13 @@
 			placeholder: "Choose a project...",
 			options: projects,
 			create: false,
-			onChange: (value) => {
-				selectedProject = projects.find(project => project.ID == value);
-			}
+      onChange: (values) => {
+        // 'values' should be an array of selected IDs
+        assassment.projects = values.map(value => {
+          let project = projects.find(project => project.ID == value);
+          return project ? project.ID : null;
+        }).filter(id => id !== null); // Filter out any nulls in case a project wasn't found
+      }
 		});
 
 		// Add options to TomSelect
