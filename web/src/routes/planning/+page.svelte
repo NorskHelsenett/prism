@@ -693,8 +693,6 @@ $: if(showModal == false) {
                       <th>Responsible</th>
                       <th>Status</th>
                       <th>Hackers</th>
-                      <th>From</th>
-                      <th>To</th>
                       <th>Note</th>
                       {#each months as month}
                         <th>{month}</th>
@@ -723,14 +721,12 @@ $: if(showModal == false) {
                         <i class="ti ti-calendar-time text-orange"></i>
                       </td>
                       <td>
-                        <div class="avatar-list avatar-list-stacked" style="min-width:10em">
+                        <div class="avatar-list avatar-list-stacked" style="min-width:7em">
                           {#each event.hackers as hacker}
                             <Avatar email="{hacker?.email}" option={{ showName: false, size: "sm", emptyFields: false, circle: true}}/>
                             {/each}
                         </div>
                       </td>
-                      <td>{event?.dateFrom}</td>
-                      <td>{event?.dateTo}</td>
                       <td>
                         {#if event?.note}
                           <i class="ti ti-notes" title="{event?.note}"></i>
@@ -738,7 +734,13 @@ $: if(showModal == false) {
                       </td>
                       {#each months as month}
                         {#if eventIn(month, event?.dateFrom, event?.dateTo)}
-                          <td>x</td>
+                          <td class="timeline-container">
+                            <span class="line bg-azure"></span>
+                              <div class="tooltip-content">
+                                <strong>start:</strong> {event.dateFrom}<br>
+                                <strong>end:</strong> {event.dateTo}
+                              </div>
+                          </td>
                         {:else}
                           <td></td>
                         {/if}
@@ -765,5 +767,35 @@ $: if(showModal == false) {
 /* Add this if you want a border separation */
 .first-col {
     border-right: solid 1px var(--tblr-body-bg); /* Bootstrap's default border color */
+}
+
+.line {
+  position: absolute;
+  bottom: 40%; /* Adjust as necessary to align with the bottom of the month divs */
+  width: 115%;
+  left: 0;
+  border-radius: 5px;
+  height: 10px; /* Thickness of the line */
+  /* background-color: #000; Color of the line */
+  /* No need to set width and left here if you're doing it inline as in the HTML example */
+}
+.timeline-container {
+  position: relative;
+}
+
+.tooltip-content {
+  visibility: hidden;
+  width: 120px;
+  background-color: black;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px 0;
+  position: absolute;
+  z-index: 1;
+}
+
+.timeline-container:hover .tooltip-content {
+  visibility: visible;
 }
 </style>
