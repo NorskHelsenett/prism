@@ -23,7 +23,7 @@
 
 function eventIn(month, dateFrom, dateTo) {
   // Parse the month string to get the month index
-  const monthIndex = months.indexOf(month);
+  const monthIndex = months.indexOf(month) +1;
 
   // Parse the dateFrom and dateTo strings to Date objects
   const fromDate = new Date(dateFrom);
@@ -31,7 +31,8 @@ function eventIn(month, dateFrom, dateTo) {
 
   // Check if the month of dateFrom or dateTo matches the specified month
   // Note: getMonth() returns a 0-based index, so January is 0, February is 1, etc.
-  return fromDate.getMonth() === monthIndex || toDate.getMonth() === monthIndex;
+  console.log(month, fromDate.getMonth(), monthIndex, toDate.getMonth(), fromDate, toDate)
+  return fromDate.getMonth() <= monthIndex && toDate.getMonth() >= monthIndex;
 }
 
 // Define an async function to fetch the data
@@ -690,8 +691,8 @@ $: if(showModal == false) {
                       <th>Project</th>
                       <th>Ordered by</th>
                       <th>Responsible</th>
-                      <th>Hackers</th>
                       <th>Status</th>
+                      <th>Hackers</th>
                       <th>From</th>
                       <th>To</th>
                       <th>Note</th>
@@ -712,7 +713,7 @@ $: if(showModal == false) {
                           {project.name}
                         {/each}
                       </td>
-                      <td>Ordered by</td>
+                      <td><span class="avatar rounded-circle">BG</span></td>
                       <td>
                         <Avatar email="{event.responsible_hacker}" option={{ showName: false, size: "sm", emptyFields: false, circle: true}}/>
                       </td>
