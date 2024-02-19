@@ -1,7 +1,7 @@
 <script>
   import { Fetch } from '$lib/fetchUtil'
   export let email = '';
-  export let option = { showName: true, size: "xs", emptyFields: false}
+  export let option = { showName: true, size: "xs", emptyFields: false, circle: false}
 
   let user = null;
 
@@ -42,7 +42,7 @@
 <span on:mouseleave={hideTooltip}>
   {#if user}
     {#if user.Picture}
-      <img src={user.Picture} alt={user.Name} class="avatar {getSize()} me-2 rounded" on:mousemove={showTooltip} />
+      <img src={user.Picture} alt={user.Name} class:rounded-circle="{option.circle}" class="avatar {getSize()} me-2 rounded" on:mousemove={showTooltip} />
     {:else}
       <span class="avatar text-uppercase">calculateInitials(user.Name)</span>
     {/if}
@@ -82,6 +82,9 @@
 {/if}
 
 <style>
+  img {
+    margin: 0 !important;
+  }
 	.user-info-card {
     position: absolute;
 		border-radius: 5px;

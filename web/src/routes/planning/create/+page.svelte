@@ -1,22 +1,34 @@
 <script>
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import TomSelect from 'tom-select';
   import 'tom-select/dist/css/tom-select.bootstrap5.min.css';
 	import { Fetch } from '$lib/fetchUtil';
 	import Avatar from '$lib/components/Avatar.svelte';
+  import { fade } from 'svelte/transition';
+	import { scale } from 'svelte/transition';
+	import { quintOut } from 'svelte/easing';
 
+  let usersOriginal = []
   let users = []
   let projectSelectElement;
-  let formData = {
-    title: "",
+
+  let assassment = {
+    description: "",
     projects: "",
     dateFrom: null,
-    dateTo: null
+    dateTo: null,
+    note: "",
+    hackers: []
+  }
+
+  async function postAssassment() {
+    await Fetch("/api/calendar/new", {method: "POST", body: JSON.stringify(assassment)})
   }
 
 	onMount(async () => {
 		const projects = await Fetch('/api/project/all');
-		users = await Fetch('/api/profile/all');
+		usersOriginal = await Fetch('/api/profile/all');
+    users = usersOriginal
 
 		let tomSelect = new TomSelect(projectSelectElement, {
       plugins: ['remove_button'],
@@ -37,12 +49,47 @@
 		});
 
 		// Refresh the TomSelect instance to show the new options
-		tomSelect.setValue(model?.ProjectID);
+		// tomSelect.setValue(model?.ProjectID);
 		tomSelect.refreshOptions(false);
+
+    window.addEventListener('click', handleClickOutside);
   });
 
-  let hackers = []
-  let showHackersList = true
+  function handleClickOutside(event) {
+    const cardElement = document.getElementById('hackersDropdownList');
+    if (cardElement && !cardElement.contains(event.target)) {
+      showHackersList = false;
+    }
+  }
+
+  onDestroy(() => {
+    window.removeEventListener('click', handleClickOutside);
+  });
+
+  let showRemoveHacker = []
+  let showHackersList = false
+
+  function addHacker(user){
+  // Add the user to the hackers list if not already included
+  if (!assassment.hackers.includes(user)) {
+    assassment.hackers.push(user);
+  }
+
+  // Filter the users list to exclude users that are in the hackers list
+  users = users.filter(u => !assassment.hackers.includes(u));
+  assassment.hackers = assassment.hackers
+  }
+
+function removeHacker(user) {
+  // Remove the user from the hackers list
+  assassment.hackers = assassment.hackers.filter(h => h !== user);
+
+  // Optionally, add the user back to the users list if not already present
+  if (!users.includes(user)) {
+    users.push(user);
+    users = users
+  }
+}
 
 </script>
 <div class="col-4">
@@ -60,7 +107,7 @@
 				name="example-text-input"
 				placeholder="Description"
 				autofocus
-				bind:value={formData.title}
+				bind:value={assassment.description}
 			/>
 		</div>
 
@@ -79,88 +126,80 @@
 		<div class="row">
 			<div class="col-sm-5">
 				<div class="mb-3">
-					<input type="date" class="form-control" bind:value={formData.dateFrom} />
-          <input type="date" class="form-control" bind:value={formData.dateTo} />
+					<input type="date" class="form-control" bind:value={assassment.dateFrom} />
+          <input type="date" class="form-control" bind:value={assassment.dateTo} />
 				</div>
 			</div>
 		</div>
 
-
       <div class="avatar-list" style="position:relative">
-          <span class="avatar avatar-sm rounded-circle" style="background-image: url(...)">BG</span>
-  <span class="avatar avatar-sm rounded-circle" style="background-image: url(...)">LG</span>
-  <span class="avatar avatar-sm rounded-circle" style="background-image: url(...)">TD</span>
-        {#each hackers as hacker}
-          <span class="avatar rounded-circle" style="background-image: url({hacker.Picture})"></span>
+        {#each assassment.hackers as hacker, index (hacker.Email)}
+          <!-- svelte-ignore a11y-no-static-element-interactions -->
+          <div class="avatar-container" on:mouseenter={() => showRemoveHacker[index] = true} on:mouseleave={() => showRemoveHacker[index] = false} transition:scale={{ duration: 300, delay: 0, opacity: 0.5, start: 0.0, easing: quintOut }}>
+            <Avatar email="{hacker.Email}" option={{ showName: false, size: "sm", emptyFields: false, circle: true}}/>
+            {#if showRemoveHacker[index]}
+              <i class="overlay ti ti-x rounded-circle" transition:fade={{ delay: 50, duration: 500 }} on:click="{removeHacker(hacker)}"></i>
+            {/if}
+          </div>
         {/each}
           <!-- svelte-ignore a11y-click-events-have-key-events -->
           <!-- svelte-ignore a11y-no-static-element-interactions -->
-          <span class="avatar rounded-circle avatar-sm cursor-pointer" on:click="{() => showHackersList = !showHackersList}"><i class="ti ti-plus"></i></span>
-        <div class="card" style="position:absolute;margin-top: 42px;" hidden={showHackersList}>
-          <div class="card-body">
-            {#each users as user}
-              <Avatar email={user.Email}/>
-            {/each}
+          <span class="avatar rounded-circle avatar-sm cursor-pointer" on:click|stopPropagation="{() => showHackersList = !showHackersList}"><i class="ti ti-plus"></i></span>
+        <div id="hackersDropdownList" class="card" style="position:absolute;margin-top: 42px;" hidden={!showHackersList}>
+          <div class="">
+            <ul>
+              {#each users as user}
+                <li class="option selected p-2" on:click="{addHacker(user)}"><Avatar email={user.Email}/></li>
+              {/each}
+            </ul>
           </div>
         </div>
       </div>
-
-
-<!--
-    							<div class="col-xl-12">
-								<div class="mb-3">
-									<label for="clientEmail" class="form-label required">Whos in charge</label>
-									<input
-										type="email"
-										class="form-control"
-										name="clientEmail"
-										bind:value={clientEmail}
-										hidden
-									/>
-									<UserSearch on:selection={handleClientSearchChange} bind:selectedValues={clientEmail}/>
-									<small class="form-hint">
-										This refers to the individual or team accountable for overseeing this project.
-										They will serve as the primary point of contact for all project-related matters.
-									</small>
-								</div>
-								<div class="mb-3">
-									<label for="hackername" class="form-label required">Executoners</label>
-									<input
-										type="email"
-										class="form-control"
-										name="hackername"
-										bind:value={hackerName}
-										hidden
-									/>
-									<UserSearch on:selection={handleUserSearchChange} bind:selectedValues={hackerName}/>
-									<small class="form-hint">
-										This denotes the individual(s) tasked with carrying out and following up on the
-										testing phase of this project. Please provide a list of their email addresses,
-										separated by commas. Note that while the system allows for searching existing
-										users, it does not verify the validity of the provided email addresses.
-									</small>
-								</div>
-							</div> -->
 
 <div class="row">
       <div class="mt-3">
 			<!-- svelte-ignore a11y-autofocus -->
 			<textarea
 				class="form-control"
-				placeholder="Note"
-				bind:value={formData.title}
+				placeholder="Notes..."
+				bind:value={assassment.note}
 			/>
 		</div>
 </div>
 
     </div>
     <div class="card-footer text-end">
-      <a href="#" class="btn btn-primary">Save</a>
+      <a href="#" class="btn btn-primary" on:click="{postAssassment}">Save</a>
     </div>
   </div>
 </div>
 
 <style>
+  .avatar-container {
+    cursor: pointer;
+    position: relative;
+    display: inline-block; /* Or 'block' depending on your layout */
+  }
+
+  .overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* 50% black overlay */
+    display: flex;
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
+    color: white; /* Text color */
+    font-size: 16px; /* Adjust as needed */
+  }
+
+  ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+  }
   :global(.item) {
     background: var(--tblr-modal-bg);
     color: var(--tblr-body-color);
@@ -178,6 +217,12 @@
 	:global(.ts-dropdown-content) {
     background: var(--tblr-card-bg);
     color: var(--tblr-body-color);
+  }
+
+  li.option:hover{
+    cursor: pointer;
+    background-color: rgba(var(--tblr-secondary-rgb),.08);
+    color: inherit;
   }
 
   :global(.ts-wrapper.multi .ts-control > div) {
