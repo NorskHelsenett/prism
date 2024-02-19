@@ -39,9 +39,9 @@ func (a *Assessment) Validate() error {
 	if a.DateTo == "" {
 		return errors.New("dateTo is required")
 	}
-	if len(a.Hackers) == 0 {
-		return errors.New("at least one hacker is required")
-	}
+	// if len(a.Hackers) == 0 {
+	// 	return errors.New("at least one hacker is required")
+	// }
 	for _, hacker := range a.Hackers {
 		if hacker.Email == "" {
 			return errors.New("hacker email is required")

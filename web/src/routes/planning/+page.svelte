@@ -1,17 +1,20 @@
 <script>
-	import { goto } from '$app/navigation';
+	import Modal from '$lib/components/Modal.svelte';
+
   import { pageMeta } from '$lib/stores/pageMeta';
   import { onMount } from 'svelte';
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 	import { Fetch } from '$lib/fetchUtil';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import NewAssessment from '$lib/components/calendar/newAssessment.svelte';
 
+  let showModal = false
 
   onMount(async () => {
       pageMeta.set({ pretitle: 'Planning',title: 'Plan future world domination' });
 
-      calendarEvents = await Fetch("/api/planning")
+      // calendarEvents = await Fetch("/api/planning")
   });
 
   let calendarEvents = []
@@ -31,7 +34,26 @@ function eventIn(month, dateFrom, dateTo) {
   return fromDate.getMonth() === monthIndex || toDate.getMonth() === monthIndex;
 }
 
+// Define an async function to fetch the data
+  async function fetchCalendarEvents() {
+    calendarEvents = await Fetch("/api/planning")
+  }
+
+$: if(showModal == false) {
+  fetchCalendarEvents()
+}
+
 </script>
+
+<!-- svelte-ignore missing-declaration -->
+<Modal bind:showModal on:close={() => showModal = false} large={false}>
+    <div class="card-header" slot="title">
+      <div class="card-title">New Assassment
+      </div>
+    </div>
+  <NewAssessment bind:showModal on:close={() => showModal = false}/>
+</Modal>
+
         <!-- Page header -->
         <div class="page-header d-print-none">
           <div class="container-xl">
@@ -43,7 +65,7 @@ function eventIn(month, dateFrom, dateTo) {
               </div>
               <!-- Page title actions -->
               <div class="col-auto ms-auto d-print-none">
-                <a href="#" class="btn btn-primary" on:click={() => goto("planning/create")} transition:slide={{ delay: 250, duration: 300, easing: quintOut, axis: 'x' }}>
+                <a href="#" class="btn btn-primary" on:click={() => showModal = !showModal} transition:slide={{ delay: 250, duration: 300, easing: quintOut, axis: 'x' }}>
                   <!-- Download SVG icon from http://tabler-icons.io/i/plus -->
                   <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M12 5l0 14"></path><path d="M5 12l14 0"></path></svg>
                   Add
@@ -656,6 +678,7 @@ function eventIn(month, dateFrom, dateTo) {
                 </div>
               </div>
             </div>
+
             <div class="card">
               <div class="table-responsive small">
                 <table class="table table-vcenter card-table">
@@ -678,24 +701,33 @@ function eventIn(month, dateFrom, dateTo) {
                     </tr>
                   </thead>
                   <tbody>
+                    {#if calendarEvents?.length > 0}
                     {#each calendarEvents as event}
                     <tr>
                       <td class="sticky-col first-col">{event?.description}</td>
                       <td>40 h</td>
                       <td>4096</td>
                       <td>
-                        {#each event?.projects as project}
-                          {project?.name}
+                        {#each event.projects as project}
+                          {project.name}
                         {/each}
                       </td>
                       <td>Ordered by</td>
-                      <td>Responisble</td>
                       <td>
-                        {#each event?.hackers as hacker}
-                          <Avatar email="{hacker.email}" option={{ showName: false, size: "sm", emptyFields: false, circle: true}}/>
-                        {/each}
+                        <Avatar email="{event.responsible_hacker}" option={{ showName: false, size: "sm", emptyFields: false, circle: true}}/>
                       </td>
-                      <td>status</td>
+                      <td>
+                        <i class="ti ti-circle-check-filled text-green"></i>
+                        <i class="ti ti-clock-filled text-yellow"></i>
+                        <i class="ti ti-calendar-time text-orange"></i>
+                      </td>
+                      <td>
+                        <div class="avatar-list avatar-list-stacked" style="min-width:10em">
+                          {#each event.hackers as hacker}
+                            <Avatar email="{hacker?.email}" option={{ showName: false, size: "sm", emptyFields: false, circle: true}}/>
+                            {/each}
+                        </div>
+                      </td>
                       <td>{event?.dateFrom}</td>
                       <td>{event?.dateTo}</td>
                       <td>
@@ -712,6 +744,7 @@ function eventIn(month, dateFrom, dateTo) {
                       {/each}
                     </tr>
                     {/each}
+                    {/if}
                   </tbody>
                 </table>
               </div>

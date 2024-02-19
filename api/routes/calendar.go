@@ -14,7 +14,7 @@ import (
 // Default values for pagination
 const (
 	DefaultPage     = 1
-	DefaultPageSize = 10
+	DefaultPageSize = 100
 )
 
 func NewAssassment(c *gin.Context) {
@@ -49,13 +49,13 @@ func RetrieveAssessmentsHandler(c *gin.Context) {
 	startDate := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 
 	// Set the default endDate to 3 months into the future
-	endDate := startDate.AddDate(0, 3, 0)
+	endDate := startDate.AddDate(0, 12, 0)
 
 	// Read the startDate and endDate from query parameters, use default values if not provided
 	startDateStr := c.DefaultQuery("startDate", startDate.Format("2006-01-02"))
 	endDateStr := c.DefaultQuery("endDate", endDate.Format("2006-01-02"))
-	pageStr := c.DefaultQuery("page", "1")
-	pageSizeStr := c.DefaultQuery("pageSize", "10")
+	pageStr := c.DefaultQuery("page", string(DefaultPage))
+	pageSizeStr := c.DefaultQuery("pageSize", string(DefaultPageSize))
 
 	// Parse dates
 	// startDate, err := time.Parse("2006-01-02", startDateStr)

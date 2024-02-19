@@ -11,6 +11,7 @@
   let usersOriginal = []
   let users = []
   let projectSelectElement;
+  export let showModal = false
 
   let assassment = {
     description: "",
@@ -22,9 +23,9 @@
   }
 
   async function postAssassment() {
-    console.log(assassment)
     // await Fetch("/api/calendar/new", {method: "POST", body: JSON.stringify(assassment)})
      await Fetch("/api/planning/new", {method: "POST", body: JSON.stringify(assassment)})
+     showModal = false
   }
 
 	onMount(async () => {
@@ -98,12 +99,7 @@ function removeHacker(user) {
 }
 
 </script>
-<div class="col-4">
   <div class="card">
-    <div class="card-header">
-      <div class="card-title">New Assassment
-      </div>
-    </div>
     <div class="card-body">
     <div class="mb-3">
 			<!-- svelte-ignore a11y-autofocus -->
@@ -178,7 +174,6 @@ function removeHacker(user) {
       <a href="#" class="btn btn-primary" on:click="{postAssassment}">Save</a>
     </div>
   </div>
-</div>
 
 <style>
   .avatar-container {
