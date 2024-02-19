@@ -254,6 +254,7 @@ func RetrieveAssessments(startDate, endDate string, page, pageSize int) ([]Asses
 	result := db.Model(&AssessmentJSON{}).
 		Where(query, startDate, endDate).
 		Offset(offset).Limit(pageSize).
+		Order("json_extract(assessment, '$.dateFrom') ASC").
 		Find(&assessments)
 
 	if result.Error != nil {

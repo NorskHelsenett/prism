@@ -18,7 +18,9 @@ const (
 )
 
 func NewAssassment(c *gin.Context) {
+	email, _ := c.Get("email")
 	var assessment models.Assessment
+	assessment.Responsible = email.(string)
 
 	if err := c.ShouldBindJSON(&assessment); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

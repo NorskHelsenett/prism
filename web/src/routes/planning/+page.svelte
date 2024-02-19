@@ -32,7 +32,6 @@ function eventIn(month, dateFrom, dateTo) {
 }
 
 </script>
-
         <!-- Page header -->
         <div class="page-header d-print-none">
           <div class="container-xl">
@@ -681,31 +680,31 @@ function eventIn(month, dateFrom, dateTo) {
                   <tbody>
                     {#each calendarEvents as event}
                     <tr>
-                      <td class="sticky-col first-col">{event.description}</td>
+                      <td class="sticky-col first-col">{event?.description}</td>
                       <td>40 h</td>
                       <td>4096</td>
                       <td>
-                        {#each event.projects as project}
-                          {project.name}
+                        {#each event?.projects as project}
+                          {project?.name}
                         {/each}
                       </td>
                       <td>Ordered by</td>
                       <td>Responisble</td>
                       <td>
-                        {#each event.hackers as hacker}
+                        {#each event?.hackers as hacker}
                           <Avatar email="{hacker.email}" option={{ showName: false, size: "sm", emptyFields: false, circle: true}}/>
                         {/each}
                       </td>
                       <td>status</td>
-                      <td>{event.dateFrom}</td>
-                      <td>{event.dateTo}</td>
+                      <td>{event?.dateFrom}</td>
+                      <td>{event?.dateTo}</td>
                       <td>
-                        {#if event.note}
-                          <i class="ti ti-notes" title="{event.note}"></i>
+                        {#if event?.note}
+                          <i class="ti ti-notes" title="{event?.note}"></i>
                         {/if}
                       </td>
                       {#each months as month}
-                        {#if eventIn(month, event.dateFrom, event.dateTo)}
+                        {#if eventIn(month, event?.dateFrom, event?.dateTo)}
                           <td>x</td>
                         {:else}
                           <td></td>

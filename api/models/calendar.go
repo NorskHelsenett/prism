@@ -3,6 +3,7 @@ package models
 import "errors"
 
 type Assessment struct {
+	Responsible string    `json:"responsible_hacker"`
 	Description string    `json:"description"`
 	Projects    []Project `json:"projects"`
 	DateFrom    string    `json:"dateFrom" gorm:"type:date"`
