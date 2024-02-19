@@ -1,6 +1,9 @@
 <script>
+	import { goto } from '$app/navigation';
   import { pageMeta } from '$lib/stores/pageMeta';
   import { onMount } from 'svelte';
+	import { slide } from 'svelte/transition';
+	import { quintOut } from 'svelte/easing';
 
     onMount(() => {
         pageMeta.set({ pretitle: 'Planning',title: 'Plan future world domination' });
@@ -18,27 +21,27 @@
               </div>
               <!-- Page title actions -->
               <div class="col-auto ms-auto d-print-none">
-                <a href="#" class="btn btn-primary">
+                <a href="#" class="btn btn-primary" on:click={() => goto("planning/create")} transition:slide={{ delay: 250, duration: 300, easing: quintOut, axis: 'x' }}>
                   <!-- Download SVG icon from http://tabler-icons.io/i/plus -->
                   <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M12 5l0 14"></path><path d="M5 12l14 0"></path></svg>
-                  Add board
+                  Add
                 </a>
               </div>
             </div>
           </div>
         </div>
         <!-- Page body -->
-        <div class="page-body">
+        <div class="page-body" style="margin-top: 17px;">
           <div class="container-xl">
             <ul class="nav nav-bordered mb-4">
               <li class="nav-item">
-                <a class="nav-link active" aria-current="page" href="#">View all</a>
+                <a class="nav-link" aria-current="page" href="#">Calendar</a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="#">Marketing</a>
+                <a class="nav-link" href="#">List</a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="#">Development</a>
+                <a class="nav-link active" href="#">Board</a>
               </li>
             </ul>
             <div class="row">

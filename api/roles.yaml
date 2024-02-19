@@ -23,6 +23,8 @@ roles:
         action: ["*"]
       - resource: "/vulnerability/:id"
         action: ["*"]
+      - resource: "/planning"
+        action: ["*"]
   visitor:
     description: "Default access to read only"
     permissions:
