@@ -87,12 +87,15 @@
 
 
       <div class="avatar-list" style="position:relative">
+          <span class="avatar avatar-sm rounded-circle" style="background-image: url(...)">BG</span>
+  <span class="avatar avatar-sm rounded-circle" style="background-image: url(...)">LG</span>
+  <span class="avatar avatar-sm rounded-circle" style="background-image: url(...)">TD</span>
         {#each hackers as hacker}
           <span class="avatar rounded-circle" style="background-image: url({hacker.Picture})"></span>
         {/each}
           <!-- svelte-ignore a11y-click-events-have-key-events -->
           <!-- svelte-ignore a11y-no-static-element-interactions -->
-          <span class="avatar rounded-circle cursor-pointer" on:click="{() => showHackersList = !showHackersList}"><i class="ti ti-plus"></i></span>
+          <span class="avatar rounded-circle avatar-sm cursor-pointer" on:click="{() => showHackersList = !showHackersList}"><i class="ti ti-plus"></i></span>
         <div class="card" style="position:absolute;margin-top: 42px;" hidden={showHackersList}>
           <div class="card-body">
             {#each users as user}

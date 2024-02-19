@@ -43,7 +43,7 @@
 				</div>
 			</div>
 			<div class="col-lg d-none d-lg-block">
-				<img src="./login.png" height="450" class="d-block mx-auto" alt="" />
+				<img src="./login_landing_page.png" height="450" class="d-block mx-auto" alt="" />
 			</div>
 		</div>
 	</div>
