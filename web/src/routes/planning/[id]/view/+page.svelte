@@ -3,6 +3,7 @@ import { goto } from '$app/navigation';
 	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 import Avatar from '$lib/components/Avatar.svelte';
+import AvatarList from '$lib/components/calendar/Avatarlist.svelte';
 import DeleteModal from '$lib/components/DeleteModal.svelte';
 import Dropdown from '$lib/components/Dropdown.svelte';
 import Icon from '$lib/components/Icon.svelte';
@@ -52,8 +53,9 @@ function editProp(prop, value){
 async function saveChanges(prop, value) {
     // Clone the assessment object to avoid mutating the original state
   const updatedAssessment = { ...assessment };
-
-  assessment[prop] = value;
+  if(prop != null){
+    assessment[prop] = value;
+  }
   updatedAssessment.estimate = Number(updatedAssessment.estimate)
   await Fetch(`/api/planning/${data.id}`, {method: "PUT", body: JSON.stringify(updatedAssessment)})
   showModalEdit = false
@@ -134,7 +136,7 @@ async function handleKeydown(event) {
       <div class="text-secondary">You've found the edit mode. Now you can make changes to your assessment.</div>
     </div>
   </div>
-  <a class="btn-close" data-bs-dismiss="alert" aria-label="close" on:click="{() => editModus = false}"></a>
+  <a class="btn-close" data-bs-dismiss="alert" aria-label="close" on:click="{() => {saveChanges(null,null); editModus = false}}"></a>
 </div>
 {/if}
 
@@ -261,15 +263,29 @@ async function handleKeydown(event) {
         <div class="datagrid-item">
           <div class="datagrid-title">Assigned Hackers</div>
           <div class="datagrid-content">
-            {#each assessment.hackers as hacker }
-              <Avatar email={hacker.email.trim()} option={{ showName: false, circle: true, size: "sm" }}/>
-            {/each}
+            {#if editModus}
+              <AvatarList
+                hackers={assessment?.hackers}
+              />
+            {:else}
+              {#each assessment.hackers as hacker }
+                <Avatar email={hacker?.email || hacker?.Email} option={{ showName: false, circle: true, size: "sm" }}/>
+              {/each}
+            {/if}
           </div>
         </div>
         </div>
         <div class="row mt-3">
             <div class="datagrid-title">Note</div>
+            {#if editModus}
+              <textarea
+                class="form-control"
+                placeholder="Notes..."
+                bind:value={assessment.note}
+              />
+            {:else}
               <Markdown markdown={assessment.note}/>
+            {/if}
         </div>
       </div>
     </div>
