@@ -220,6 +220,15 @@ func CloseConnection() error {
 	return sqlDB.Close() // close the underlying SQL database
 }
 
+func UpdateAssassment(assessment models.Assessment, id uint) error {
+	data, err := json.Marshal(assessment)
+	if err != nil {
+		return err
+	}
+
+	return db.Model(&AssessmentJSON{}).Where("id = ?", id).Update("assessment", data).Error
+}
+
 func PersistAssassment(assessment models.Assessment) error {
 	var assessmentJSON AssessmentJSON
 	data, err := json.Marshal(assessment)

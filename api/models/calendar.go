@@ -11,6 +11,8 @@ type Assessment struct {
 	Note        string    `json:"note"`
 	Hackers     []Hacker  `json:"hackers"`
 	ID          uint      `json:"id" gorm:"-"`
+	Estimate    uint      `json:"estimate"`
+	WorkOrder   string    `json:"workorder"`
 }
 
 type Hacker struct {

@@ -6,6 +6,7 @@
 	import Avatar from '$lib/components/Avatar.svelte';
 	import NewAssessment from '$lib/components/calendar/newAssessment.svelte';
 	import { goto } from '$app/navigation';
+	import Assessments from '$lib/components/dashboard/Assessments.svelte';
 
   let showModal = false
   let selectedRow = -1
@@ -730,11 +731,15 @@ console.log(dayPercentage)
                         <h4 class="text-capitalize">{event?.description}</h4>
                         <div class="grid-container text-secondary">
                           <strong title="Work Order">AO:</strong>
-                          <button class="btn-none" on:click|preventDefault="{() => copyText('4096')}">4096</button>
+                          <button class="btn-none" on:click|preventDefault="{() => copyText(event?.workorder)}">{event?.workorder || ""}</button>
                           <!-- <strong title="Estimate">Est.:</strong> <span>4000 h</span> -->
                         </div>
                       </td>
-                      <td class="text-secondary">4000 h</td>
+                      <td class="text-secondary">
+                        {#if event?.estimate}
+                          {event?.estimate} h
+                        {/if}
+                      </td>
                       <td style="min-width:10em">
                         {#each event.projects as project}
                           <div class="badge bg-cyan-lt mt-1"><a href="/project/{project.id}/view">{project.name}</a></div>

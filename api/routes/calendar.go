@@ -61,6 +61,37 @@ func DeleteAssessmentsHandler(c *gin.Context) {
 	}
 }
 
+func PutAssessmentsHandler(c *gin.Context) {
+	idStr := c.Param("id") // Get ID as string
+	if idStr != "" {
+		// Convert string ID to uint
+		id, err := strconv.ParseUint(idStr, 10, 32)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ID format"})
+			return
+		}
+
+		var assessment models.Assessment
+
+		if err := c.ShouldBindJSON(&assessment); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		if err := assessment.Validate(); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		error := database.UpdateAssassment(assessment, uint(id))
+		if error != nil {
+			c.AbortWithStatus(500)
+			return
+		}
+
+		c.JSON(http.StatusOK, assessment)
+	}
+}
+
 func RetrieveAssessmentsHandler(c *gin.Context) {
 
 	idStr := c.Param("id") // Get ID as string

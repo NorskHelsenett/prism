@@ -36,7 +36,53 @@ onMount(async () => {
   }
 
 $: responsibleHackerName = ""
+
+let showModalEdit = false
+let modalEditProp = null
+let modalEditValue = ""
+
+function editProp(prop, value){
+  showModalEdit = true
+  modalEditProp = prop
+  modalEditValue = value
+}
+
+async function saveChanges(prop, value) {
+
+    // Clone the assessment object to avoid mutating the original state
+  const updatedAssessment = { ...assessment };
+
+  assessment[prop] = value;
+  updatedAssessment.estimate = Number(updatedAssessment.estimate)
+  await Fetch(`/api/planning/${data.id}`, {method: "PUT", body: JSON.stringify(updatedAssessment)})
+  showModalEdit = false
+}
+
+async function handleKeydown(event) {
+  if (event.key === 'Enter') {
+    // Enter key was pressed
+    await saveChanges(modalEditProp, modalEditValue)
+  }
+}
 </script>
+
+{#if showModalEdit}
+<div class="modal modal-blur fade show" id="modal-small" tabindex="-1" style="display: block;" aria-modal="true" role="dialog">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-body">
+        <!-- Bind the input to modalEditValue instead of modalEditProp -->
+        <input autofocus bind:value={modalEditValue} class="form-control" on:keydown={handleKeydown}/>
+      </div>
+      <div class="modal-footer">
+        <!-- Update showModalEdit and optionally save changes on Save button click -->
+        <button type="button" class="btn btn-link link-secondary me-auto" on:click="{() => showModalEdit = false}">Cancel</button>
+        <button type="button" class="btn btn-info" on:click="{() => { showModalEdit = false; saveChanges(modalEditProp, modalEditValue); }}">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+{/if}
 
 <div class="row g-2 align-items-center">
   <div class="col">
@@ -59,7 +105,7 @@ $: responsibleHackerName = ""
         </div>
 
         <Dropdown bind:show={showDropdown}>
-          <a class="dropdown-item" href="#" on:click={()=> showEditModal = !showEditModal}>Edit</a>
+          <a class="dropdown-item" href="#" on:click={()=> {showEditModal = !showEditModal; showDropdown = false}}>Edit</a>
           <div class="dropdown-divider"></div>
           <a class="dropdown-item text-warning" href="#" on:click={() => showDeleteModal = true}>
             <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-trash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
@@ -141,7 +187,7 @@ $: responsibleHackerName = ""
               </div>
               <div class="col">
                 <div class="font-weight-medium">
-                  450 h
+                  {assessment.estimate} h
                 </div>
                 <div class="text-secondary">Estimate</div>
               </div>
@@ -152,19 +198,17 @@ $: responsibleHackerName = ""
 
       <div class="col-sm-3 col-lg-3">
         <div class="card card-sm">
-
-          <div class="card-body placeholder-glow">
-                        <div class="row">
-                          <div class="col-auto">
-                            <Avatar email="{assessment?.responsible_hacker}" option={{ showName: false, size: "md", emptyFields: false, circle: true}}/>
-                          </div>
-                          <div class="col">
-                            <div class="font-weight-medium">{responsibleHackerName}</div>
-                            <div class="text-secondary">Responsible</div>
-                          </div>
-                        </div>
-                      </div>
-
+          <div class="card-body">
+            <div class="row">
+              <div class="col-auto">
+                <Avatar email="{assessment?.responsible_hacker}" option={{ showName: false, size: "md", emptyFields: false, circle: true}}/>
+              </div>
+              <div class="col">
+                <div class="font-weight-medium">{responsibleHackerName}</div>
+                <div class="text-secondary">Responsible</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -173,14 +217,14 @@ $: responsibleHackerName = ""
       <div class="card-body" style="min-height: 10rem">
         <div class="datagrid">
 
-          <div class="datagrid-item">
+          <div class="datagrid-item" on:click={() => editProp('workorder', assessment.workorder)}>
             <div class="datagrid-title">AO</div>
             <div class="datagrid-content">
-              {assessment?.ao || ""}
+              {assessment?.workorder || ""}
             </div>
           </div>
 
-          <div class="datagrid-item">
+          <div class="datagrid-item" on:click={() => editProp('estimate', assessment.estimate)}>
             <div class="datagrid-title">Estimate</div>
             <div class="datagrid-content">
               {assessment?.estimate || ""}
