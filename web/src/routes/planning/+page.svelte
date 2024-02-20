@@ -49,7 +49,6 @@ function copyText(content){
     }
 
     navigator.clipboard.writeText(content).then(() => {
-      console.log('Content copied to clipboard successfully!');
       // notification.addAlert({message: 'Content copied to clipboard successfully'});
     }).catch(err => {
       console.error('Failed to copy content to clipboard:', err);
@@ -68,7 +67,6 @@ function copyText(content){
 
   let totalDays = daysInMonth(monthIndex + 1, currentYear); // Month index is 0-based, add 1 to get the correct month
   let dayPercentage = (currentDay / totalDays) * 100; // Calculate the percentage of the month that has passed
-console.log(dayPercentage)
 </script>
 
 <!-- svelte-ignore missing-declaration -->

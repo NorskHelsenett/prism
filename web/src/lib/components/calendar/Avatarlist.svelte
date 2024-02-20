@@ -1,12 +1,14 @@
 <script>
 	import { onDestroy, onMount } from 'svelte';
-	import TomSelect from 'tom-select';
   import 'tom-select/dist/css/tom-select.bootstrap5.min.css';
 	import { Fetch } from '$lib/fetchUtil';
 	import Avatar from '$lib/components/Avatar.svelte';
   import { fade } from 'svelte/transition';
 	import { scale } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
+  import { createEventDispatcher } from 'svelte';
+
+  const dispatch = createEventDispatcher();
 
   let usersOriginal = []
   let users = []
@@ -15,6 +17,7 @@
 	onMount(async () => {
 		usersOriginal = await Fetch('/api/profile/all');
     users = usersOriginal
+    users = usersOriginal.filter(user => !hackers.some(hacker => hacker.email === user.Email));
 
     window.addEventListener('click', handleClickOutside);
   });
@@ -33,26 +36,30 @@
   let showRemoveHacker = []
   let showHackersList = false
 
-  function addHacker(user){
-  // Add the user to the hackers list if not already included
-  if (!hackers.includes(user)) {
-    hackers.push(user);
-  }
+function addHacker(user) {
+    user.email = user.Email || user.email; // Ensure the email property is standardized
 
-  // Filter the users list to exclude users that are in the hackers list
-  users = users.filter(u => !hackers.includes(u));
-  hackers = hackers
-  }
+    // Check if the user is already in the hackers list based on email
+    if (!hackers.some(hacker => hacker.email === user.email)) {
+        hackers = [...hackers, user]; // Use spread syntax for immutability
+    }
+
+    // Filter the users list to exclude users that are now in the hackers list
+    users = users.filter(u => !hackers.some(hacker => hacker.email === u.email));
+    dispatch('updateHackers', hackers);
+}
 
 function removeHacker(user) {
-  // Remove the user from the hackers list
-  hackers = hackers.filter(h => h !== user);
+    user.email = user.Email || user.email; // Ensure the email property is standardized
 
-  // Optionally, add the user back to the users list if not already present
-  if (!users.includes(user)) {
-    users.push(user);
-    users = users
-  }
+    // Filter out the user from the hackers list
+    hackers = hackers.filter(hacker => hacker.email !== user.email);
+
+    // Add the user back to the users list if they're not already present
+    if (!users.some(u => u.email === user.email)) {
+        users = [...users, user]; // Use spread syntax for immutability
+    }
+    dispatch('updateHackers', hackers);
 }
 
 </script>
@@ -74,7 +81,7 @@ function removeHacker(user) {
     <div class="">
       <ul>
         {#each users as user}
-          <li class="option selected p-2" on:click="{addHacker(user)}"><Avatar email={user.email}/></li>
+          <li class="option selected p-2" on:click="{addHacker(user)}"><Avatar email={user.Email}/></li>
         {/each}
       </ul>
     </div>
@@ -120,32 +127,9 @@ function removeHacker(user) {
     color: var(--tblr-body-color);
   }
 
-	:global(.ts-control) {
-		height: 2.7em;
-	}
-
-	:global(.ts-dropdown-content) {
-    background: var(--tblr-card-bg);
-    color: var(--tblr-body-color);
-  }
-
   li.option:hover{
     cursor: pointer;
     background-color: rgba(var(--tblr-secondary-rgb),.08);
     color: inherit;
-  }
-
-  :global(.ts-wrapper.multi .ts-control > div) {
-    background: var(--tblr-bg-surface-secondary);
-    border: 1px solid var(--tblr-border-color);
-    color: var(--tblr-body-color);
-  }
-
-	:global(.ts-control input) {
-		color: var(--tblr-body-color);
-	}
-
-  :global(.ts-wrapper.plugin-remove_button:not(.rtl) .item .remove) {
-    border-left: 1px solid var(--tblr-border-color);
   }
 </style>

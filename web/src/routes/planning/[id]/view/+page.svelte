@@ -13,6 +13,7 @@ import CountVulnerabilities from '$lib/components/dashboard/countVulnerabilities
 import { Fetch } from '$lib/fetchUtil';
 import { accessLevels } from '$lib/userStore';
 import { onMount } from 'svelte';
+	import ProjectList from '$lib/components/calendar/ProjectList.svelte';
 
 export let data;
 let assessment = null
@@ -51,12 +52,16 @@ function editProp(prop, value){
 }
 
 async function saveChanges(prop, value) {
-    // Clone the assessment object to avoid mutating the original state
+  // Clone the assessment object to avoid mutating the original state
   const updatedAssessment = { ...assessment };
   if(prop != null){
     assessment[prop] = value;
   }
   updatedAssessment.estimate = Number(updatedAssessment.estimate)
+  updatedAssessment.hackers = []
+  assessment.hackers.forEach(hacker => {
+    updatedAssessment.hackers.push({"email": hacker.Email || hacker.email})
+  });
   await Fetch(`/api/planning/${data.id}`, {method: "PUT", body: JSON.stringify(updatedAssessment)})
   showModalEdit = false
 }
@@ -67,6 +72,11 @@ async function handleKeydown(event) {
     await saveChanges(modalEditProp, modalEditValue)
   }
 }
+
+  function handleUpdateHackers(event) {
+    assessment.hackers = event.detail; // Assuming event.detail contains the updated hackers array
+  }
+
 </script>
 
 {#if showModalEdit && editModus}
@@ -90,7 +100,7 @@ async function handleKeydown(event) {
 <div class="row g-2 align-items-center">
   <div class="col">
     <div class="page-pretitle">Assessment</div>
-    <h2 class="page-title">
+    <h2 class="page-title" on:click={() => editProp('description', assessment.description)}>
       {assessment?.description}
     </h2>
   </div>
@@ -254,9 +264,13 @@ async function handleKeydown(event) {
         <div class="datagrid-item">
           <div class="datagrid-title">Projects</div>
           <div class="datagrid-content">
-            {#each assessment.projects as project}
-              <span>{project.name}</span>
-            {/each}
+            {#if editModus}
+              <ProjectList projects={assessment.projects} on:updateProjects="{e => assessment.projects = e.detail}"/>
+            {:else}
+              {#each assessment.projects as project}
+                <span>{project.name}</span>
+              {/each}
+            {/if}
           </div>
         </div>
 
@@ -264,9 +278,7 @@ async function handleKeydown(event) {
           <div class="datagrid-title">Assigned Hackers</div>
           <div class="datagrid-content">
             {#if editModus}
-              <AvatarList
-                hackers={assessment?.hackers}
-              />
+              <AvatarList hackers={assessment.hackers} on:updateHackers="{handleUpdateHackers}"/>
             {:else}
               {#each assessment.hackers as hacker }
                 <Avatar email={hacker?.email || hacker?.Email} option={{ showName: false, circle: true, size: "sm" }}/>
