@@ -1,6 +1,7 @@
 <script>
 import { goto } from '$app/navigation';
-
+	import { slide } from 'svelte/transition';
+	import { quintOut } from 'svelte/easing';
 import Avatar from '$lib/components/Avatar.svelte';
 import DeleteModal from '$lib/components/DeleteModal.svelte';
 import Dropdown from '$lib/components/Dropdown.svelte';
@@ -16,7 +17,7 @@ export let data;
 let assessment = null
 let showDropdown = false;
 let showDeleteModal = false;
-let showEditModal = false;
+let editModus = false;
 let severityData = { critical: 1, high: 1, medium: 2, low: 0, information: 0 }
 let vulnerabilitiesTotal = 10
 
@@ -42,13 +43,13 @@ let modalEditProp = null
 let modalEditValue = ""
 
 function editProp(prop, value){
+  if(!editModus) { return }
   showModalEdit = true
   modalEditProp = prop
   modalEditValue = value
 }
 
 async function saveChanges(prop, value) {
-
     // Clone the assessment object to avoid mutating the original state
   const updatedAssessment = { ...assessment };
 
@@ -66,7 +67,7 @@ async function handleKeydown(event) {
 }
 </script>
 
-{#if showModalEdit}
+{#if showModalEdit && editModus}
 <div class="modal modal-blur fade show" id="modal-small" tabindex="-1" style="display: block;" aria-modal="true" role="dialog">
   <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
     <div class="modal-content">
@@ -77,7 +78,7 @@ async function handleKeydown(event) {
       <div class="modal-footer">
         <!-- Update showModalEdit and optionally save changes on Save button click -->
         <button type="button" class="btn btn-link link-secondary me-auto" on:click="{() => showModalEdit = false}">Cancel</button>
-        <button type="button" class="btn btn-info" on:click="{() => { showModalEdit = false; saveChanges(modalEditProp, modalEditValue); }}">Save</button>
+        <button type="button" class="btn btn-info" on:click="{() => { saveChanges(modalEditProp, modalEditValue); }}">Save</button>
       </div>
     </div>
   </div>
@@ -105,7 +106,7 @@ async function handleKeydown(event) {
         </div>
 
         <Dropdown bind:show={showDropdown}>
-          <a class="dropdown-item" href="#" on:click={()=> {showEditModal = !showEditModal; showDropdown = false}}>Edit</a>
+          <a class="dropdown-item" href="#" on:click={()=> {editModus = !editModus; showDropdown = false}}>Edit</a>
           <div class="dropdown-divider"></div>
           <a class="dropdown-item text-warning" href="#" on:click={() => showDeleteModal = true}>
             <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-trash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
@@ -120,6 +121,22 @@ async function handleKeydown(event) {
     </div>
   </div>
 </div>
+
+{#if editModus}
+  <div class="card alert alert-info alert-dismissible" role="alert" transition:slide={{ delay: 100, duration: 300, easing: quintOut, axis: 'y' }}>
+  <div class="d-flex">
+    <div>
+      <!-- Download SVG icon from http://tabler-icons.io/i/info-circle -->
+      <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"></path><path d="M12 9h.01"></path><path d="M11 12h1v4h1"></path></svg>
+    </div>
+    <div>
+      <h4 class="alert-title">Edit mode!</h4>
+      <div class="text-secondary">You've found the edit mode. Now you can make changes to your assessment.</div>
+    </div>
+  </div>
+  <a class="btn-close" data-bs-dismiss="alert" aria-label="close" on:click="{() => editModus = false}"></a>
+</div>
+{/if}
 
 <div class="row-deck row-cards" >
 	<Criticality {severityData}/>
@@ -305,3 +322,9 @@ async function handleKeydown(event) {
 {/if}
 
 <DeleteModal bind:showDeleteModal onDelete={deleteProject} deleteButtonText="Yes, delete it!" text="Delete this assessment. This action is irreversible."/>
+
+<style>
+  .alert {
+    background-color: var(--tblr-card-bg);
+  }
+</style>
