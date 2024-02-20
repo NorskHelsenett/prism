@@ -6,6 +6,7 @@ import (
 	"prism/database"
 	"prism/models"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -41,7 +42,67 @@ func NewAssassment(c *gin.Context) {
 	c.JSON(http.StatusOK, assessment)
 }
 
+func DeleteAssessmentsHandler(c *gin.Context) {
+	idStr := c.Param("id") // Get ID as string
+	if idStr != "" {
+		// Convert string ID to uint
+		id, err := strconv.ParseUint(idStr, 10, 32)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ID format"})
+			return
+		}
+		err = database.DeleteAssessment(uint(id))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "unable to delete assessment"})
+		}
+		c.JSON(http.StatusOK, gin.H{"status": "deleted successfully"})
+	} else {
+		c.JSON(http.StatusMethodNotAllowed, gin.H{"error": "id is required"})
+	}
+}
+
 func RetrieveAssessmentsHandler(c *gin.Context) {
+
+	idStr := c.Param("id") // Get ID as string
+	if idStr != "" {
+		// Convert string ID to uint
+		id, err := strconv.ParseUint(idStr, 10, 32)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ID format"})
+			return
+		}
+		assessmentJSON, err := database.RetrieveAssessment(uint(id))
+		if err != nil {
+			if strings.Contains(err.Error(), "not found") {
+				c.AbortWithStatus(http.StatusNotFound)
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error getting assessment"})
+			return
+		}
+
+		var assessment models.Assessment
+		if err := json.Unmarshal(assessmentJSON.Assessment, &assessment); err != nil {
+			// Handle JSON unmarshal error, maybe log it or return an HTTP error
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse assessment data"})
+			return
+		}
+
+		// Iterate over assessment.Projects by index
+		for j := range assessment.Projects {
+			// Use the index to directly reference and modify each project
+			name, err := database.PopulateProjectName(assessment.Projects[j].Id)
+			if err != nil {
+				// Handle the error, perhaps log it or return an HTTP error response
+				// For simplicity, let's continue to the next project
+				continue
+			}
+			assessment.Projects[j].Name = name
+		}
+		assessment.ID = assessmentJSON.ID
+		c.JSON(http.StatusOK, assessment)
+		return
+	}
+
 	// Get the current time
 	now := time.Now()
 
@@ -109,7 +170,7 @@ func RetrieveAssessmentsHandler(c *gin.Context) {
 			}
 			assessment.Projects[j].Name = name
 		}
-
+		assessment.ID = assessmentJSON.ID
 		modelAssessments = append(modelAssessments, assessment)
 	}
 

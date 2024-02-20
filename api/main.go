@@ -62,6 +62,8 @@ func main() {
 
 		apiRoutes.POST("/planning/new", routes.NewAssassment)
 		apiRoutes.GET("/planning", routes.RetrieveAssessmentsHandler)
+		apiRoutes.GET("/planning/:id", routes.RetrieveAssessmentsHandler)
+		apiRoutes.DELETE("/planning/:id", routes.DeleteAssessmentsHandler)
 
 		// Group with ACL middleware
 		protectedRoutes := apiRoutes.Group("/")

@@ -241,6 +241,20 @@ func PopulateProjectName(projectID uint) (string, error) {
 	return project.ProjectName, nil
 }
 
+func DeleteAssessment(id uint) error {
+	return db.Where("id = ?", id).Delete(&AssessmentJSON{}).Error
+}
+
+func RetrieveAssessment(id uint) (*AssessmentJSON, error) {
+	var assessment AssessmentJSON
+	result := db.First(&assessment, id)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &assessment, nil
+}
+
 func RetrieveAssessments(startDate, endDate string, page, pageSize int) ([]AssessmentJSON, error) {
 	var assessments []AssessmentJSON
 

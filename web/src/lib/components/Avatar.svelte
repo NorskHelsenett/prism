@@ -28,6 +28,8 @@
       return "avatar-sm"
     if (option.size === "md")
       return "avatar-md"
+    if (option.size === "lg")
+      return "avatar-lg"
     return "avatar-xs"
   }
 

@@ -1,15 +1,14 @@
 <script>
 	import Modal from '$lib/components/Modal.svelte';
-
   import { pageMeta } from '$lib/stores/pageMeta';
   import { onMount } from 'svelte';
-	import { slide } from 'svelte/transition';
-	import { quintOut } from 'svelte/easing';
 	import { Fetch } from '$lib/fetchUtil';
 	import Avatar from '$lib/components/Avatar.svelte';
 	import NewAssessment from '$lib/components/calendar/newAssessment.svelte';
+	import { goto } from '$app/navigation';
 
   let showModal = false
+  let selectedRow = -1
 
   onMount(async () => {
       pageMeta.set({ pretitle: 'Planning',title: 'Plan future world domination' });
@@ -33,9 +32,9 @@ function eventIn(month, dateFrom, dateTo) {
 }
 
 // Define an async function to fetch the data
-  async function fetchCalendarEvents() {
-    calendarEvents = await Fetch("/api/planning")
-  }
+async function fetchCalendarEvents() {
+  calendarEvents = await Fetch("/api/planning")
+}
 
 $: if(showModal == false) {
   fetchCalendarEvents()
@@ -91,7 +90,7 @@ console.log(dayPercentage)
               </div>
               <!-- Page title actions -->
               <div class="col-auto ms-auto d-print-none">
-                <a href="#" class="btn btn-primary" on:click={() => showModal = !showModal} transition:slide={{ delay: 250, duration: 300, easing: quintOut, axis: 'x' }}>
+                <a href="#" class="btn btn-primary" on:click={() => showModal = !showModal} >
                   <!-- Download SVG icon from http://tabler-icons.io/i/plus -->
                   <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M12 5l0 14"></path><path d="M5 12l14 0"></path></svg>
                   Add
@@ -725,8 +724,8 @@ console.log(dayPercentage)
                   </thead>
                   <tbody>
                     {#if calendarEvents?.length > 0}
-                    {#each calendarEvents as event}
-                    <tr>
+                    {#each calendarEvents as event, index}
+                    <tr on:dblclick={() => goto(`/planning/${event.id}/view`)} on:click={() => selectedRow === index ? selectedRow = -1 : selectedRow = index} class:selected="{selectedRow === index}" >
                       <td class="sticky-col first-col" style="min-width:20em">
                         <h4 class="text-capitalize">{event?.description}</h4>
                         <div class="grid-container text-secondary">
@@ -789,6 +788,10 @@ console.log(dayPercentage)
         </div>
 
 <style>
+
+.selected {
+  background-color: rgba(184, 196, 228, 0.05);
+}
 
 .grid-container {
   display: grid;

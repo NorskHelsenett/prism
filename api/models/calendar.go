@@ -10,6 +10,7 @@ type Assessment struct {
 	DateTo      string    `json:"dateTo" gorm:"type:date"`
 	Note        string    `json:"note"`
 	Hackers     []Hacker  `json:"hackers"`
+	ID          uint      `json:"id" gorm:"-"`
 }
 
 type Hacker struct {
