@@ -29,9 +29,6 @@ function eventIn(month, dateFrom, dateTo) {
   const fromDate = new Date(dateFrom);
   const toDate = new Date(dateTo);
 
-  // Check if the month of dateFrom or dateTo matches the specified month
-  // Note: getMonth() returns a 0-based index, so January is 0, February is 1, etc.
-  console.log(month, fromDate.getMonth(), monthIndex, toDate.getMonth(), fromDate, toDate)
   return fromDate.getMonth() <= monthIndex && toDate.getMonth() >= monthIndex;
 }
 
@@ -44,6 +41,34 @@ $: if(showModal == false) {
   fetchCalendarEvents()
 }
 
+function copyText(content){
+    if (!navigator.clipboard) {
+      // Clipboard API not available
+      console.error('Clipboard API is not available.');
+      return;
+    }
+
+    navigator.clipboard.writeText(content).then(() => {
+      console.log('Content copied to clipboard successfully!');
+      // notification.addAlert({message: 'Content copied to clipboard successfully'});
+    }).catch(err => {
+      console.error('Failed to copy content to clipboard:', err);
+    });
+}
+  const formattedToday = months[new Date().getMonth()+1]
+
+  function daysInMonth(month, year) {
+    return new Date(year, month, 0).getDate();
+  }
+
+  let today = new Date();
+  let currentDay = today.getDate(); // Get the current day (1-31)
+  let monthIndex = today.getMonth(); // Month index (0-11)
+  let currentYear = today.getFullYear();
+
+  let totalDays = daysInMonth(monthIndex + 1, currentYear); // Month index is 0-based, add 1 to get the correct month
+  let dayPercentage = (currentDay / totalDays) * 100; // Calculate the percentage of the month that has passed
+console.log(dayPercentage)
 </script>
 
 <!-- svelte-ignore missing-declaration -->
@@ -687,7 +712,6 @@ $: if(showModal == false) {
                     <tr>
                       <th class="sticky-col first-col">Title</th>
                       <th>Estimate</th>
-                      <th>AO</th>
                       <th>Project</th>
                       <th>Ordered by</th>
                       <th>Responsible</th>
@@ -703,12 +727,18 @@ $: if(showModal == false) {
                     {#if calendarEvents?.length > 0}
                     {#each calendarEvents as event}
                     <tr>
-                      <td class="sticky-col first-col">{event?.description}</td>
-                      <td>40 h</td>
-                      <td>4096</td>
-                      <td>
+                      <td class="sticky-col first-col" style="min-width:20em">
+                        <h4 class="text-capitalize">{event?.description}</h4>
+                        <div class="grid-container text-secondary">
+                          <strong title="Work Order">AO:</strong>
+                          <button class="btn-none" on:click|preventDefault="{() => copyText('4096')}">4096</button>
+                          <!-- <strong title="Estimate">Est.:</strong> <span>4000 h</span> -->
+                        </div>
+                      </td>
+                      <td class="text-secondary">4000 h</td>
+                      <td style="min-width:10em">
                         {#each event.projects as project}
-                          {project.name}
+                          <div class="badge bg-cyan-lt mt-1"><a href="/project/{project.id}/view">{project.name}</a></div>
                         {/each}
                       </td>
                       <td><span class="avatar rounded-circle">BG</span></td>
@@ -734,15 +764,18 @@ $: if(showModal == false) {
                       </td>
                       {#each months as month}
                         {#if eventIn(month, event?.dateFrom, event?.dateTo)}
-                          <td class="timeline-container">
+                          <td class="timeline-container" class:today={month === formattedToday}>
                             <span class="line bg-azure"></span>
                               <div class="tooltip-content">
                                 <strong>start:</strong> {event.dateFrom}<br>
                                 <strong>end:</strong> {event.dateTo}
                               </div>
-                          </td>
+                              <span class:today-line={month === formattedToday} style="--day-percentage: {dayPercentage}" title="today"></span>
+                            </td>
                         {:else}
-                          <td></td>
+                          <td class:today={month === formattedToday}>
+                            <span class:today-line={month === formattedToday} style="--day-percentage: {dayPercentage}" title="today"></span>
+                          </td>
                         {/if}
                       {/each}
                     </tr>
@@ -756,6 +789,41 @@ $: if(showModal == false) {
         </div>
 
 <style>
+
+.grid-container {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px;
+}
+
+  .today-line {
+    position: absolute;
+    left: calc(var(--day-percentage) * 1%); /* Use the calculated percentage */
+    width: 2px;
+    background-color: rgba(var(--tblr-azure-rgb), 0.3); /* Example style for highlighting today's date column */
+    z-index: 1000;
+    top: 0;
+    height: 101%;
+    bottom: 0;
+  }
+
+  .btn-none{
+    text-align: inherit;
+    border: none;
+    padding: 0;
+    margin: 0;
+    background-color: transparent;
+    color: inherit;
+    box-shadow: none;
+  }
+  .btn-none:hover {
+    color: rgba(var(--tblr-link-color-rgb),var(--tblr-link-opacity,1));
+  }
+
+  .sticky-col h4{
+    margin-bottom: 0;
+  }
+
   .sticky-col {
     position: -webkit-sticky; /* For Safari */
     position: sticky;
@@ -798,4 +866,10 @@ $: if(showModal == false) {
 .timeline-container:hover .tooltip-content {
   visibility: visible;
 }
+
+  .today {
+    position: relative;
+    /* border-left: 2px solid rgba(var(--tblr-azure-rgb), 0.5); */
+  }
+
 </style>
