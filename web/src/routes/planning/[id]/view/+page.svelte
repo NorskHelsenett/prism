@@ -244,6 +244,13 @@ async function handleKeydown(event) {
       <div class="card-body" style="min-height: 10rem">
         <div class="datagrid">
 
+          <div class="datagrid-item" on:click={() => editProp('dateFrom', assessment.dateFrom)}>
+            <div class="datagrid-title">From</div>
+            <div class="datagrid-content">
+              {assessment?.dateFrom || ""}
+            </div>
+          </div>
+
           <div class="datagrid-item" on:click={() => editProp('workorder', assessment.workorder)}>
             <div class="datagrid-title">AO</div>
             <div class="datagrid-content">
@@ -255,13 +262,6 @@ async function handleKeydown(event) {
             <div class="datagrid-title">Estimate</div>
             <div class="datagrid-content">
               {assessment?.estimate || ""}
-            </div>
-          </div>
-
-          <div class="datagrid-item" on:click={() => editProp('dateFrom', assessment.dateFrom)}>
-            <div class="datagrid-title">From</div>
-            <div class="datagrid-content">
-              {assessment?.dateFrom || ""}
             </div>
           </div>
 
@@ -280,7 +280,7 @@ async function handleKeydown(event) {
               <ProjectList projects={assessment.projects} on:updateProjects="{e => assessment.projects = e.detail}"/>
             {:else}
               {#each assessment.projects as project}
-                <div class="badge bg-cyan-lt mt-1"><a href="/project/{project.id}/view">{project.name}</a></div>
+                <div class="badge bg-cyan-lt mt-1 mr-1"><a href="/project/{project.id}/view">{project.name}</a></div>
               {/each}
             {/if}
           </div>
@@ -378,5 +378,8 @@ async function handleKeydown(event) {
 <style>
   .alert {
     background-color: var(--tblr-card-bg);
+  }
+  .mr-1{
+    margin-right: 0.5em;
   }
 </style>
