@@ -6,7 +6,8 @@
 	import Avatar from '$lib/components/Avatar.svelte';
 	import NewAssessment from '$lib/components/calendar/newAssessment.svelte';
 	import { goto } from '$app/navigation';
-	import Assessments from '$lib/components/dashboard/Assessments.svelte';
+	import Dropdown from '$lib/components/Dropdown.svelte';
+	import Markdown from '$lib/components/Markdown.svelte';
 
   let showModal = false
   let selectedRow = -1
@@ -18,6 +19,7 @@
   });
 
   let calendarEvents = []
+  let showDropdown = []
 
   let months =["Jan", "Feb","Mar", "Apr","May","Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
@@ -181,7 +183,12 @@ function copyText(content){
                       </td>
                       <td>
                         {#if event?.note}
-                          <i class="ti ti-notes" title="{event?.note}"></i>
+                          <i class="ti ti-notes cursor-pointer" on:click="{() => showDropdown[index] = true}"></i>
+                          <Dropdown bind:show={showDropdown[index]}>
+                              <div class="card-body">
+                                <Markdown markdown={event.note}/>
+                              </div>
+                          </Dropdown>
                         {/if}
                       </td>
                       {#each months as month}
