@@ -14,7 +14,7 @@
   export let showModal = false
 
   let assassment = {
-    description: "",
+    title: "",
     projects: [],
     dateFrom: null,
     dateTo: null,
@@ -107,9 +107,9 @@ function removeHacker(user) {
 				type="text"
 				class="form-control"
 				name="example-text-input"
-				placeholder="Description"
+				placeholder="Title"
 				autofocus
-				bind:value={assassment.description}
+				bind:value={assassment.title}
 			/>
 		</div>
 
@@ -135,10 +135,10 @@ function removeHacker(user) {
 		</div>
 
       <div class="avatar-list" style="position:relative">
-        {#each assassment.hackers as hacker, index (hacker.Email)}
+        {#each assassment.hackers as hacker, index (hacker.email)}
           <!-- svelte-ignore a11y-no-static-element-interactions -->
           <div class="avatar-container" on:mouseenter={() => showRemoveHacker[index] = true} on:mouseleave={() => showRemoveHacker[index] = false} transition:scale={{ duration: 300, delay: 0, opacity: 0.5, start: 0.0, easing: quintOut }}>
-            <Avatar email="{hacker.Email}" option={{ showName: false, size: "sm", emptyFields: false, circle: true}}/>
+            <Avatar email="{hacker.email}" option={{ showName: false, size: "sm", emptyFields: false, circle: true}}/>
             {#if showRemoveHacker[index]}
               <i class="overlay ti ti-x rounded-circle" transition:fade={{ delay: 50, duration: 500 }} on:click="{removeHacker(hacker)}"></i>
             {/if}
@@ -151,7 +151,7 @@ function removeHacker(user) {
           <div class="">
             <ul>
               {#each users as user}
-                <li class="option selected p-2" on:click="{addHacker(user)}"><Avatar email={user.Email}/></li>
+                <li class="option selected p-2" on:click="{addHacker(user)}"><Avatar email={user.email}/></li>
               {/each}
             </ul>
           </div>

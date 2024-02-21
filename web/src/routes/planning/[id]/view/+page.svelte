@@ -35,7 +35,7 @@ onMount(async () => {
 
 async function getUser(email) {
   const user = await Fetch(`/api/profile/${email}`);
-  responsibleHackerName = user.Name
+  responsibleHackerName = user.name
 }
 
 $: responsibleHackerName = ""
@@ -61,7 +61,7 @@ async function saveChanges(prop, value) {
   updatedAssessment.estimate = Number(updatedAssessment.estimate)
   updatedAssessment.hackers = []
   assessment.hackers.forEach((/** @type {{ Email: any; email: any; }} */ hacker) => {
-    updatedAssessment.hackers.push({"email": hacker.Email || hacker.email})
+    updatedAssessment.hackers.push({"email": hacker.email})
   });
   await Fetch(`/api/planning/${data.id}`, {method: "PUT", body: JSON.stringify(updatedAssessment)})
   showModalEdit = false
@@ -98,7 +98,7 @@ async function handleKeydown(event) {
 </div>
 {/if}
 
-<div class="row g-2 align-items-center">
+<div class="row g-2 align-items-center mb-3">
   <div class="col">
     <div class="page-pretitle">Assessment</div>
     <h2 class="page-title" on:click={() => editProp('description', assessment.description)}>
@@ -119,7 +119,7 @@ async function handleKeydown(event) {
         </div>
 
         <Dropdown bind:show={showDropdown}>
-          <a class="dropdown-item" href="#" on:click={()=> {editModus = !editModus; showDropdown = false}}>Edit</a>
+          <a class="dropdown-item" href="#" on:click={()=> {editModus = !editModus; showDropdown = false; goto(`/planning/${data.id}/edit`)}}>Edit</a>
           <div class="dropdown-divider"></div>
           <a class="dropdown-item text-warning" href="#" on:click={() => showDeleteModal = true}>
             <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-trash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
@@ -129,10 +129,7 @@ async function handleKeydown(event) {
 
   </div>
 {/if}
-      <div class="page-body">
-    <div class="container-xl">
-    </div>
-  </div>
+
 </div>
 
 {#if editModus}
@@ -261,6 +258,20 @@ async function handleKeydown(event) {
             </div>
           </div>
 
+          <div class="datagrid-item" on:click={() => editProp('dateFrom', assessment.dateFrom)}>
+            <div class="datagrid-title">From</div>
+            <div class="datagrid-content">
+              {assessment?.dateFrom || ""}
+            </div>
+          </div>
+
+          <div class="datagrid-item" on:click={() => editProp('dateTo', assessment.dateTo)}>
+            <div class="datagrid-title">To</div>
+            <div class="datagrid-content">
+              {assessment?.dateTo || ""}
+            </div>
+          </div>
+
 
         <div class="datagrid-item">
           <div class="datagrid-title">Projects</div>
@@ -282,11 +293,23 @@ async function handleKeydown(event) {
               <AvatarList hackers={assessment.hackers} on:updateHackers="{handleUpdateHackers}"/>
             {:else}
               {#each assessment.hackers as hacker }
-                <Avatar email={hacker?.email || hacker?.Email} option={{ showName: false, circle: true, size: "sm" }}/>
+                <Avatar email={hacker?.email || hacker?.email} option={{ showName: false, circle: true, size: "sm" }}/>
               {/each}
             {/if}
           </div>
         </div>
+
+        <div class="datagrid-item">
+          <div class="datagrid-title">Responsible</div>
+          <div class="datagrid-content">
+            {#if editModus}
+              <AvatarList hackers={[{"email": assessment.responsible_hacker}]} on:updateHackers="{handleUpdateHackers}"/>
+            {:else}
+              <Avatar email={assessment.responsible_hacker} option={{ showName: false, circle: true, size: "sm" }}/>
+            {/if}
+          </div>
+        </div>
+
         </div>
         <div class="row mt-3">
             <div class="datagrid-title">Note</div>

@@ -23,17 +23,17 @@
   }
 
   let user = {
-      Image: "",
-      Role: "visitor",
-      Name: ""
+      image: "",
+      role: "visitor",
+      name: ""
   }
 
   // Subscribe to the user store
   const unsubscribe = userStore.subscribe(storeUser => {
       if (!storeUser.loading) {
-          user.Image = storeUser.Picture;
-          user.Role = storeUser.Role;
-          user.Name = storeUser.Name;
+          user.image = storeUser.picture;
+          user.role = storeUser.role;
+          user.name = storeUser.name;
       }
   });
 
@@ -42,10 +42,10 @@
 </script>
 
 <a href="#" on:click|preventDefault={toggleHidden} class="nav-link d-flex lh-1 text-reset p-0">
-    <span class="avatar avatar-sm" style="background-image: url({user.Image})"></span>
+    <span class="avatar avatar-sm" style="background-image: url({user.image})"></span>
     <div class="d-none d-xl-block ps-2">
-        <div>{user.Name}</div>
-        <div class="mt-1 small text-secondary text-capitalize">{user.Role}</div>
+        <div>{user.name}</div>
+        <div class="mt-1 small text-secondary text-capitalize">{user.role}</div>
     </div>
 </a>
 <div

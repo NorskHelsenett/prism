@@ -121,11 +121,11 @@ type Metrics struct {
 
 type UserData struct {
 	gorm.Model
-	Email     string
-	Name      string
-	Picture   string
-	Role      string `gorm:"default:visitor"`
-	Title     string `gorm:"default:My title"`
+	Email     string `json:"email"`
+	Name      string `json:"name"`
+	Picture   string `json:"picture"`
+	Role      string `json:"role" gorm:"default:visitor"`
+	Title     string `json:"title" gorm:"default:My title"`
 	OTPSecret string `json:"-"`
 }
 

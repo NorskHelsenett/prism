@@ -4,7 +4,7 @@ import "errors"
 
 type Assessment struct {
 	Responsible string    `json:"responsible_hacker"`
-	Description string    `json:"description"`
+	Title       string    `json:"title"`
 	Projects    []Project `json:"projects"`
 	DateFrom    string    `json:"dateFrom" gorm:"type:date"`
 	DateTo      string    `json:"dateTo" gorm:"type:date"`
@@ -25,8 +25,8 @@ type Project struct {
 }
 
 func (a *Assessment) Validate() error {
-	if a.Description == "" {
-		return errors.New("description is required")
+	if a.Title == "" {
+		return errors.New("Title is required")
 	}
 	if len(a.Projects) == 0 {
 		return errors.New("at least one project is required")

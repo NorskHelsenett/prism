@@ -17,7 +17,7 @@
 	onMount(async () => {
 		usersOriginal = await Fetch('/api/profile/all');
     users = usersOriginal
-    users = usersOriginal.filter(user => !hackers.some(hacker => hacker.email === user.Email));
+    users = usersOriginal.filter(user => !hackers.some(hacker => hacker.email === user.email));
 
     window.addEventListener('click', handleClickOutside);
   });
@@ -37,7 +37,7 @@
   let showHackersList = false
 
 function addHacker(user) {
-    user.email = user.Email || user.email; // Ensure the email property is standardized
+    user.email = user.email; // Ensure the email property is standardized
 
     // Check if the user is already in the hackers list based on email
     if (!hackers.some(hacker => hacker.email === user.email)) {
@@ -50,7 +50,7 @@ function addHacker(user) {
 }
 
 function removeHacker(user) {
-    user.email = user.Email || user.email; // Ensure the email property is standardized
+    user.email = user.email; // Ensure the email property is standardized
 
     // Filter out the user from the hackers list
     hackers = hackers.filter(hacker => hacker.email !== user.email);
@@ -81,7 +81,7 @@ function removeHacker(user) {
     <div class="">
       <ul>
         {#each users as user}
-          <li class="option selected p-2" on:click="{addHacker(user)}"><Avatar email={user.Email}/></li>
+          <li class="option selected p-2" on:click="{addHacker(user)}"><Avatar email={user.email}/></li>
         {/each}
       </ul>
     </div>

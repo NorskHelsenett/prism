@@ -18,13 +18,13 @@
     return (event) => {
     switch (n) {
       case "name":
-        users = users.sort((a, b) => a.Name.localeCompare(b.Name));
+        users = users.sort((a, b) => a.name.localeCompare(b.name));
         break;
       case "role":
-        users = users.sort((a, b) => a.Role.localeCompare(b.Role));
+        users = users.sort((a, b) => a.role.localeCompare(b.role));
         break;
       default:
-        users = users.sort((a, b) => a.Name.localeCompare(b.Name));
+        users = users.sort((a, b) => a.name.localeCompare(b.name));
         break;
       }
       desc = !desc
@@ -41,7 +41,7 @@
   function updateUser(user){
     return async function(event) {
       const newRole = event.target.value;
-      user.Role = newRole
+      user.role = newRole
 
       const response = await Fetch('/api/settings/profile', {
         method: 'PUT',
@@ -92,7 +92,7 @@ function formatDate(dateString) {
   async function resetMFA(user){
     showDropdown = [false]
     // console.log(user)
-    await Fetch(`/api/settings/session/otp/reset/${user.Email}`, {method: "DELETE"})
+    await Fetch(`/api/settings/session/otp/reset/${user.email}`, {method: "DELETE"})
     //close all showDropdowns, iterate the array and set it to false
   }
 </script>
@@ -102,7 +102,7 @@ function formatDate(dateString) {
     <table class="table table-vcenter table-mobile-md card-table">
       <thead>
         <tr>
-          <th on:click={orderBy("name", true)}><button class="table-sort" data-sort="sort-name">Name</button></th>
+          <th on:click={orderBy("name", true)}><button class="table-sort" data-sort="sort-name">name</button></th>
           <th>Created</th>
           <th>Last seen</th>
           <th><button on:click={orderBy("role", true)} class="table-sort" data-sort="sort-name">Role</button></th>
@@ -114,14 +114,14 @@ function formatDate(dateString) {
         <tr>
           <td data-label="name">
             <div class="d-flex py-1 align-items-center">
-              <span class="avatar me-2" style="background-image: url({user.Picture})"></span>
+              <span class="avatar me-2" style="background-image: url({user.picture})"></span>
               <div class="flex-fill">
-                <div class="font-weight-medium">{user.Name}</div>
+                <div class="font-weight-medium">{user.name}</div>
                 <!-- <div class="text-secondary"><a href="#" class="text-reset">{user.Email}</a></div> -->
                 <div class="mt-2 list-inline list-inline-dots mb-0 text-secondary d-sm-block d-none">
                                   <div class="list-inline-item"><!-- Download SVG icon from http://tabler-icons.io/i/building-community -->
                                     <i class="ti ti-mail"></i>
-                                    {user.Email}</div>
+                                    {user.email}</div>
                                 </div>
               </div>
             </div>
@@ -129,9 +129,9 @@ function formatDate(dateString) {
           <td class="text-secondary" title={formatDateText(user.CreatedAt)}><i class="ti ti-license"></i> {formatDate(user.CreatedAt)}</td>
           <td class="text-secondary" title={formatDateText(user.UpdatedAt)}>{formatDate(user.UpdatedAt)}</td>
           <td data-label="Role">
-            <select class="form-select" disabled={userIsAdmin(user.Role)} on:change={updateUser(user)}>
+            <select class="form-select" disabled={userIsAdmin(user.role)} on:change={updateUser(user)}>
               {#each roles as role}
-                <option value="{role}" class="text-capitalize" selected={isRole(user.Role, role)}>{role}</option>
+                <option value="{role}" class="text-capitalize" selected={isRole(user.role, role)}>{role}</option>
               {/each}
             </select>
           </td>

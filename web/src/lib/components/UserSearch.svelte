@@ -34,7 +34,7 @@ onMount(async () => {
     });
 
     users.forEach(user => {
-      tomSelect.addOption({ value: user.Email, text: user.Name });
+      tomSelect.addOption({ value: user.email, text: user.name });
     });
 
     // Splitt selectedValues og sjekk hver e-post

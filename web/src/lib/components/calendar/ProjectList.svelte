@@ -1,12 +1,12 @@
 <script>
 	import { Fetch } from '$lib/fetchUtil';
-    import { onMount, createEventDispatcher } from 'svelte';
-    import TomSelect from 'tom-select';
-    import 'tom-select/dist/css/tom-select.bootstrap5.min.css';
+  import { onMount, createEventDispatcher } from 'svelte';
+  import TomSelect from 'tom-select';
+  import 'tom-select/dist/css/tom-select.bootstrap5.min.css';
 
-    export let projects = [];
-    const dispatch = createEventDispatcher();
-    let projectSelectElement;
+  export let projects = [];
+  const dispatch = createEventDispatcher();
+  let projectSelectElement;
 
     onMount(async () => {
         const allProjects = await Fetch('/api/project/all');
