@@ -13,6 +13,8 @@ type Assessment struct {
 	ID          uint      `json:"id" gorm:"-"`
 	Estimate    uint      `json:"estimate"`
 	WorkOrder   string    `json:"workorder"`
+	Status      string    `json:"status"`
+	Requester   string    `json:"requester"`
 }
 
 type Hacker struct {

@@ -4,12 +4,16 @@
   import AvatarList from '$lib/components/calendar/Avatarlist.svelte';
 	import { onMount } from 'svelte';
 	import ProjectList from '$lib/components/calendar/ProjectList.svelte';
+	import UserSearch from '$lib/components/UserSearch.svelte';
 
   export let data;
-  export let assessment = {}
+  export let assessment = { status: 'Planning' };
 
   onMount(async () => {
     assessment = await Fetch(`/api/planning/${data.id}`)
+    if (!assessment.status) {
+      assessment.status = 'Planning';
+    }
   })
 
   async function updateAssessment() {
@@ -75,6 +79,46 @@
           </div>
           <div class="col">
             <input type="date" class="form-control" aria-describedby="emailHelp" placeholder="Enter end date" bind:value={assessment.dateTo}>
+          </div>
+        </div>
+
+        <div class="mb-3 row">
+          <label class="col-3 col-form-label required">Requested by</label>
+          <div class="col">
+            <UserSearch on:selection={e => assessment.requester = e.detail.selectedEmails[0]} bind:selectedValues={assessment.requester}/>
+          </div>
+        </div>
+
+        <div class="mb-3 row">
+          <label class="col-3 col-form-label required">Status</label>
+          <div class="col">
+            <label class="form-check">
+              <input name="radios-inline" class="form-check-input" type="radio" bind:group={assessment.status} value="Planning">
+              <span class="form-check-label">
+                Planning
+              </span>
+              <span class="form-check-description">
+                This assessment is currently in the planning phase. Details such as dates, participants, and objectives are under review and subject to change. Please check for updates regularly.
+              </span>
+            </label>
+            <label class="form-check">
+              <input name="radios-inline" class="form-check-input" type="radio" bind:group={assessment.status} value="Approved">
+              <span class="form-check-label">
+                Approved
+              </span>
+              <span class="form-check-description">
+                This assessment has been finalized and approved. All key details including dates, participants, and objectives have been established and agreed upon. It is now in the implementation phase.
+              </span>
+            </label>
+            <label class="form-check">
+              <input name="radios-inline" class="form-check-input" type="radio" bind:group={assessment.status} value="Finished">
+              <span class="form-check-label">
+                Finished
+              </span>
+              <span class="form-check-description">
+                This assessment has been successfully completed. All objectives and tasks have been addressed, and the final outcomes are now available for review. Please refer to the provided documentation for detailed results and findings.
+              </span>
+            </label>
           </div>
         </div>
 
