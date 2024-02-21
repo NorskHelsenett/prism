@@ -7,37 +7,53 @@
   export let projects = [];
   const dispatch = createEventDispatcher();
   let projectSelectElement;
+  let tomSelect;
 
-    onMount(async () => {
-        const allProjects = await Fetch('/api/project/all');
+onMount(async () => {
+    const allProjects = await Fetch('/api/project/all');
 
-        let tomSelect = new TomSelect(projectSelectElement, {
-            plugins: ['remove_button'],
-            valueField: 'ID',
-            labelField: 'ProjectName',
-            searchField: 'ProjectName',
-            placeholder: "Choose a project...",
-            options: allProjects,
-            create: false,
-            onItemAdd: (value) => {
-                updateProjects(value, allProjects);
-            },
-            onItemRemove: (value) => {
-                updateProjects(value, allProjects, false);
-            }
-        });
-
-        // Add options to TomSelect
-        allProjects.forEach(project => {
-            tomSelect.addOption({ value: project.ID, text: project.ProjectName });
-        });
-
-        // Set initially selected values
-        const initialSelectedValues = projects.map(p => p.id);
-        tomSelect.setValue(initialSelectedValues);
-
-        tomSelect.refreshOptions(false);
+    tomSelect = new TomSelect(projectSelectElement, {
+        plugins: ['remove_button'],
+        valueField: 'ID',
+        labelField: 'ProjectName',
+        searchField: 'ProjectName',
+        placeholder: "Choose a project...",
+        options: allProjects,
+        create: false,
+        onItemAdd: (value) => {
+            updateProjects(value, allProjects);
+        },
+        onItemRemove: (value) => {
+            updateProjects(value, allProjects, false);
+        }
     });
+
+    // Add options to TomSelect
+    allProjects.forEach(project => {
+        tomSelect.addOption({ value: project.ID, text: project.ProjectName });
+    });
+
+    // Set initially selected values
+    const initialSelectedValues = projects.map(p => p.id);
+    tomSelect.setValue(initialSelectedValues);
+
+    tomSelect.refreshOptions(false);
+});
+
+$: if (tomSelect && projects) {
+      const selectedValues = projects.map(p => p.id);
+      // Get current values from TomSelect to compare
+      const currentValues = tomSelect.getValue();
+
+      // Convert both arrays to strings for easy comparison
+      const selectedValuesStr = selectedValues.sort().join(",");
+      const currentValuesStr = currentValues.sort().join(",");
+
+      // Update TomSelect values only if there are changes
+      if (selectedValuesStr !== currentValuesStr) {
+          tomSelect.setValue(selectedValues);
+      }
+  }
 
 function updateProjects(value, allProjects, add = true) {
     if (add) {

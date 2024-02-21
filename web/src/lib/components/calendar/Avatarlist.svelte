@@ -29,6 +29,10 @@
     }
   }
 
+  $: if(hackers) {
+    users = usersOriginal.filter(user => !hackers.some(hacker => hacker.email === user.email));
+  }
+
   onDestroy(() => {
     window.removeEventListener('click', handleClickOutside);
   });

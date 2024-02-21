@@ -16,6 +16,15 @@
     await Fetch(`/api/planning/${data.id}`, {method:"PUT", body: JSON.stringify(assessment)})
   }
 
+  function updateResponsibleHacker(event) {
+    const hackers = event.detail
+    const lastOne = hackers[hackers.length-1]
+    assessment.responsible_hacker = lastOne.email
+    responsibleHackers = [lastOne]
+  }
+
+  let responsibleHackers = []
+
 </script>
 
 <div class="row align-items-center mb-3">
@@ -74,14 +83,14 @@
         <div class="mb-3 row">
           <label class="col-3 col-form-label required">Responsible</label>
           <div class="col">
-            <AvatarList hackers={[{"email": assessment.responsible_hacker}]} on:updateHackers="{e => assessment.responsible_hacker = e.detail[0].email}"/>
+            <AvatarList hackers={responsibleHackers} on:updateHackers="{event => updateResponsibleHacker(event)}"/>
           </div>
         </div>
 
         <div class="mb-3 row">
           <label class="col-3 col-form-label required">Projects</label>
           <div class="col">
-            <ProjectList projects={assessment.projects} on:updateProjects="{e => assessment.projects = e.detail}"/>
+              <ProjectList projects={assessment?.projects} on:updateProjects="{e => assessment.projects = e.detail}"/>
           </div>
         </div>
 

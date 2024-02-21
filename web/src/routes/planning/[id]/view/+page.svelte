@@ -280,7 +280,7 @@ async function handleKeydown(event) {
               <ProjectList projects={assessment.projects} on:updateProjects="{e => assessment.projects = e.detail}"/>
             {:else}
               {#each assessment.projects as project}
-                <span>{project.name}</span>
+                <div class="badge bg-cyan-lt mt-1"><a href="/project/{project.id}/view">{project.name}</a></div>
               {/each}
             {/if}
           </div>
