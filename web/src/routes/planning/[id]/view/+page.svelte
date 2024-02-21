@@ -1,19 +1,19 @@
 <script>
 import { goto } from '$app/navigation';
-	import { slide } from 'svelte/transition';
-	import { quintOut } from 'svelte/easing';
+import { slide } from 'svelte/transition';
+import { quintOut } from 'svelte/easing';
 import Avatar from '$lib/components/Avatar.svelte';
 import AvatarList from '$lib/components/calendar/Avatarlist.svelte';
 import DeleteModal from '$lib/components/DeleteModal.svelte';
 import Dropdown from '$lib/components/Dropdown.svelte';
 import Icon from '$lib/components/Icon.svelte';
-	import Markdown from '$lib/components/Markdown.svelte';
+import Markdown from '$lib/components/Markdown.svelte';
 import Criticality from '$lib/components/dashboard/Criticality.svelte';
 import CountVulnerabilities from '$lib/components/dashboard/countVulnerabilities.svelte';
 import { Fetch } from '$lib/fetchUtil';
 import { accessLevels } from '$lib/userStore';
 import { onMount } from 'svelte';
-	import ProjectList from '$lib/components/calendar/ProjectList.svelte';
+import ProjectList from '$lib/components/calendar/ProjectList.svelte';
 
 export let data;
 let assessment = null
@@ -33,14 +33,15 @@ onMount(async () => {
   await getUser(assessment.responsible_hacker)
 })
 
-  async function getUser(email) {
-    const user = await Fetch(`/api/profile/${email}`);
-    responsibleHackerName = user.Name
-  }
+async function getUser(email) {
+  const user = await Fetch(`/api/profile/${email}`);
+  responsibleHackerName = user.Name
+}
 
 $: responsibleHackerName = ""
 
 let showModalEdit = false
+
 let modalEditProp = null
 let modalEditValue = ""
 
@@ -59,7 +60,7 @@ async function saveChanges(prop, value) {
   }
   updatedAssessment.estimate = Number(updatedAssessment.estimate)
   updatedAssessment.hackers = []
-  assessment.hackers.forEach(hacker => {
+  assessment.hackers.forEach((/** @type {{ Email: any; email: any; }} */ hacker) => {
     updatedAssessment.hackers.push({"email": hacker.Email || hacker.email})
   });
   await Fetch(`/api/planning/${data.id}`, {method: "PUT", body: JSON.stringify(updatedAssessment)})
