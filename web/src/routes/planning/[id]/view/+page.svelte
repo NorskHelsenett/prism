@@ -310,6 +310,29 @@ async function handleKeydown(event) {
           </div>
         </div>
 
+        <div class="datagrid-item">
+          <div class="datagrid-title">Requested by</div>
+          <div class="datagrid-content">
+            <Avatar email={assessment.requester} option={{ emptyFields: true, showName: false, circle: true, size: "sm" }}/>
+          </div>
+        </div>
+
+        <div class="datagrid-item">
+          <div class="datagrid-title">Status</div>
+          <div class="datagrid-content">
+            <span style="margin:0;">
+            {#if assessment.status == "Finished"}
+              <i class="ti ti-circle-check-filled text-green" title="Finished"></i>
+            {:else if assessment.status == "Approved"}
+              <i class="ti ti-clock-filled text-yellow" title="Approved"></i>
+            {:else}
+              <i class="ti ti-calendar-time text-orange" title="Planning"></i>
+            {/if}
+          </span>
+            {assessment.status || "Planning" }
+          </div>
+        </div>
+
         </div>
         <div class="row mt-3">
             <div class="datagrid-title">Note</div>

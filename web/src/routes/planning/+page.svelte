@@ -136,7 +136,9 @@ function copyText(content){
                     {#each calendarEvents as event, index}
                     <tr on:dblclick={() => goto(`/planning/${event.id}/view`)} on:click={() => selectedRow === index ? selectedRow = -1 : selectedRow = index} class:selected="{selectedRow === index}" >
                       <td class="sticky-col first-col" style="min-width:20em">
-                        <h4 class="text-capitalize">{event?.title}</h4>
+                        <h4 class="text-capitalize">
+                          <a href="#" on:click="{() => goto(`/planning/${event.id}/view`)}">{event?.title}</a>
+                        </h4>
                         <div class="grid-container text-secondary">
                           <strong title="Work Order">AO:</strong>
                           <button class="btn-none" on:click|preventDefault="{() => copyText(event?.workorder)}">{event?.workorder || ""}</button>
@@ -197,7 +199,7 @@ function copyText(content){
                             <span class:today-line={month === formattedToday} style="--day-percentage: {dayPercentage}" title="today"></span>
                           </td>
                         {/if}
-                      {/each}
+                        {/each}
                     </tr>
                     {/each}
                     {/if}
@@ -212,6 +214,7 @@ function copyText(content){
 
 .selected {
   background-color: rgba(184, 196, 228, 0.05);
+  cursor: pointer;
 }
 
 .grid-container {
