@@ -12,6 +12,10 @@
     assessment = await Fetch(`/api/planning/${data.id}`)
   })
 
+  async function updateAssessment() {
+    await Fetch(`/api/planning/${data.id}`, {method:"PUT", body: JSON.stringify(assessment)})
+  }
+
 </script>
 
 <div class="row align-items-center mb-3">
@@ -19,7 +23,7 @@
     <a href="#" class="btn btn-dark w-100" on:click="{() => goto(`/planning/${data.id}/view`)}">Back</a>
   </div>
   <div class="col-auto">
-    <a href="#" class="btn btn-primary w-100">Save</a>
+    <a href="#" class="btn btn-primary w-100" on:click="{() => updateAssessment()}">Save</a>
   </div>
 </div>
 
@@ -37,31 +41,31 @@
         <div class="mb-3 row">
           <label class="col-3 col-form-label required">Title</label>
           <div class="col">
-            <input type="text" class="form-control" aria-describedby="emailHelp" placeholder="Enter email" bind:value={assessment.title}>
+            <input type="text" class="form-control" aria-describedby="emailHelp" placeholder="Enter title" bind:value={assessment.title}>
           </div>
         </div>
 
         <div class="mb-3 row">
           <label class="col-3 col-form-label required">Work order</label>
           <div class="col">
-            <input type="text" class="form-control" aria-describedby="emailHelp" placeholder="Enter email" bind:value={assessment.workorder}>
+            <input type="text" class="form-control" aria-describedby="emailHelp" placeholder="Enter work order" bind:value={assessment.workorder}>
           </div>
         </div>
 
         <div class="mb-3 row">
           <label class="col-3 col-form-label required">Estimate</label>
           <div class="col">
-            <input type="number" class="form-control" aria-describedby="emailHelp" placeholder="Enter email" bind:value={assessment.estimate}>
+            <input type="number" class="form-control" aria-describedby="emailHelp" placeholder="Enter estimation" bind:value={assessment.estimate}>
           </div>
         </div>
 
         <div class="mb-3 row">
           <label class="col-3 col-form-label required">Date</label>
           <div class="col">
-            <input type="date" class="form-control" aria-describedby="emailHelp" placeholder="Enter email" bind:value={assessment.dateFrom}>
+            <input type="date" class="form-control" aria-describedby="emailHelp" placeholder="Enter start date" bind:value={assessment.dateFrom}>
           </div>
           <div class="col">
-            <input type="date" class="form-control" aria-describedby="emailHelp" placeholder="Enter email" bind:value={assessment.dateTo}>
+            <input type="date" class="form-control" aria-describedby="emailHelp" placeholder="Enter end date" bind:value={assessment.dateTo}>
           </div>
         </div>
 

@@ -726,7 +726,7 @@ function copyText(content){
                     {#each calendarEvents as event, index}
                     <tr on:dblclick={() => goto(`/planning/${event.id}/view`)} on:click={() => selectedRow === index ? selectedRow = -1 : selectedRow = index} class:selected="{selectedRow === index}" >
                       <td class="sticky-col first-col" style="min-width:20em">
-                        <h4 class="text-capitalize">{event?.description}</h4>
+                        <h4 class="text-capitalize">{event?.title}</h4>
                         <div class="grid-container text-secondary">
                           <strong title="Work Order">AO:</strong>
                           <button class="btn-none" on:click|preventDefault="{() => copyText(event?.workorder)}">{event?.workorder || ""}</button>

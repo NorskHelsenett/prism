@@ -101,8 +101,8 @@ async function handleKeydown(event) {
 <div class="row g-2 align-items-center mb-3">
   <div class="col">
     <div class="page-pretitle">Assessment</div>
-    <h2 class="page-title" on:click={() => editProp('description', assessment.description)}>
-      {assessment?.description}
+    <h2 class="page-title" on:click={() => editProp('title', assessment.title)}>
+      {assessment?.title}
     </h2>
   </div>
 {#if $accessLevels["/planning"]?.write}
