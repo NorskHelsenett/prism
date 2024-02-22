@@ -210,3 +210,28 @@ func RetrieveAssessmentsHandler(c *gin.Context) {
 	// Respond with the fetched data
 	c.JSON(http.StatusOK, modelAssessments)
 }
+
+func FindNonAvailablePersons(c *gin.Context) {
+	idStr := c.Param("id")
+	if idStr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID is required"})
+		return
+	}
+
+	id, err := strconv.ParseUint(idStr, 10, strconv.IntSize)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		return
+	}
+	// Retrieve optional dateFrom and dateTo query parameters
+	dateFrom := c.Query("from")
+	dateTo := c.Query("to")
+
+	availablePersons, err := database.FindNonAvailablePersons(uint(id), dateFrom, dateTo)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, availablePersons)
+}

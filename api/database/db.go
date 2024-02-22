@@ -1060,6 +1060,47 @@ func CountProjectVulnerabilities(projectID uint) (int64, error) {
 	return count, nil
 }
 
+func FindNonAvailablePersons(excludeProjectID uint, dateFrom, dateTo string) ([]string, error) {
+	var assessmentJSONs []AssessmentJSON
+	var emailsMap = make(map[string]bool) // Use a map to store unique emails
+	var uniqueEmails []string
+
+	// Build the initial query
+	query := db.Model(&AssessmentJSON{}).Where("id != ?", excludeProjectID)
+
+	// Apply date filters using the JSON_EXTRACT function in SQLite
+	if dateFrom != "" {
+		query = query.Where("date(json_extract(assessment, '$.dateFrom')) >= ?", dateFrom)
+	}
+	if dateTo != "" {
+		query = query.Where("date(json_extract(assessment, '$.dateTo')) <= ?", dateTo)
+	}
+
+	// Execute the query
+	if err := query.Find(&assessmentJSONs).Error; err != nil {
+		return nil, err
+	}
+
+	// Loop through the results and extract hacker emails
+	for _, aJSON := range assessmentJSONs {
+		var assessment models.Assessment
+		if err := json.Unmarshal(aJSON.Assessment, &assessment); err != nil {
+			return nil, err // Handle JSON unmarshal error
+		}
+
+		for _, hacker := range assessment.Hackers {
+			emailsMap[hacker.Email] = true
+		}
+	}
+
+	// Convert the map keys to a slice
+	for email := range emailsMap {
+		uniqueEmails = append(uniqueEmails, email)
+	}
+
+	return uniqueEmails, nil
+}
+
 func GetProjectVulnerabilities(projectID uint, dateFrom, dateTo string) ([]JSONData, error) {
 	var jsonData []JSONData
 

@@ -63,6 +63,7 @@ func main() {
 		apiRoutes.POST("/planning/new", routes.NewAssassment)
 		apiRoutes.GET("/planning", routes.RetrieveAssessmentsHandler)
 		apiRoutes.GET("/planning/:id", routes.RetrieveAssessmentsHandler)
+		apiRoutes.GET("/planning/:id/assignedHackers", routes.FindNonAvailablePersons)
 		apiRoutes.PUT("/planning/:id", routes.PutAssessmentsHandler)
 		apiRoutes.DELETE("/planning/:id", routes.DeleteAssessmentsHandler)
 

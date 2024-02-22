@@ -358,7 +358,14 @@ let showEditModal = false
   <div class="col-5">
     <div class="card h-100" >
       <div class="card-body">
-          <!-- <EndpointVulnerability dataset={vulnerabilities}/> -->
+        <!-- <div class="grid-container">
+          <i class="ti ti-player-record-filled text-green" title="Approved"></i>
+          <div>Team size</div>
+          <i class="ti ti-player-record-filled text-green" title="Approved"></i>
+          <div>It is approved</div>
+          <i class="ti ti-player-record-filled text-green" title="Approved"></i>
+          <div>All team members are available</div>
+        </div> -->
       </div>
     </div>
   </div>
@@ -395,5 +402,10 @@ let showEditModal = false
   }
   .mr-1{
     margin-right: 0.5em;
+  }
+  .grid-container {
+    display: grid; /* Use CSS Grid to create the layout */
+    grid-template-columns: 0.05fr 1fr; /* Create two columns of equal width */
+    align-items: center; /* Vertically center align items */
   }
 </style>
