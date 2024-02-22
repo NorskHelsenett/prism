@@ -86,7 +86,7 @@
       padding: {
         top: 40,    // Replace with desired padding value
         right: 30,  // Replace with desired padding value
-        bottom: 30, // Replace with desired padding value
+        bottom: 50, // Replace with desired padding value
         left: 30    // Replace with desired padding value
       }
     }
