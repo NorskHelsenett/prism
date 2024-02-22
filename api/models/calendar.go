@@ -1,6 +1,9 @@
 package models
 
-import "errors"
+import (
+	"errors"
+	"time"
+)
 
 type Assessment struct {
 	Responsible string    `json:"responsible_hacker"`
@@ -38,11 +41,19 @@ func (a *Assessment) Validate() error {
 			return errors.New("project ID is required")
 		}
 	}
+
+	const layout = "2006-01-02"
 	if a.DateFrom == "" {
 		return errors.New("dateFrom is required")
 	}
+	if _, err := time.Parse(layout, a.DateFrom); err != nil {
+		return errors.New("dateFrom is not in the format yyyy-mm-dd")
+	}
 	if a.DateTo == "" {
 		return errors.New("dateTo is required")
+	}
+	if _, err := time.Parse(layout, a.DateTo); err != nil {
+		return errors.New("dateTo is not in the format yyyy-mm-dd")
 	}
 	// if len(a.Hackers) == 0 {
 	// 	return errors.New("at least one hacker is required")

@@ -14,14 +14,20 @@
   let projectSelectElement;
   export let showModal = false
 
-  let assassment = {
-    title: "",
-    projects: [],
-    dateFrom: null,
-    dateTo: null,
-    note: "",
-    hackers: []
+  let assassment = resetData()
+
+  function resetData() {
+    return {
+      title: "",
+      projects: [],
+      dateFrom: null,
+      dateTo: null,
+      note: "",
+      hackers: []
+    }
   }
+
+  $: if(showModal) { assassment = resetData() }
 
   let error
 
@@ -36,6 +42,7 @@
       })
     } else {
       notification.addAlert("Successfully created")
+      assassment = resetData()
       showModal = false
     }
   }
