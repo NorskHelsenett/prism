@@ -18,7 +18,7 @@
     }
 </script>
 <dialog bind:this={dialog} on:close={handleClose}>
-<div class="modal modal-blur fade show" id="modal-report" tabindex="-1" role="dialog" aria-modal="true" style="display: block;">
+  <div class="modal modal-blur fade show" id="modal-report" tabindex="-1" role="dialog" aria-modal="true" style="display: block;">
       <div class="modal-dialog modal-dialog-centered" class:modal-lg={large} role="document">
         <div class="modal-content">
           <div class="modal-header">

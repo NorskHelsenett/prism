@@ -7,6 +7,7 @@
   import { fade } from 'svelte/transition';
 	import { scale } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
+	import { notification } from '$lib/stores/notificationStore';
 
   let usersOriginal = []
   let users = []
@@ -22,10 +23,21 @@
     hackers: []
   }
 
+  let error
+
   async function postAssassment() {
-    // await Fetch("/api/calendar/new", {method: "POST", body: JSON.stringify(assassment)})
-     await Fetch("/api/planning/new", {method: "POST", body: JSON.stringify(assassment)})
-     showModal = false
+    const result = await Fetch("/api/planning/new", {method: "POST", body: JSON.stringify(assassment)})
+    if(result.error) {
+      error = result.error
+      notification.addAlert({
+        type: 'warning',
+        message: result.error,
+        title: 'Unable to save'
+      })
+    } else {
+      notification.addAlert("Successfully created")
+      showModal = false
+    }
   }
 
 	onMount(async () => {
@@ -97,10 +109,15 @@ function removeHacker(user) {
     users = users
   }
 }
-
 </script>
+
   <div class="card">
     <div class="card-body">
+      {#if error}
+        <div class="alert alert-warning" role="alert">
+          {error}
+        </div>
+      {/if}
     <div class="mb-3">
 			<!-- svelte-ignore a11y-autofocus -->
 			<input

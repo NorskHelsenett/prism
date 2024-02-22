@@ -10,6 +10,8 @@
 	import User from '$lib/components/User.svelte';
 	import Loader from '$lib/components/Loader.svelte';
   import { goto } from '$app/navigation';
+  import { fly } from 'svelte/transition';
+	import { quintOut } from 'svelte/easing';
 
   function navigate(url) {
     return (event) => {
@@ -43,7 +45,7 @@
 {:else if $isAuthenticated}
 <div class="alert-container">
 	{#each $notification as alert (alert.id)}
-		<div class="alert alert-{alert.type} alert-dismissible" role="alert">
+		<div class="alert alert-{alert.type} alert-dismissible" role="alert" transition:fly={{ delay: 100, duration: 500, x: 1000, y: 0, opacity: 0.8, easing: quintOut }}>
 			<div class="d-flex">
 				<div>
 					{#if alert.type === 'success'}
@@ -468,9 +470,13 @@
 
 	.alert-container {
 		position: fixed;
-		top: 50px;
-		right: 10px;
-		z-index: 10000 !important;
+		top: 4em;
+		right: 2em;
+		z-index: 1050 !important;
 	}
+
+  .alert {
+    background-color: var(--tblr-active-bg);
+  }
 
 </style>
