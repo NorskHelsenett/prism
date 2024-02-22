@@ -1,15 +1,14 @@
 <script>
-	import Avatar from '$lib/components/Avatar.svelte';
-	import { goto } from '$app/navigation';
-	import Dropdown from '$lib/components/Dropdown.svelte';
-	import Markdown from '$lib/components/Markdown.svelte';
-	import { Fetch } from '$lib/fetchUtil';
+import Avatar from '$lib/components/Avatar.svelte';
+import { goto } from '$app/navigation';
+import Dropdown from '$lib/components/Dropdown.svelte';
+import Markdown from '$lib/components/Markdown.svelte';
+import { Fetch } from '$lib/fetchUtil';
 
-  let selectedRow = -1
-  let calendarEvents = []
-  let showDropdown = []
-  export let reload = true
-
+let selectedRow = -1
+let calendarEvents = []
+let showDropdown = []
+export let reload = true
 
 let months =["Jan", "Feb","Mar", "Apr","May","Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
@@ -28,24 +27,24 @@ async function fetchCalendarEvents() {
   calendarEvents = await Fetch("/api/planning")
 }
 
-  $: if (!reload) {
-    fetchCalendarEvents();
-  }
+$: if (!reload) {
+  fetchCalendarEvents();
+}
 
 function copyText(content){
-    if (!navigator.clipboard) {
-      // Clipboard API not available
-      console.error('Clipboard API is not available.');
-      return;
-    }
+  if (!navigator.clipboard) {
+    // Clipboard API not available
+    console.error('Clipboard API is not available.');
+    return;
+  }
 
-    navigator.clipboard.writeText(content).then(() => {
-      // notification.addAlert({message: 'Content copied to clipboard successfully'});
-    }).catch(err => {
-      console.error('Failed to copy content to clipboard:', err);
-    });
+  navigator.clipboard.writeText(content).then(() => {
+    // notification.addAlert({message: 'Content copied to clipboard successfully'});
+  }).catch(err => {
+    console.error('Failed to copy content to clipboard:', err);
+  });
 }
-  const formattedToday = months[new Date().getMonth()+1]
+  const formattedToday = months[new Date().getMonth()]
 
   function daysInMonth(month, year) {
     return new Date(year, month, 0).getDate();
@@ -56,7 +55,7 @@ function copyText(content){
   let monthIndex = today.getMonth(); // Month index (0-11)
   let currentYear = today.getFullYear();
 
-  let totalDays = daysInMonth(monthIndex + 1, currentYear); // Month index is 0-based, add 1 to get the correct month
+  let totalDays = daysInMonth(monthIndex +1 , currentYear); // Month index is 0-based, add 1 to get the correct month
   let dayPercentage = (currentDay / totalDays) * 100;
 </script>
 <div class="card">
