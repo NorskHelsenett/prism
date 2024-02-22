@@ -56,7 +56,7 @@ onMount(async () => {
 });
 
 
-$: if(selectedValues != "") {
+$: if(tomSelect){
 // Splitt selectedValues og sjekk hver e-post
     let selectedEmails = selectedValues.split(",").filter(email => email.trim() !== ""); // Fjerner tomme strenger
     selectedEmails.forEach(email => {
