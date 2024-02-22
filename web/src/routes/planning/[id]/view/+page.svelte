@@ -14,24 +14,31 @@ import { Fetch } from '$lib/fetchUtil';
 import { accessLevels } from '$lib/userStore';
 import { onMount } from 'svelte';
 import ProjectList from '$lib/components/calendar/ProjectList.svelte';
+import Vulnerability from '$lib/components/Lists/Vulnerability.svelte';
+import OwaspTable from '$lib/components/dashboard/OwaspTable.svelte';
+import CriticalityPie from '$lib/components/charts/CriticalityPie.svelte';
 
 export let data;
 let assessment = null
 let showDropdown = false;
 let showDeleteModal = false;
 let editModus = false;
-let severityData = { critical: 1, high: 1, medium: 2, low: 0, information: 0 }
-let vulnerabilitiesTotal = 10
+let vulnerabilities = []
+
+onMount(async () => {
+  assessment = await Fetch(`/api/planning/${data.id}`)
+  await getUser(assessment.responsible_hacker)
+  assessment.projects.forEach(async project => {
+    const vulns = await Fetch(`/api/project/${project.id}/vulnerabilities?from=${assessment.dateFrom}&to=${assessment.dateTo}`)
+    vulnerabilities = [...vulnerabilities, ...vulns]
+  });
+})
 
 async function deleteProject(){
   await Fetch(`/api/planning/${data.id}`, {method: "DELETE"})
   goto("/planning")
 }
 
-onMount(async () => {
-  assessment = await Fetch(`/api/planning/${data.id}`)
-  await getUser(assessment.responsible_hacker)
-})
 
 async function getUser(email) {
   const user = await Fetch(`/api/profile/${email}`);
@@ -78,6 +85,11 @@ async function handleKeydown(event) {
     assessment.hackers = event.detail; // Assuming event.detail contains the updated hackers array
   }
 
+function formatDate(dateStr){
+  const options = { day: 'numeric', month: 'short' };
+  const date = new Date(dateStr);
+  return new Intl.DateTimeFormat('en-GB', options).format(date).replace(/\s/g, '. ');
+}
 </script>
 
 {#if showModalEdit && editModus}
@@ -149,7 +161,7 @@ async function handleKeydown(event) {
 {/if}
 
 <div class="row-deck row-cards" >
-	<Criticality {severityData}/>
+	<Criticality {vulnerabilities}/>
 </div>
 
 {#if assessment}
@@ -159,7 +171,7 @@ async function handleKeydown(event) {
     <div class="row row-cards">
       <div class="col-sm-3 col-lg-3">
         <div class="card card-sm">
-          <CountVulnerabilities data={vulnerabilitiesTotal} />
+          <CountVulnerabilities data={vulnerabilities.length} />
         </div>
       </div>
 
@@ -174,9 +186,9 @@ async function handleKeydown(event) {
               </div>
               <div class="col">
                 <div class="font-weight-medium">
-                  {assessment?.dateFrom}
+                  {formatDate(assessment?.dateFrom)}
                 </div>
-                <div class="text-secondary">Planned starting date</div>
+                <div class="text-secondary">{formatDate(assessment?.dateTo)}</div>
               </div>
             </div>
           </div>
@@ -244,34 +256,12 @@ async function handleKeydown(event) {
       <div class="card-body" style="min-height: 10rem">
         <div class="datagrid">
 
-          <div class="datagrid-item" on:click={() => editProp('dateFrom', assessment.dateFrom)}>
-            <div class="datagrid-title">From</div>
-            <div class="datagrid-content">
-              {assessment?.dateFrom || ""}
-            </div>
-          </div>
-
           <div class="datagrid-item" on:click={() => editProp('workorder', assessment.workorder)}>
-            <div class="datagrid-title">AO</div>
+            <div class="datagrid-title">Work order</div>
             <div class="datagrid-content">
               {assessment?.workorder || ""}
             </div>
           </div>
-
-          <div class="datagrid-item" on:click={() => editProp('estimate', assessment.estimate)}>
-            <div class="datagrid-title">Estimate</div>
-            <div class="datagrid-content">
-              {assessment?.estimate || ""}
-            </div>
-          </div>
-
-          <div class="datagrid-item" on:click={() => editProp('dateTo', assessment.dateTo)}>
-            <div class="datagrid-title">To</div>
-            <div class="datagrid-content">
-              {assessment?.dateTo || ""}
-            </div>
-          </div>
-
 
         <div class="datagrid-item">
           <div class="datagrid-title">Projects</div>
@@ -322,11 +312,11 @@ async function handleKeydown(event) {
           <div class="datagrid-content">
             <span style="margin:0;">
             {#if assessment.status == "Finished"}
-              <i class="ti ti-circle-check-filled text-green" title="Finished"></i>
+              <i class="ti ti-circle-check-filled text-azure" title="Finished"></i>
             {:else if assessment.status == "Approved"}
-              <i class="ti ti-clock-filled text-yellow" title="Approved"></i>
+              <i class="ti ti-player-record-filled text-green" title="Approved"></i>
             {:else}
-              <i class="ti ti-calendar-time text-orange" title="Planning"></i>
+              <i class="ti ti-circle text-yellow"  title="Planning"></i>
             {/if}
           </span>
             {assessment.status || "Planning" }
@@ -352,15 +342,9 @@ async function handleKeydown(event) {
 
   <div class="col-4 h-100">
     <div class="card">
-<div class="card-body text-end placeholder-glow">
-                        <div class="placeholder col-9 mb-3"></div>
-                        <div class="placeholder placeholder-xs col-10"></div>
-                        <div class="placeholder placeholder-xs col-12"></div>
-                        <div class="placeholder placeholder-xs col-11"></div>
-                        <div class="placeholder placeholder-xs col-8"></div>
-                        <div class="placeholder placeholder-xs col-10"></div>
-                      </div>
-
+        <div class="card-body " style="min-height: 10rem">
+        <CriticalityPie {vulnerabilities}/>
+      </div>
     </div>
   </div>
 
@@ -377,7 +361,7 @@ async function handleKeydown(event) {
     <div class="card h-100" >
       <div class="card-body">
         <div class="table-responsive w-100">
-          <!-- <OwaspTable owaspData={owaspData}/> -->
+          <OwaspTable {vulnerabilities}/>
         </div>
       </div>
     </div>
@@ -386,7 +370,7 @@ async function handleKeydown(event) {
   <div class="col-12">
     <div class="card">
       <div class="card-body">
-        <!-- <Vulnerability {vulnerabilities} /> -->
+        <Vulnerability {vulnerabilities} />
       </div>
     </div>
   </div>

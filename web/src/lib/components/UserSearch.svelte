@@ -8,7 +8,7 @@
   const dispatch = createEventDispatcher();
 
   let selectElement;
-  export let selectedValues;
+  export let selectedValues = "";
 
   let users = [];
   let tomSelect
@@ -55,7 +55,8 @@ onMount(async () => {
   }
 });
 
-$: if(selectedValues){
+
+$: if(selectedValues != "") {
 // Splitt selectedValues og sjekk hver e-post
     let selectedEmails = selectedValues.split(",").filter(email => email.trim() !== ""); // Fjerner tomme strenger
     selectedEmails.forEach(email => {

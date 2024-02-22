@@ -1,5 +1,6 @@
 <script>
   export let severityData = { critical: 0, high: 0, medium: 0, low: 0, information: 0 };
+  export let vulnerabilities = []
 	let progressData = [];
 
 	$: if (severityData) {
@@ -33,6 +34,27 @@
 	function hideTooltip() {
 		tooltipVisible = false;
 	}
+
+  $: if(vulnerabilities?.length > 0){
+    // Reset counts
+    severityData = { critical: 0, high: 0, medium: 0, low: 0, information: 0 };
+
+    vulnerabilities.forEach(vulnerability => {
+      const criticality = vulnerability.Vulnerability.criticality.toLowerCase();
+
+      if (criticality === 'critical') {
+        severityData.critical += 1;
+      } else if (criticality === 'high') {
+        severityData.high += 1;
+      } else if (criticality === 'medium') {
+        severityData.medium += 1;
+      } else if (criticality === 'low') {
+        severityData.low += 1;
+      } else if (criticality === 'information') {
+        severityData.information += 1;
+      }
+    });
+  }
 </script>
 
 <div class="progress mb-2" role="presentation" on:mousemove={showTooltip} on:mouseleave={hideTooltip}>

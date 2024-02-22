@@ -7,7 +7,7 @@
 	import UserSearch from '$lib/components/UserSearch.svelte';
 
   export let data;
-  export let assessment = { status: 'Planning' };
+  export let assessment
 
   onMount(async () => {
     assessment = await Fetch(`/api/planning/${data.id}`)
@@ -40,6 +40,7 @@
   </div>
 </div>
 
+{#if assessment}
 <div>{JSON.stringify(assessment)}</div>
 
 <div class="row">
@@ -162,3 +163,5 @@
     </div>
   </div>
 </div>
+
+{/if}

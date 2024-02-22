@@ -13,6 +13,7 @@
   ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, ChartDataLabels);
 
   export let severityData = { critical: 0, high: 0, medium: 0, low: 0, information: 0 };
+  export let vulnerabilities = []
 
   let data = {
   labels: [
@@ -83,7 +84,7 @@
     },
     layout: {
       padding: {
-        top: 30,    // Replace with desired padding value
+        top: 40,    // Replace with desired padding value
         right: 30,  // Replace with desired padding value
         bottom: 30, // Replace with desired padding value
         left: 30    // Replace with desired padding value
@@ -91,8 +92,31 @@
     }
   }
 
+  $: {
+    if (vulnerabilities.length > 0) {
+      // Reset counts
+      severityData = { critical: 0, high: 0, medium: 0, low: 0, information: 0 };
+
+      vulnerabilities.forEach(vulnerability => {
+        const criticality = vulnerability.Vulnerability.criticality.toLowerCase();
+
+        if (criticality === 'critical') {
+          severityData.critical += 1;
+        } else if (criticality === 'high') {
+          severityData.high += 1;
+        } else if (criticality === 'medium') {
+          severityData.medium += 1;
+        } else if (criticality === 'low') {
+          severityData.low += 1;
+        } else if (criticality === 'information') {
+          severityData.information += 1;
+        }
+      });
+    }
+  }
+
 </script>
 
 {#if severityData}
-	<Doughnut {data} {options} />
+  <Doughnut {data} {options} />
 {/if}

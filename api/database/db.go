@@ -1060,9 +1060,20 @@ func CountProjectVulnerabilities(projectID uint) (int64, error) {
 	return count, nil
 }
 
-func GetProjectVulnerabilities(projectID uint) ([]JSONData, error) {
+func GetProjectVulnerabilities(projectID uint, dateFrom, dateTo string) ([]JSONData, error) {
 	var jsonData []JSONData
-	err := db.Where("project_id = ?", projectID).Order("created_at desc").Find(&jsonData).Error
+
+	query := db.Where("project_id = ?", projectID)
+
+	if dateFrom != "" {
+		query = query.Where("date(json_extract(vulnerability, '$.date')) >= ?", dateFrom)
+	}
+
+	if dateTo != "" {
+		query = query.Where("date(json_extract(vulnerability, '$.date')) <= ?", dateTo)
+	}
+
+	err := query.Order("created_at desc").Find(&jsonData).Error
 
 	return jsonData, err
 }

@@ -165,13 +165,13 @@ function copyText(content){
                       </td>
                       <td>
                         <h1 style="margin: 0">
-                        {#if event.status == "Finished"}
-                          <i class="ti ti-circle-check-filled text-green" title="Finished"></i>
-                        {:else if event.status == "Approved"}
-                          <i class="ti ti-clock-filled text-yellow" title="Approved"></i>
-                        {:else}
-                          <i class="ti ti-calendar-time text-orange" title="Planning"></i>
-                        {/if}
+                          {#if event.status == "Finished"}
+                            <i class="ti ti-circle-check-filled text-azure" title="Finished"></i>
+                          {:else if event.status == "Approved"}
+                            <i class="ti ti-player-record-filled text-green" title="Approved"></i>
+                          {:else}
+                            <i class="ti ti-circle text-yellow"  title="Planning"></i>
+                          {/if}
                         </h1>
                       </td>
                       <td>
