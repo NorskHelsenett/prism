@@ -200,7 +200,7 @@ function isAvailable(user) {
                   </div>
             {/if}
             {#each assessment.hackers as hacker}
-            {#if busyHackers.includes(hacker.email)}
+            {#if busyHackers?.includes(hacker.email)}
 
                 <div class="alert alert-warning" role="alert">
                       <div class="d-flex">
