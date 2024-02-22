@@ -17,6 +17,7 @@ import ProjectList from '$lib/components/calendar/ProjectList.svelte';
 import Vulnerability from '$lib/components/Lists/Vulnerability.svelte';
 import OwaspTable from '$lib/components/dashboard/OwaspTable.svelte';
 import CriticalityPie from '$lib/components/charts/CriticalityPie.svelte';
+	import EditAssessment from '$lib/components/calendar/EditAssessment.svelte';
 
 export let data;
 let assessment = null
@@ -38,7 +39,6 @@ async function deleteProject(){
   await Fetch(`/api/planning/${data.id}`, {method: "DELETE"})
   goto("/planning")
 }
-
 
 async function getUser(email) {
   const user = await Fetch(`/api/profile/${email}`);
@@ -90,7 +90,13 @@ function formatDate(dateStr){
   const date = new Date(dateStr);
   return new Intl.DateTimeFormat('en-GB', options).format(date).replace(/\s/g, '. ');
 }
+
+let showEditModal = false
 </script>
+
+{#if showEditModal}
+  <EditAssessment {assessment} bind:showModal={showEditModal} on:change="{e => assessment = e.detail.assessment}"/>
+{/if}
 
 {#if showModalEdit && editModus}
 <div class="modal modal-blur fade show" id="modal-small" tabindex="-1" style="display: block;" aria-modal="true" role="dialog">
@@ -132,6 +138,7 @@ function formatDate(dateStr){
 
         <Dropdown bind:show={showDropdown}>
           <a class="dropdown-item" href="#" on:click={()=> {editModus = !editModus; showDropdown = false; goto(`/planning/${data.id}/edit`)}}>Edit</a>
+          <!-- <a class="dropdown-item" href="#" on:click={()=> {showEditModal = !showEditModal; showDropdown = false}}>Edit</a> -->
           <div class="dropdown-divider"></div>
           <a class="dropdown-item text-warning" href="#" on:click={() => showDeleteModal = true}>
             <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-trash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
