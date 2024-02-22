@@ -41,7 +41,6 @@
 </div>
 
 {#if assessment}
-<div>{JSON.stringify(assessment)}</div>
 
 <div class="row">
 <div class="card">
@@ -147,7 +146,6 @@
         </div>
 
 <hr />
-			<!-- <fieldset class="col-lg-12 form-fieldset"> -->
                 <div class="mb-3 row">
           <div class="col">
             			<textarea
@@ -157,7 +155,6 @@
                     bind:value={assessment.note} />
           </div>
         </div>
-      <!-- </fieldset> -->
 
       </div>
     </div>
