@@ -2,8 +2,9 @@ package routes
 
 import (
 	"errors"
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 
 	"prism/database"
 	"strconv"
@@ -112,7 +113,11 @@ func GetProjectVulnerabilitiesForProject(c *gin.Context) {
 		return
 	}
 
-	vulnerabilites, err := database.GetProjectVulnerabilities(uint(projectID))
+	// Retrieve optional dateFrom and dateTo query parameters
+	dateFrom := c.Query("from")
+	dateTo := c.Query("to")
+
+	vulnerabilites, err := database.GetProjectVulnerabilities(uint(projectID), dateFrom, dateTo)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

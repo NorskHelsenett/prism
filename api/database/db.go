@@ -3,6 +3,7 @@ package database
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 
 	"runtime"
@@ -81,6 +82,11 @@ type JSONData struct {
 	Revisions     datatypes.JSON
 }
 
+type AssessmentJSON struct {
+	gorm.Model
+	Assessment datatypes.JSON
+}
+
 // ImageData is a model for storing image metadata and binary data
 type ImageData struct {
 	gorm.Model
@@ -115,11 +121,11 @@ type Metrics struct {
 
 type UserData struct {
 	gorm.Model
-	Email     string
-	Name      string
-	Picture   string
-	Role      string `gorm:"default:visitor"`
-	Title     string `gorm:"default:My title"`
+	Email     string `json:"email"`
+	Name      string `json:"name"`
+	Picture   string `json:"picture"`
+	Role      string `json:"role" gorm:"default:visitor"`
+	Title     string `json:"title" gorm:"default:My title"`
 	OTPSecret string `json:"-"`
 }
 
@@ -195,6 +201,7 @@ func InitDB() {
 	db.AutoMigrate(&Settings{})
 	db.AutoMigrate(&AuditLog{})
 	db.AutoMigrate(&ImageData{})
+	db.AutoMigrate(&AssessmentJSON{})
 
 	db.Exec(`
     CREATE TRIGGER IF NOT EXISTS jsondata_insert AFTER INSERT ON json_data
@@ -211,6 +218,73 @@ func CloseConnection() error {
 	}
 
 	return sqlDB.Close() // close the underlying SQL database
+}
+
+func UpdateAssassment(assessment models.Assessment, id uint) error {
+	data, err := json.Marshal(assessment)
+	if err != nil {
+		return err
+	}
+
+	return db.Model(&AssessmentJSON{}).Where("id = ?", id).Update("assessment", data).Error
+}
+
+func PersistAssassment(assessment models.Assessment) error {
+	var assessmentJSON AssessmentJSON
+	data, err := json.Marshal(assessment)
+	if err != nil {
+		return err
+	}
+
+	assessmentJSON.Assessment = data
+
+	return db.Create(&assessmentJSON).Error
+}
+
+func PopulateProjectName(projectID uint) (string, error) {
+	var project ProjectData
+	result := db.First(&project, projectID).Select("project_name")
+	if result.Error != nil {
+		return "", result.Error
+	}
+	return project.ProjectName, nil
+}
+
+func DeleteAssessment(id uint) error {
+	return db.Where("id = ?", id).Delete(&AssessmentJSON{}).Error
+}
+
+func RetrieveAssessment(id uint) (*AssessmentJSON, error) {
+	var assessment AssessmentJSON
+	result := db.First(&assessment, id)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &assessment, nil
+}
+
+func RetrieveAssessments(startDate, endDate string, page, pageSize int) ([]AssessmentJSON, error) {
+	var assessments []AssessmentJSON
+
+	// Calculate offset for pagination
+	offset := (page - 1) * pageSize
+
+	// Build a query using json_extract to filter by dates within the JSON blob
+	query := fmt.Sprintf(`json_extract(assessment, '$.dateFrom') >= ? AND json_extract(assessment, '$.dateTo') <= ?`)
+
+	// Execute the query with pagination
+	result := db.Model(&AssessmentJSON{}).
+		Where(query, startDate, endDate).
+		Offset(offset).Limit(pageSize).
+		Order("json_extract(assessment, '$.dateFrom') ASC").
+		Find(&assessments)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return assessments, nil
 }
 
 func RecordAuditLog(log AuditLog) error {
@@ -986,9 +1060,61 @@ func CountProjectVulnerabilities(projectID uint) (int64, error) {
 	return count, nil
 }
 
-func GetProjectVulnerabilities(projectID uint) ([]JSONData, error) {
+func FindNonAvailablePersons(excludeProjectID uint, dateFrom, dateTo string) ([]string, error) {
+	var assessmentJSONs []AssessmentJSON
+	var emailsMap = make(map[string]bool) // Use a map to store unique emails
+	var uniqueEmails []string
+
+	// Build the initial query
+	query := db.Model(&AssessmentJSON{}).Where("id != ?", excludeProjectID)
+
+	// Apply date filters using the JSON_EXTRACT function in SQLite
+	if dateFrom != "" {
+		query = query.Where("date(json_extract(assessment, '$.dateFrom')) >= ?", dateFrom)
+	}
+	if dateTo != "" {
+		query = query.Where("date(json_extract(assessment, '$.dateTo')) <= ?", dateTo)
+	}
+
+	// Execute the query
+	if err := query.Find(&assessmentJSONs).Error; err != nil {
+		return nil, err
+	}
+
+	// Loop through the results and extract hacker emails
+	for _, aJSON := range assessmentJSONs {
+		var assessment models.Assessment
+		if err := json.Unmarshal(aJSON.Assessment, &assessment); err != nil {
+			return nil, err // Handle JSON unmarshal error
+		}
+
+		for _, hacker := range assessment.Hackers {
+			emailsMap[hacker.Email] = true
+		}
+	}
+
+	// Convert the map keys to a slice
+	for email := range emailsMap {
+		uniqueEmails = append(uniqueEmails, email)
+	}
+
+	return uniqueEmails, nil
+}
+
+func GetProjectVulnerabilities(projectID uint, dateFrom, dateTo string) ([]JSONData, error) {
 	var jsonData []JSONData
-	err := db.Where("project_id = ?", projectID).Order("created_at desc").Find(&jsonData).Error
+
+	query := db.Where("project_id = ?", projectID)
+
+	if dateFrom != "" {
+		query = query.Where("date(json_extract(vulnerability, '$.date')) >= ?", dateFrom)
+	}
+
+	if dateTo != "" {
+		query = query.Where("date(json_extract(vulnerability, '$.date')) <= ?", dateTo)
+	}
+
+	err := query.Order("created_at desc").Find(&jsonData).Error
 
 	return jsonData, err
 }

@@ -8,15 +8,16 @@
   const dispatch = createEventDispatcher();
 
   let selectElement;
-  export let selectedValues;
+  export let selectedValues = "";
 
   let users = [];
+  let tomSelect
 
 onMount(async () => {
   users = await Fetch(`/api/profile/all`);
 
   if (users) {
-    let tomSelect = new TomSelect(selectElement, {
+    tomSelect = new TomSelect(selectElement, {
       plugins: ['remove_button'],
       persist: false,
       createOnBlur: true,
@@ -34,7 +35,7 @@ onMount(async () => {
     });
 
     users.forEach(user => {
-      tomSelect.addOption({ value: user.Email, text: user.Name });
+      tomSelect.addOption({ value: user.email, text: user.name });
     });
 
     // Splitt selectedValues og sjekk hver e-post
@@ -55,10 +56,26 @@ onMount(async () => {
 });
 
 
-  function handleSelectChange(event) {
-    const selectedValues = Array.from(event.target.selectedOptions).map(o => o.value);
-    dispatch('selection', { selectedEmails: selectedValues });
-  }
+$: if(tomSelect){
+// Splitt selectedValues og sjekk hver e-post
+    let selectedEmails = selectedValues.split(",").filter(email => email.trim() !== ""); // Fjerner tomme strenger
+    selectedEmails.forEach(email => {
+      // Sjekk om e-posten allerede finnes som et alternativ, hvis ikke, legg til som nytt alternativ
+      if (email && !tomSelect.options[email]) { // Sjekker at e-posten ikke er tom
+        tomSelect.addOption({ value: email, text: email });
+      }
+    });
+
+    // Sett de valgte verdiene, men ignorer tomme strenger
+    if (selectedEmails.length > 0) {
+      tomSelect.setValue(selectedEmails);
+    }
+}
+
+function handleSelectChange(event) {
+  const selectedValues = Array.from(event.target.selectedOptions).map(o => o.value);
+  dispatch('selection', { selectedEmails: selectedValues });
+}
 </script>
 
 <select
@@ -83,6 +100,7 @@ onMount(async () => {
   :global(.ts-dropdown-content) {
     background: var(--tblr-modal-bg);
     color: var(--tblr-body-color);
+    background: var(--tblr-card-bg);
   }
 
   :global(.ts-wrapper.multi .ts-control > div) {

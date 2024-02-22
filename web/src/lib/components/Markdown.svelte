@@ -93,7 +93,7 @@ function updateText(index) {
 </span>
 {/if}
 </div>
-<div class="" bind:this={container}>{@html renderedMarkdown || 'N/A'}</div>
+<div class="" bind:this={container}>{@html renderedMarkdown || ''}</div>
 
 <style>
   :global(.form-check-input:disabled){

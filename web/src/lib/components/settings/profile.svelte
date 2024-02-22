@@ -17,10 +17,10 @@
   // Subscribe to the user store
   const unsubscribe = userStore.subscribe(storeUser => {
       if (!storeUser.loading) {
-          user.Picture = storeUser.Picture;
-          user.Title = storeUser.Title;
-          user.Name = storeUser.Name;
-          user.Email = storeUser.Email;
+          user.picture = storeUser.picture;
+          user.title = storeUser.title;
+          user.name = storeUser.name;
+          user.email = storeUser.email;
           user.ID = storeUser.ID;
       }
   });
@@ -88,13 +88,13 @@
   <h3 class="card-title">Profile Details</h3>
   <div class="row align-items-center">
     <div class="col-auto">
-      <span class="avatar avatar-xl" style="background-image: url({user.Picture})"></span>
+      <span class="avatar avatar-xl" style="background-image: url({user.picture})"></span>
     </div>
     <div class="col m-2">
       <strong class="row">Name</strong>
-      <div class="row text-secondary">{user.Name}</div>
+      <div class="row text-secondary">{user.name}</div>
       <strong class="row">Email</strong>
-      <a href="mailto:{user.Email}" class="row">{user.Email}</a>
+      <a href="mailto:{user.email}" class="row">{user.email}</a>
     </div>
   </div>
 

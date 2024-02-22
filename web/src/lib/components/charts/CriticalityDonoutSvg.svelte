@@ -4,7 +4,7 @@
   export let severity = ""
   let index = -1
 
-  $: {index = cricitality.indexOf(severity); console.log(index, severity)}
+  $: {index = cricitality.indexOf(severity)}
 </script>
 
 {#if index >= 0}

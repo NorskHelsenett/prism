@@ -414,7 +414,9 @@
 							</a>
 						</li>
             {/if}
-						<li class="nav-item" hidden>
+
+            {#if $accessLevels['/planning']}
+						<li class="nav-item">
 							<a href="/planning" class="nav-link" on:click={navigate("/planning")}>
 								<span class="nav-link-icon d-md-none d-lg-inline-block">
 									<svg
@@ -436,6 +438,8 @@
 								<span class="nav-link-title"> Planning </span>
 							</a>
 						</li>
+            {/if}
+
 					</ul>
 				</div>
 			</div>

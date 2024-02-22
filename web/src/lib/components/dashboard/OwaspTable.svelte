@@ -1,8 +1,42 @@
 <script>
+	import { onMount } from "svelte";
+
   export let owaspData = {};
+  export let vulnerabilities = []
 
   function textColor(value){
     return value > 0 ? "text-info" : "text-secondary"
+  }
+
+  onMount(() => {
+    if (vulnerabilities.length > 0){
+      owaspData = categorizeData(vulnerabilities);
+    }
+  })
+
+  function categorizeData(vulns) {
+    const results = {};
+
+    vulns.forEach(item => {
+      const category = item.Vulnerability.category || '';
+      const criticality = item.Vulnerability.criticality.toLowerCase();
+
+      if (!(category in results)) {
+        results[category] = { information: 0, low: 0, medium: 0, high: 0, critical: 0 };
+      }
+
+      if (criticality in results[category]) {
+        results[category][criticality]++;
+      }
+    });
+
+    return results;
+  }
+
+  $: {
+    if (vulnerabilities.length > 0){
+      owaspData = categorizeData(vulnerabilities);
+    }
   }
 </script>
 
