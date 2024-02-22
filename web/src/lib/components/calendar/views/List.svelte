@@ -23,6 +23,7 @@ function eventIn(month, dateFrom, dateTo) {
 
   return fromDate.getMonth() <= monthIndex && toDate.getMonth() >= monthIndex;
 }
+
 async function fetchCalendarEvents() {
   calendarEvents = await Fetch("/api/planning")
 }

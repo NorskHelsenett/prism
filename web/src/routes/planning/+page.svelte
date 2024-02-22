@@ -67,7 +67,7 @@ $: componentsToShow = [{ id: 1, component: activeComponent }];
             </ul>
 
         {#each componentsToShow as { component } (component)}
-            <div transition:fly={{ delay: 0, duration: 300, x: 3000, y: 0, opacity: 1, easing: quintOut }}>
+            <div transition:fly={{ delay: 0, duration: 90, x: 3000, y: 0, opacity: 0.5, easing: quintOut }}>
               <svelte:component this={component} reload={showModal} />
             </div>
         {/each}
