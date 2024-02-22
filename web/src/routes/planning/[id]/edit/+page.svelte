@@ -17,6 +17,7 @@
     if (!assessment.status) {
       assessment.status = 'Planning';
     }
+    responsibleHackers = [{email: assessment.responsible_hacker}]
   })
 
   async function updateAssessment() {
