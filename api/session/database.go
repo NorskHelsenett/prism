@@ -167,7 +167,7 @@ func (s *SessionStore) GetUserDataByEmail(email string) (*database.UserData, err
 
 func GetAllProfiles(s *SessionStore) (*[]database.UserData, error) {
 	var userData []database.UserData
-	result := s.DB.Select("Name", "Picture", "Email").Find(&userData)
+	result := s.DB.Select("Name", "Picture", "Email").Order("role desc").Find(&userData)
 
 	if result.Error != nil {
 		return nil, result.Error

@@ -116,6 +116,26 @@ function removeHacker(user) {
     users = users
   }
 }
+
+let filterText = ""
+
+function filterUsers(event){
+  filterText = event.target.value.toLowerCase()
+  if (filterText == "") {
+    users = usersOriginal.filter(u => !assassment.hackers.includes(u));
+  } else {
+    users = users.filter(user =>
+      user.name.toLowerCase().includes(filterText) // Convert user.name to lowercase as well
+    );
+  }
+}
+
+$: if(showHackersList){
+  document.getElementById("filterQuery")?.focus()
+} else {
+  filterText = ""
+  users = usersOriginal.filter(u => !assassment.hackers.includes(u));
+}
 </script>
 
   <div class="card">
@@ -171,8 +191,10 @@ function removeHacker(user) {
           <!-- svelte-ignore a11y-click-events-have-key-events -->
           <!-- svelte-ignore a11y-no-static-element-interactions -->
           <span class="avatar rounded-circle avatar-sm cursor-pointer" on:click|stopPropagation="{() => showHackersList = !showHackersList}"><i class="ti ti-plus"></i></span>
-        <div id="hackersDropdownList" class="card" style="position:absolute;margin-top: 42px;" hidden={!showHackersList}>
+          {#if showHackersList}
+        <div id="hackersDropdownList" class="card" style="position:absolute;margin-top: 42px;">
           <div class="">
+            <input id="filterQuery" type="text" bind:value={filterText} on:keyup={e => filterUsers(e)}/>
             <ul>
               {#each users as user}
                 <li class="option selected p-2" on:click="{addHacker(user)}"><Avatar email={user.email}/></li>
@@ -180,6 +202,7 @@ function removeHacker(user) {
             </ul>
           </div>
         </div>
+        {/if}
       </div>
 
 <div class="row">
