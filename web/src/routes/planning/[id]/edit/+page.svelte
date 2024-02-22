@@ -66,7 +66,7 @@ function calculateTeamSize() {
     return 0;
   }
 
-  return Math.ceil(assessment.estimate / (numberOfDays * workingHours));
+  return Math.floor(assessment.estimate / (numberOfDays * workingHours));
 }
 
 function isAvailable(user) {
