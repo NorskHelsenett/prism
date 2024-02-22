@@ -69,7 +69,7 @@
         anchor: 'end',
         clamp: true,
         formatter: (value, context) => {
-          return context.chart.data.labels[context.dataIndex]; // Display the label text instead of the value
+          return value > 0 ? context.chart.data.labels[context.dataIndex] : ""; // Display the label text instead of the value
         },
         color: '#4399E1',
         font: {
