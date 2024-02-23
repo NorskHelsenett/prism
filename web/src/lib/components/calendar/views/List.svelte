@@ -24,7 +24,10 @@ function eventIn(month, dateFrom, dateTo) {
 }
 
 async function fetchCalendarEvents() {
-  calendarEvents = await Fetch("/api/planning")
+  const today = new Date().getFullYear()
+  const startDate = `${today}-01-01`
+  const endDate = `${today}-12-31`
+  calendarEvents = await Fetch(`/api/planning?startDate=${startDate}&endDate=${endDate}`)
 }
 
 $: if (!reload) {
