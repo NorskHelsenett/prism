@@ -13,11 +13,19 @@ function createAlertStore() {
       const defaultAlert = {
         type: 'success',
         title: 'We did it!',
+        message: `It was successfull`
       };
 
-      // Merge the provided alert object with the default values, overriding defaults if specified
-      const finalAlert = { ...defaultAlert, ...alert, id };
+      // Check if alert is a string and apply that to the message as default
+      let finalAlert;
+      if (typeof alert === 'string') {
+        finalAlert = { ...defaultAlert, message: alert, id };
+      } else {
+        // Merge the provided alert object with the default values, overriding defaults if specified
+        finalAlert = { ...defaultAlert, ...alert, id };
+      }
 
+      // Add the finalAlert to the list of alerts
       update((alerts) => [...alerts, finalAlert]);
 
       setTimeout(() => {

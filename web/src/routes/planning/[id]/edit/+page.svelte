@@ -8,6 +8,7 @@
   	import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 	import Avatar from '$lib/components/Avatar.svelte';
+	import { notification } from '$lib/stores/notificationStore.js';
 
   export let data;
   export let assessment
@@ -21,7 +22,13 @@
   })
 
   async function updateAssessment() {
-    await Fetch(`/api/planning/${data.id}`, {method:"PUT", body: JSON.stringify(assessment)})
+    const result = await Fetch(`/api/planning/${data.id}`, {method:"PUT", body: JSON.stringify(assessment)})
+    if (result.error) {
+      notification.addAlert({type: "alert", title: "Error", message: result.error})
+    } else {
+      notification.addAlert("Saved")
+      goto(`/planning/${assessment.id}/view`)
+    }
   }
 
   function updateResponsibleHacker(event) {
