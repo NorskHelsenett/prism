@@ -33,11 +33,13 @@ func NewAssassment(c *gin.Context) {
 		return
 	}
 
-	error := database.PersistAssassment(assessment)
-	if error != nil {
-		c.AbortWithStatus(500)
+	id, err := database.PersistAssessment(assessment)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	assessment.ID = id
 
 	c.JSON(http.StatusOK, assessment)
 }

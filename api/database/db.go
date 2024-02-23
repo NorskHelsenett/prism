@@ -229,16 +229,19 @@ func UpdateAssassment(assessment models.Assessment, id uint) error {
 	return db.Model(&AssessmentJSON{}).Where("id = ?", id).Update("assessment", data).Error
 }
 
-func PersistAssassment(assessment models.Assessment) error {
+func PersistAssessment(assessment models.Assessment) (uint, error) {
 	var assessmentJSON AssessmentJSON
 	data, err := json.Marshal(assessment)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	assessmentJSON.Assessment = data
+	if err := db.Create(&assessmentJSON).Error; err != nil {
+		return 0, err
+	}
 
-	return db.Create(&assessmentJSON).Error
+	return assessmentJSON.ID, nil // Return the new ID
 }
 
 func PopulateProjectName(projectID uint) (string, error) {

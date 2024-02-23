@@ -8,6 +8,7 @@
 	import { scale } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 	import { notification } from '$lib/stores/notificationStore';
+	import { goto } from '$app/navigation';
 
   let usersOriginal = []
   let users = []
@@ -44,6 +45,7 @@
       notification.addAlert("Successfully created")
       assassment = resetData()
       showModal = false
+      goto(`/planning/${result.id}/edit`)
     }
   }
 
