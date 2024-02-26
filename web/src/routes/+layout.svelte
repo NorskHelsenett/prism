@@ -478,5 +478,4 @@
   .alert {
     background-color: var(--tblr-active-bg);
   }
-
 </style>

@@ -44,9 +44,9 @@ export function refreshList() {
               <td>
                 <div class="flex-fill">
                   <div class="font-weight-medium">
-                    <a href="#" on:click={() => goto(`/project/${project?.ID}/view`)}>
+                    <button class="link" on:click={() => goto(`/project/${project?.ID}/view`)}>
                       {project.ProjectName}
-                    </a>
+                    </button>
                   </div>
                 </div>
               </td>
@@ -112,4 +112,9 @@ export function refreshList() {
   background-color: rgba(184, 196, 228, 0.05);
   cursor: pointer;
 }
+
+  .link{
+    border:none;
+    background-color: inherit;
+  }
 </style>
