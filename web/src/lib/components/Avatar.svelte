@@ -37,6 +37,13 @@
     const words = fullname.split(' ');
     return `${words[0][0]}${words[words.length - 1][0]}`;
   }
+
+  function calculateInitialsFromEmail(email){
+    const mail = email.split("@")[0]
+    const name = mail.split(".")
+
+    return calculateInitials(`${name[0]} ${name[name.length-1]}`)
+  }
 </script>
 
 {#if email}
@@ -46,13 +53,13 @@
     {#if user.picture}
       <img src={user.picture} alt={user.name} class:rounded-circle="{option.circle}" class="avatar {getSize()} me-2 rounded" on:mousemove={showTooltip} />
     {:else}
-      <span class="avatar text-uppercase">{calculateInitials(user.name)}</span>
+      <span class="avatar text-uppercase {getSize()}" class:rounded-circle="{option.circle}" on:mousemove={showTooltip}>{calculateInitials(user.name)}</span>
     {/if}
     {#if option.showName}
       <span class="align-middle">{user.name}</span>
     {/if}
   {:else}
-    <svg on:mousemove={showTooltip}  xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user-square" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 10a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /><path d="M6 21v-1a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v1" /><path d="M3 5a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14z" /></svg>
+    <span class="avatar text-uppercase {getSize()}" class:rounded-circle="{option.circle}" on:mousemove={showTooltip}>{calculateInitialsFromEmail(email)}</span>
   {/if}
 
   {#if tooltipVisible}

@@ -1,4 +1,5 @@
 <script>
+  import '../app.css'
 	import { onMount } from 'svelte';
   import { initializeApiEndpoint, isLoading, isAuthenticated } from '$lib/stores/configStore';
 	import '@tabler/core/dist/css/tabler.min.css';
