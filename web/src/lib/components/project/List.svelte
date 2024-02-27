@@ -116,5 +116,6 @@ export function refreshList() {
   .link{
     border:none;
     background-color: inherit;
+    text-align: left;
   }
 </style>
