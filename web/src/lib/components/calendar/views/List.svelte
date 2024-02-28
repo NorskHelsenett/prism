@@ -60,6 +60,35 @@ function copyText(content){
 
   let totalDays = daysInMonth(monthIndex +1 , currentYear); // Month index is 0-based, add 1 to get the correct month
   let dayPercentage = (currentDay / totalDays) * 100;
+
+function calculateStartPercentage(dateFrom, monthStr) {
+    const date = new Date(dateFrom);
+    const dateMonth = date.getMonth();
+    const givenMonth = new Date(Date.parse(monthStr +" 1, " + date.getFullYear())).getMonth();
+
+    if (dateMonth !== givenMonth) {
+        return 0;
+    } else {
+        const totalDays = new Date(date.getFullYear(), dateMonth + 1, 0).getDate();
+        return (date.getDate() / totalDays) * 100;
+    }
+}
+
+function calculateLineLength(dateTo, monthStr) {
+    const date = new Date(dateTo);
+    const dateMonth = date.getMonth();
+    const givenMonth = new Date(Date.parse(monthStr +" 1, " + date.getFullYear())).getMonth();
+
+    console.log(dateTo, monthStr)
+
+    if (dateMonth !== givenMonth) {
+        return 100;
+    } else {
+        const totalDays = new Date(date.getFullYear(), dateMonth + 1, 0).getDate();
+        return ((date.getDate() / totalDays) * 100)*0.8; //0.8 offset to address width overlap to not have gaps between the bars
+    }
+}
+
 </script>
 <div class="card">
               <div class="table-responsive small">
@@ -139,20 +168,24 @@ function copyText(content){
                       </td>
                       {#each months as month}
                         {#if eventIn(month, event?.dateFrom, event?.dateTo)}
+
                           <td class="timeline-container" class:today={month === formattedToday}>
-                            <span class="line bg-azure"></span>
-                              <div class="tooltip-content">
-                                <strong>start:</strong> {event.dateFrom}<br>
-                                <strong>end:</strong> {event.dateTo}
-                              </div>
-                              <span class:today-line={month === formattedToday} style="--day-percentage: {dayPercentage}" title="today"></span>
-                            </td>
+                            <span
+        class="line"
+        style="--start-percentage: {calculateStartPercentage(event?.dateFrom, month)}%; --line-length: {calculateLineLength(event?.dateTo, month)}%"
+      ></span>
+                            <div class="tooltip-content">
+                              <strong>start:</strong> {event.dateFrom}<br>
+                              <strong>end:</strong> {event.dateTo}
+                            </div>
+                            <span class:today-line={month === formattedToday} style="--day-percentage: {dayPercentage}" title="today"></span>
+                          </td>
                         {:else}
                           <td class:today={month === formattedToday}>
                             <span class:today-line={month === formattedToday} style="--day-percentage: {dayPercentage}" title="today"></span>
                           </td>
                         {/if}
-                        {/each}
+                      {/each}
                     </tr>
                     {/each}
                     {/if}
@@ -218,14 +251,15 @@ function copyText(content){
 
 .line {
   position: absolute;
-  bottom: 40%; /* Adjust as necessary to align with the bottom of the month divs */
-  width: 115%;
-  left: 0;
+  bottom: 5px;
+  left: var(--start-percentage);
+  width: calc(var(--line-length)*1.15);
+  height: 10px;
+  background-color: var(--tblr-azure);
   border-radius: 5px;
-  height: 10px; /* Thickness of the line */
-  /* background-color: #000; Color of the line */
-  /* No need to set width and left here if you're doing it inline as in the HTML example */
+  bottom: 40%;
 }
+
 .timeline-container {
   position: relative;
 }
