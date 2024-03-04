@@ -114,7 +114,7 @@ function calculateLineLength(dateTo, monthStr) {
                     <tr on:dblclick={() => goto(`/planning/${event.id}/view`)} on:click={() => selectedRow === index ? selectedRow = -1 : selectedRow = index} class:selected="{selectedRow === index}" >
                       <td class="sticky-col first-col" style="min-width:20em">
                         <h4 class="text-capitalize">
-                          <a href="#" on:click="{() => goto(`/planning/${event.id}/view`)}">{event?.title}</a>
+                          <button class="link" on:click="{() => goto(`/planning/${event.id}/view`)}">{event?.title}</button>
                         </h4>
                         <div class="grid-container text-secondary">
                           <strong title="Work Order">AO:</strong>
