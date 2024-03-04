@@ -3,12 +3,13 @@ package event
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gin-gonic/gin"
 
 	"prism/config"
 	"prism/database"
@@ -83,24 +84,23 @@ func UpdateEventQueues(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Update successful"})
 }
 
-// move this functionality to its own function, handle all errors, and mark events as processed, but failed.
 func handleEvent(event database.EventQueue) error {
 	settings, _ := database.GetSettings(false)
 
 	if !settings.Slack.Enabled {
-		return fmt.Errorf("Slack is disabled")
+		return fmt.Errorf("slack is disabled")
 	}
 
 	finding, err := database.GetJSONData(event.TableID)
 
 	if err != nil {
-		return fmt.Errorf("Error vulnerability not found: %v", err)
+		return fmt.Errorf("error vulnerability not found: %v", err)
 	}
 
 	var vulnData Vulnerability
 	err = json.Unmarshal(finding.Vulnerability, &vulnData)
 	if err != nil {
-		return fmt.Errorf("Error unmarshaling JSON data: %v", err)
+		return fmt.Errorf("error unmarshaling JSON data: %v", err)
 	}
 
 	var data VulnerabilityData
@@ -118,17 +118,17 @@ func handleEvent(event database.EventQueue) error {
 
 	switch data.Vulnerability.Criticality {
 	case "information":
-		imageUrl = "https://imgur.com/kmNFZ6m.png" // Replace with actual URL
+		imageUrl = "https://imgur.com/kmNFZ6m.png"
 	case "low":
-		imageUrl = "https://imgur.com/4LnvMDk.png" // Replace with actual URL
+		imageUrl = "https://imgur.com/4LnvMDk.png"
 	case "medium":
-		imageUrl = "https://imgur.com/4ztQrRz.png" // Replace with actual URL
+		imageUrl = "https://imgur.com/4ztQrRz.png"
 	case "high":
-		imageUrl = "https://imgur.com/2YCkzIc.png" // Replace with actual URL
+		imageUrl = "https://imgur.com/2YCkzIc.png"
 	case "critical":
-		imageUrl = "https://i.imgur.com/IlXt8Ds.png" // Replace with actual URL
+		imageUrl = "https://i.imgur.com/IlXt8Ds.png"
 	default:
-		imageUrl = "https://imgur.com/kmNFZ6m.png" // Default image URL
+		imageUrl = "https://imgur.com/kmNFZ6m.png"
 	}
 
 	data.ImageUrl = imageUrl
@@ -200,7 +200,8 @@ func PollEventQueue() {
 		events := *eventsPtr
 
 		for _, event := range events {
-			go prepareAndSendSlackMessage(event)
+			eventCopy := event
+			go prepareAndSendSlackMessage(eventCopy)
 		}
 	}
 }
