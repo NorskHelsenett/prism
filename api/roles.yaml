@@ -55,9 +55,9 @@ roles:
     description: "Access to the planning feature"
     permissions:
       - resource: "/project"
-        action: ["read"]
+        action: ["read", "write", "delete"]
       - resource: "/project/:id"
-        action: ["read"]
+        action: ["*"]
       - resource: "/vulnerability"
         action: ["read"]
       - resource: "/vulnerability/:id"
