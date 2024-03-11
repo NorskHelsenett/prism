@@ -93,7 +93,7 @@ function updateText(index) {
 </span>
 {/if}
 </div>
-<div class="" bind:this={container}>{@html renderedMarkdown || ''}</div>
+<div class="markdown-content" bind:this={container}>{@html renderedMarkdown || ''}</div>
 
 <style>
   :global(.form-check-input:disabled){
@@ -101,5 +101,14 @@ function updateText(index) {
   }
   :global(form-check-input:disabled ~ .form-check-label, .form-check-input[disabled] ~ .form-check-label) {
     opacity: 1 !important;
+  }
+
+  :global(.markdown-content > *){
+    margin-bottom: 1.5rem!important;
+  }
+
+  :global(.markdown-content > hr){
+    margin-bottom: 1.2rem!important;
+    margin-top: -0.5rem!important;
   }
 </style>
