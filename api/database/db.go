@@ -419,7 +419,7 @@ func HasClientAccessToProject(email, projectID string) (bool, error) {
 
 	emails := strings.Split(project.ClientEmail, ",")
 	for _, clientEmail := range emails {
-		if strings.TrimSpace(clientEmail) == email {
+		if strings.TrimSpace(strings.ToLower(clientEmail)) == strings.ToLower(email) {
 			return true, nil
 		}
 	}
