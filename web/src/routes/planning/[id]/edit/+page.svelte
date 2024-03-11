@@ -84,7 +84,7 @@ function isAvailable(user) {
 
 <div class="row align-items-center mb-3">
   <div class="col-auto">
-    <a href="#" class="btn btn-dark w-100" on:click="{() => goto(`/planning/${data.id}/view`)}">Back</a>
+    <button href="#" class="btn btn-dark w-100 link" on:click="{() => goto(`/planning/${data.id}/view`)}">Back</button>
   </div>
   <div class="col-auto">
     <a href="#" class="btn btn-primary w-100" on:click="{() => updateAssessment()}">Save</a>
