@@ -9,35 +9,36 @@
 	import { dashboardStore } from '$lib/stores/dashboardStore';
 
 	function handleRefresh() {
-			dashboardStore.refreshData(); // Force refresh data when button clicked
+    dashboardStore.refreshData(); // Force refresh data when button clicked
+    console.log($dashboardStore.owaspCriticalities)
 	}
 
-    let showModal = false;
+  let showModal = false;
 
   $: if (!showModal) {
     handleRefresh()
   }
 
-    function openVulnerabilityReportForm() {
-        showModal = true;
-    }
+  function openVulnerabilityReportForm() {
+      showModal = true;
+  }
 
-    function closeModal() {
-        showModal = false;
-    }
+  function closeModal() {
+      showModal = false;
+  }
 
 	import { pageMeta } from '$lib/stores/pageMeta';
   import { onMount } from 'svelte';
-	import Categories from '$lib/components/dashboard/Categories.svelte';
 	import OwaspDonut from '$lib/components/charts/OwaspDonut.svelte';
 	import OwaspTable from '$lib/components/dashboard/OwaspTable.svelte';
-	import EndpointVulnerability from '$lib/components/dashboard/EndpointVulnerability.svelte';
 	import StatusVulnerability from '$lib/components/dashboard/StatusVulnerability.svelte';
 	import { accessLevels } from '$lib/userStore';
+	import OwaspBarChart from '$lib/components/dashboard/OwaspBarChart.svelte';
+	import { goto } from '$app/navigation';
 	let severityData;
+
 	onMount(() => {
 			pageMeta.set({ pretitle: 'Overview',title: 'Pentest Report Information Security Management' });
-
 	});
 
   $: if ($dashboardStore && $dashboardStore.criticalities) {
@@ -103,17 +104,17 @@
 			<div class="col12">
 				<div class="row row-cards">
 					<div class="col-sm-6 col-lg-3">
-						<div class="card card-sm">
+						<div class="card card-sm cursor-pointer" on:click={() => goto("/vulnerability")}>
 							<CountVulnerabilities data={$dashboardStore.total}/>
 						</div>
 					</div>
 					<div class="col-sm-6 col-lg-3">
-						<div class="card card-sm">
+						<div class="card card-sm cursor-pointer" on:click={() => goto("/project")}>
 							<Projects />
 						</div>
 					</div>
-					<div class="col-sm-6 col-lg-3">
-						<div class="card card-sm">
+					<div class="col-sm-6 col-lg-3"> <!-- TODO: fix this hardcoding-->
+						<div class="card card-sm cursor-pointer" on:click={() => goto("/project/20/view")}>
 							<BugBounty data={$dashboardStore.bugBounties}/>
 						</div>
 					</div>
@@ -155,6 +156,14 @@
 				<div class="card">
 						<div class="card-body">
 							<StatusVulnerability statuses={$dashboardStore.statuses}/>
+            </div>
+					</div>
+			</div>
+
+			<div class="col-12">
+				<div class="card">
+						<div class="card-body">
+							<OwaspBarChart owaspData={$dashboardStore.owaspCriticalities}/>
             </div>
 					</div>
 			</div>
