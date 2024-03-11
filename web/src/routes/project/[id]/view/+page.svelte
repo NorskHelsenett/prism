@@ -217,8 +217,8 @@ let severityData = {
     </div>
   </div>
 
-  <div class="col-4 h-100">
-    <div class="card">
+  <div class="col-4">
+    <div class="card h-100">
         <div class="card-body " style="min-height: 10rem">
         <CriticalityPie {severityData} />
       </div>
