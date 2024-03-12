@@ -12,9 +12,11 @@
 
   export let data;
   export let assessment
+  let requestedBy
 
   onMount(async () => {
     assessment = await Fetch(`/api/planning/${data.id}`)
+    requestedBy = [assessment.requester]
     if (!assessment.status) {
       assessment.status = 'Planning';
     }
@@ -22,6 +24,7 @@
   })
 
   async function updateAssessment() {
+    // assessment.requester = requestedBy[0]
     const result = await Fetch(`/api/planning/${data.id}`, {method:"PUT", body: JSON.stringify(assessment)})
     if (result.error) {
       notification.addAlert({type: "alert", title: "Error", message: result.error})
@@ -136,7 +139,7 @@ function isAvailable(user) {
         <div class="mb-3 row">
           <label class="col-3 col-form-label required">Requested by</label>
           <div class="col">
-            <UserSearch on:selection={e => assessment.requester = e.detail.selectedEmails[0]} bind:selectedValues={assessment.requester}/>
+            <UserSearch on:selection={e => assessment.requester = e.detail.selectedEmails[0]} bind:selectedValues={requestedBy}/>
           </div>
         </div>
 
