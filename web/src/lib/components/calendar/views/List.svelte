@@ -79,7 +79,6 @@ function calculateLineLength(dateTo, monthStr) {
     const dateMonth = date.getMonth();
     const givenMonth = new Date(Date.parse(monthStr +" 1, " + date.getFullYear())).getMonth();
 
-    console.log(dateTo, monthStr)
 
     if (dateMonth !== givenMonth) {
         return 100;

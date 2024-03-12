@@ -10,7 +10,6 @@
 
 	function handleRefresh() {
     dashboardStore.refreshData(); // Force refresh data when button clicked
-    console.log($dashboardStore.owaspCriticalities)
 	}
 
   let showModal = false;
