@@ -12,8 +12,10 @@
 	let projectName = '';
 	let slackChannel = '';
 	let description = '';
-	let clientEmail = '';
-	let hackerName = '';
+	let clientEmailInitilized = [];
+	let clientEmail = [];
+	let hackerNameInitilized = [];
+	let hackerName = [];
 	let isBugBounty = false;
 	let isPersisting = false
 
@@ -22,11 +24,11 @@
 	}
 
 	function handleUserSearchChange(event) {
-		hackerName = event.detail.selectedEmails.join(',');
+		hackerName = event.detail.selectedEmails;
 	}
 
 	function handleClientSearchChange(event) {
-		clientEmail = event.detail.selectedEmails.join(',');
+		clientEmail = event.detail.selectedEmails
 	}
 
 	let errorMessage = '';
@@ -35,13 +37,14 @@
 		// Reset error message
 		errorMessage = '';
 		isPersisting = true
+    const clientEmailToPost = clientEmail.join(',')
 
 		let projectData = {
 			projectName: projectName,
 			slackChannel: slackChannel,
 			description: description,
-			clientEmail: clientEmail,
-			hackerName: hackerName,
+			clientEmail: clientEmailToPost,
+			hackerName: hackerName.join(','),
 			isBugBounty: isBugBounty,
 			ID: model?.ID
 		};
@@ -49,8 +52,8 @@
 		formData.append('projectName', projectName);
 		formData.append('slackChannel', slackChannel);
 		formData.append('description', description);
-		formData.append('clientEmail', clientEmail);
-		formData.append('hackerName', hackerName);
+		formData.append('clientEmail', clientEmailToPost);
+		formData.append('hackerName', hackerName.join(','));
 		try {
 			const method = (model == null) ? "POST" : "PUT";
 			const url = (model == null) ? "/api/project" : `/api/project/${model.ID}`
@@ -91,11 +94,20 @@
 			projectName = model.ProjectName;
 			slackChannel = model.SlackChannel;
 			description = model.Description;
-			clientEmail = model.ClientEmail;
-			hackerName = model.HackerName;
+			clientEmailInitilized = splitEmails(model.ClientEmail);
+			hackerNameInitilized = splitEmails(model.HackerName);
 			isBugBounty = model.IsBugBounty;
 		}
 	});
+
+  function splitEmails(value){
+    let emails = value.split(",");
+    if(emails.length == 1){
+      return [value]
+    }
+    console.log(emails)
+    return emails;
+  }
 </script>
 
 <Modal bind:showModal on:close={closeModal}>
@@ -193,15 +205,15 @@
 						<div class="row g-3">
 							<div class="col-xl-12">
 								<div class="mb-3">
-									<label for="clientEmail" class="form-label required">Client emails</label>
+									<label for="clientEmailInitilized" class="form-label required">Client emails</label>
 									<input
 										type="email"
 										class="form-control"
-										name="clientEmail"
-										bind:value={clientEmail}
+										name="clientEmailInitilized"
+										bind:value={clientEmailInitilized}
 										hidden
 									/>
-									<UserSearch on:selection={handleClientSearchChange} bind:selectedValues={clientEmail}/>
+									<UserSearch on:selection={handleClientSearchChange} bind:selectedValues={clientEmailInitilized}/>
 									<small class="form-hint">
 										This refers to the individual or team accountable for overseeing this project.
 										They will serve as the primary point of contact for all project-related matters.
@@ -213,10 +225,10 @@
 										type="email"
 										class="form-control"
 										name="hackername"
-										bind:value={hackerName}
+										bind:value={hackerNameInitilized}
 										hidden
 									/>
-									<UserSearch on:selection={handleUserSearchChange} bind:selectedValues={hackerName}/>
+									<UserSearch on:selection={handleUserSearchChange} bind:selectedValues={hackerNameInitilized}/>
 									<small class="form-hint">
 										This denotes the individual(s) tasked with carrying out and following up on the
 										testing phase of this project. Please provide a list of their email addresses,

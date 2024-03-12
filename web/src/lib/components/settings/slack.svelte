@@ -33,7 +33,6 @@
           persisting = true;
           // Replace with actual API call
           await updateChannelIDAPI();
-          console.log("Channel ID persisted:", settings.slack.channelID);
       } catch (error) {
           console.error("Failed to persist channel ID:", error);
       } finally {

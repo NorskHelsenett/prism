@@ -37,7 +37,6 @@ function getDaysInMonth(year, month) {
 }
 
   function eventsForDay(day) {
-    console.log(day, calendarEvents)
     return calendarEvents.filter(event => {
       const eventStartDate = new Date(event.dateFrom).getDate();
       const eventEndDate = new Date(event.dateTo).getDate();
