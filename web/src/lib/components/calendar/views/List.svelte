@@ -88,6 +88,23 @@ function calculateLineLength(dateTo, monthStr) {
     }
 }
 
+let formattedTotalHours; // Declare the variable outside the reactive block
+
+const numberFormatter = new Intl.NumberFormat('sv-SE', {
+    style: 'decimal',
+    useGrouping: true,
+    minimumFractionDigits: 0
+});
+
+$: if (calendarEvents) {
+  const totalHours = calendarEvents.reduce((accumulator, event) => {
+    return accumulator + (event?.estimate || 0);
+  }, 0);
+
+  formattedTotalHours = numberFormatter.format(totalHours);
+  console.log(formattedTotalHours);
+}
+
 </script>
 <div class="card">
               <div class="table-responsive small">
@@ -123,7 +140,7 @@ function calculateLineLength(dateTo, monthStr) {
                       </td>
                       <td class="text-secondary">
                         {#if event?.estimate}
-                          {event?.estimate} h
+                          {numberFormatter.format(event?.estimate)} h
                         {/if}
                       </td>
                       <td style="min-width:10em">
@@ -191,10 +208,15 @@ function calculateLineLength(dateTo, monthStr) {
                   </tbody>
                 </table>
               </div>
+              <div class="card-footer d-flex align-items-center">
+                  <p class="m-0 text-secondary">Showing <span>{calendarEvents.length}</span> assessments with a total of {formattedTotalHours} hours</p>
+                </div>
             </div>
 
 <style>
-
+.table{
+  overflow-x: hidden;
+}
 
 .selected {
   background-color: rgba(184, 196, 228, 0.05);

@@ -32,10 +32,12 @@ $: componentsToShow = [{ id: 1, component: activeComponent }];
 </Modal>
 
         <!-- Page header -->
-        <div class="page-header d-print-none">
-          <div class="container-xl">
+        <div class="d-print-none">
             <div class="row g-2 align-items-center">
               <div class="col">
+                <div class="page-pretitle">
+                  Overview
+                </div>
                 <h2 class="page-title">
                   Planning
                 </h2>
@@ -49,11 +51,9 @@ $: componentsToShow = [{ id: 1, component: activeComponent }];
                 </a>
               </div>
             </div>
-          </div>
         </div>
         <!-- Page body -->
-        <div class="page-body" style="margin-top: 17px;">
-          <div class="container-xl">
+        <div class="page-body" style="margin-top: 41px;">
             <ul class="nav nav-bordered mb-4">
               <li class="nav-item">
                 <a class="nav-link" class:active="{activeComponent === Calendar}" on:click|preventDefault={() => show(Calendar)} aria-current="page" href="#">Calendar</a>
@@ -71,7 +71,6 @@ $: componentsToShow = [{ id: 1, component: activeComponent }];
               <svelte:component this={component} reload={showModal} />
             </div>
         {/each}
-          </div>
         </div>
 
 <style>

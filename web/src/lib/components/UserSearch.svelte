@@ -41,7 +41,7 @@ onMount(async () => {
 });
 
 
-$: if(tomSelect){
+$: if(tomSelect && selectedValues){
     let selectedEmails = selectedValues.filter(email => email.trim() !== ""); // Fjerner tomme strenger
     selectedEmails.forEach(email => {
       // Sjekk om e-posten allerede finnes som et alternativ, hvis ikke, legg til som nytt alternativ
