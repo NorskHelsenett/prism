@@ -25,7 +25,7 @@ $: componentsToShow = [{ id: 1, component: activeComponent }];
 <!-- svelte-ignore missing-declaration -->
 <Modal bind:showModal on:close={() => showModal = false} large={false}>
     <div class="card-header" slot="title">
-      <div class="card-title">New Assassment
+      <div class="card-title">New Assessment
       </div>
     </div>
   <NewAssessment bind:showModal on:close={() => showModal = false}/>
