@@ -1,6 +1,5 @@
 <script>
-	import { accessLevels } from '$lib/userStore';
-
+import { accessLevels } from '$lib/userStore';
 
 import DOMPurify from 'dompurify'
 import { marked } from 'marked';
@@ -17,6 +16,13 @@ let todo = 0
 let checked = 0
 
 export let writeAccess = false
+
+// Add a custom renderer for tables
+renderer.table = function(header, body) {
+  return `<table class="">
+    <thead>${header}</thead>
+    ${body}</table>`;
+};
 
 renderer.listitem = function(text) {
   if (text.includes("type=\"checkbox\"") == false){
@@ -110,5 +116,22 @@ function updateText(index) {
   :global(.markdown-content > hr){
     margin-bottom: 1.2rem!important;
     margin-top: -0.5rem!important;
+  }
+
+  :global(td,th){
+    padding: 0 1rem 0.4rem 0;
+  }
+
+  :global(table) {
+    width: 100%;
+    background-color: var(--tblr-table-bg);
+  }
+
+  :global(tr){
+    padding: 1rem 1rem;
+  }
+
+  :global(td){
+    vertical-align: top;
   }
 </style>
