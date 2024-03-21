@@ -8,12 +8,9 @@
 
   onMount(async () => {
     data = await Fetch('/api/session/otp/generate');
-    // if (data?.otp_activated){
-    //   alreadyActivated = data.otp_activated
-    // }
-    alreadyActivated = false
-    data.url = "test"
-    data.secret = "7DVCQUFZQLA7H5366UCGYOJVOKIZ6NUQ"
+    if (data?.otp_activated){
+      alreadyActivated = data.otp_activated
+    }
   });
 
   const logo = "/favicon.png"
@@ -42,7 +39,7 @@
           <div class="hr-text hr-text-center hr-text-spaceless">QR Code</div>
           <div class="card-body mb-3">
             <div class="mb-3 d-flex justify-content-center mh-20 cursor-pointer" on:click={() => showSecret =!showSecret}>
-                  <SvgQR class="text-teal bg-transparent blur" data={data.url} {logo} shape="circle"/>
+                <SvgQR class="text-teal bg-transparent blur" data={data.url} {logo} shape="circle"/>
                 {#if showSecret}
                 <div id="secret-box" class="card card-body text-teal">
                   <p class="text-secondary">
