@@ -8,14 +8,22 @@
 
   onMount(async () => {
     data = await Fetch('/api/session/otp/generate');
-    if (data?.otp_activated){
-      alreadyActivated = data.otp_activated
-    }
+    // if (data?.otp_activated){
+    //   alreadyActivated = data.otp_activated
+    // }
+    alreadyActivated = false
+    data.url = "test"
+    data.secret = "7DVCQUFZQLA7H5366UCGYOJVOKIZ6NUQ"
   });
 
   const logo = "/favicon.png"
   let warningAccepted = true
 
+  let showSecret = false
+
+  function addSpacesToText(text){
+    return text.replace(/(.{4})/g, '$1 ').trim()
+  }
 </script>
 
 <div class="page page-center">
@@ -33,8 +41,16 @@
           </div>
           <div class="hr-text hr-text-center hr-text-spaceless">QR Code</div>
           <div class="card-body mb-3">
-            <div class="mb-3 d-flex justify-content-center mh-20">
-                <SvgQR class="text-teal bg-transparent " data={data.url} {logo} shape="circle" />
+            <div class="mb-3 d-flex justify-content-center mh-20 cursor-pointer" on:click={() => showSecret =!showSecret}>
+                  <SvgQR class="text-teal bg-transparent blur" data={data.url} {logo} shape="circle"/>
+                {#if showSecret}
+                <div id="secret-box" class="card card-body text-teal">
+                  <p class="text-secondary">
+                    <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-info-circle"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M12 9h.01" /><path d="M11 12h1v4h1" /></svg>
+                    Enter this code without the spaces</p>
+                  <p class="d-flex justify-content-center code-text">{addSpacesToText(data.secret)}</p>
+                </div>
+              {/if}
             </div>
           </div>
         </div>
@@ -73,5 +89,20 @@
 <style>
   .mh-20{
     height: 20em;
+  }
+  #secret-box{
+    position: absolute;
+    top: 32%;
+    text-align: center;
+    left: 0;
+    margin: 1em;
+  }
+
+  .code-text{
+    letter-spacing: 5px;
+  }
+
+  .blur {
+    filter: blur(3px);
   }
 </style>
