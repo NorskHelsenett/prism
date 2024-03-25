@@ -102,7 +102,6 @@ $: if (calendarEvents) {
   }, 0);
 
   formattedTotalHours = numberFormatter.format(totalHours);
-  console.log(formattedTotalHours);
 }
 
 </script>
@@ -209,7 +208,7 @@ $: if (calendarEvents) {
                 </table>
               </div>
               <div class="card-footer d-flex align-items-center">
-                  <p class="m-0 text-secondary">Showing <span>{calendarEvents.length}</span> assessments with a total of {formattedTotalHours} hours</p>
+                  <p class="m-0 text-secondary">Showing <span>{calendarEvents?.length}</span> assessments with a total of {formattedTotalHours} hours</p>
                 </div>
             </div>
 
