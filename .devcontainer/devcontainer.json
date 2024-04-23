@@ -8,7 +8,7 @@
 		"ghcr.io/lumenpink/devcontainer-features/bun:0": {}
 	},
 	"containerEnv": {
-		"HOME": "/home/vscode"
+		"HOME": "/home/vscode",
 	},
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
@@ -18,7 +18,8 @@
 	"forwardPorts": [8080, 1473],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	"postCreateCommand": "ssh-add -L > $HOME/.ssh/yubikey.pub && git config --global gpg.format ssh && git config --global user.signingkey $HOME/.ssh/yubikey.pub",
+	//"postCreateCommand": "ssh-add -L > $HOME/.ssh/yubikey.pub && git config --global gpg.format ssh && git config --global user.signingkey $HOME/.ssh/yubikey.pub",
+	"postAttachCommand": "git config --global user.signingkey $HOME/.ssh/yubikey.pub && ssh-add -L > $HOME/.ssh/yubikey.pub",
 
 	// Configure tool-specific properties.
 	// "customizations": {},
