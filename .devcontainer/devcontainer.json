@@ -1,0 +1,37 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/go
+{
+	"name": "Go",
+	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+	"image": "mcr.microsoft.com/devcontainers/go:1-1.22-bookworm",
+	"features": {
+		"ghcr.io/lumenpink/devcontainer-features/bun:0": {}
+	},
+	"containerEnv": {
+		"HOME": "/home/vscode"
+	},
+
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	// "features": {},
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	"forwardPorts": [8080, 1473],
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	"postCreateCommand": "ssh-add -L > $HOME/.ssh/yubikey.pub && git config --global gpg.format ssh && git config --global user.signingkey $HOME/.ssh/yubikey.pub",
+
+	// Configure tool-specific properties.
+	// "customizations": {},
+	"runArgs": [
+		"--userns=keep-id:uid=1000,gid=1000",
+	],
+	"containerUser": "vscode",
+  "updateRemoteUserUID": true,
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "svelte.svelte-vscode"
+      ]
+    }
+  }
+}
