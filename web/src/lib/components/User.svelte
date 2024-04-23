@@ -3,6 +3,7 @@
   import { clickOutside } from './clickOutside.js';
   import { userStore } from '$lib/userStore.js';
   import { goto } from '$app/navigation';
+  import { slide } from 'svelte/transition'
 
   function navigate(url) {
     return (event) => {
@@ -48,14 +49,16 @@
         <div class="mt-1 small text-secondary text-capitalize">{user.role}</div>
     </div>
 </a>
+{#if !isHidden}
 <div
     use:clickOutside on:outsideClick={closeDropdown}
-    hidden={isHidden}
     class="dropdown-menu dropdown-menu-end dropdown-menu-arrow show"
     data-bs-popper="static"
+    transition:slide
 >
     <a href="/" class="dropdown-item" on:click={navigate("/")}>Status</a>
     <a href="/settings" class="dropdown-item" on:click={navigate("/settings")}>Settings</a>
     <div class="dropdown-divider"></div>
     <a href="/api/logout" class="dropdown-item" on:click={navigate("/api/logout")}>Logout</a>
 </div>
+{/if}
