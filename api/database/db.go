@@ -34,6 +34,12 @@ type ProjectData struct {
 	IsBugBounty  bool
 }
 
+type Subscriber struct {
+	gorm.Model
+	Email        string
+	Subscription datatypes.JSON
+}
+
 func CreateProject(project *ProjectData) {
 	result := db.Create(project) // Create a new record
 	if result.Error != nil {
@@ -106,12 +112,18 @@ type AuditLoggingSettings struct {
 
 type Settings struct {
 	gorm.Model
-	SlackData    string               `json:"-" gorm:"column:slack_settings"`
-	Slack        SlackSettings        `gorm:"-" json:"slack"`
-	AuditLogData string               `json:"-" gorm:"column:auditlog_settings"`
-	AuditLog     AuditLoggingSettings `gorm:"-" json:"auditlog"`
-	Metrics      Metrics              `gorm:"-" json:"metrics"`
-	MFAEnabled   bool                 `gorm:"default:false"`
+	SlackData           string               `json:"-" gorm:"column:slack_settings"`
+	Slack               SlackSettings        `gorm:"-" json:"slack"`
+	AuditLogData        string               `json:"-" gorm:"column:auditlog_settings"`
+	AuditLog            AuditLoggingSettings `gorm:"-" json:"auditlog"`
+	Metrics             Metrics              `gorm:"-" json:"metrics"`
+	MFAEnabled          bool                 `gorm:"default:false"`
+	WebPushNotification string               `gorm:"column:vaapi_keys" json:"-"`
+}
+
+type WebPushNotificationSettings struct {
+	PrivateKey string `json:"privateKey"`
+	PublicKey  string `json:"publicKey"`
 }
 
 type Metrics struct {
@@ -121,12 +133,13 @@ type Metrics struct {
 
 type UserData struct {
 	gorm.Model
-	Email     string `json:"email"`
-	Name      string `json:"name"`
-	Picture   string `json:"picture"`
-	Role      string `json:"role" gorm:"default:visitor"`
-	Title     string `json:"title" gorm:"default:My title"`
-	OTPSecret string `json:"-"`
+	Email         string         `json:"email"`
+	Name          string         `json:"name"`
+	Picture       string         `json:"picture"`
+	Role          string         `json:"role" gorm:"default:visitor"`
+	Title         string         `json:"title" gorm:"default:My title"`
+	OTPSecret     string         `json:"-"`
+	Notifications datatypes.JSON `json:"-"`
 }
 
 type Vulnerability struct {
@@ -143,6 +156,7 @@ type EventQueue struct {
 	Processed bool      `gorm:"default:false;index:idx_processed"`
 	CreatedAt time.Time `gorm:"index:idx_created_at,autoCreateTime"`
 	UpdatedAt time.Time `gorm:"autoCreateTime"`
+	Kind      models.EventKind
 }
 
 type AuditLog struct {
@@ -202,13 +216,33 @@ func InitDB() {
 	db.AutoMigrate(&AuditLog{})
 	db.AutoMigrate(&ImageData{})
 	db.AutoMigrate(&AssessmentJSON{})
+	db.AutoMigrate(&Subscriber{})
+
+	db.Exec("DROP TRIGGER IF EXISTS jsondata_insert;")
+	db.Exec("DROP TRIGGER IF EXISTS jsondata_update_comments;")
 
 	db.Exec(`
     CREATE TRIGGER IF NOT EXISTS jsondata_insert AFTER INSERT ON json_data
 		BEGIN
-    	INSERT INTO event_queues (table_id, table_name, created_at) VALUES (NEW.id, 'vulnerability', CURRENT_TIMESTAMP);
+    	INSERT INTO event_queues (table_id, table_name, created_at, kind) VALUES (NEW.id, 'vulnerability', CURRENT_TIMESTAMP, 1);
 		END;
 		`)
+
+	db.Exec(`
+		CREATE TRIGGER IF NOT EXISTS jsondata_update_comments
+		AFTER UPDATE OF comments ON json_data
+		FOR EACH ROW
+		WHEN (OLD.comments IS NOT NEW.comments)
+		BEGIN
+				INSERT INTO event_queues (table_id, table_name, created_at, kind)
+				VALUES (
+						NEW.id,
+						'vulnerability',
+						CURRENT_TIMESTAMP,
+						2
+				);
+		END;
+	`)
 }
 
 func CloseConnection() error {
@@ -218,6 +252,146 @@ func CloseConnection() error {
 	}
 
 	return sqlDB.Close() // close the underlying SQL database
+}
+
+func DeleteNotifications(email string) error {
+	var userData UserData
+
+	// Fetch the user data by email
+	result := db.Where("email = ?", email).First(&userData)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	userData.Notifications = nil
+
+	result = db.Save(&userData)
+	return result.Error
+}
+
+func GetAllSubscribers() ([]Subscriber, error) {
+	var subscriberList []Subscriber
+	result := db.Find(&subscriberList)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return subscriberList, nil
+}
+
+func AppendSubscriber(email string, subs []byte) error {
+	subscriber := Subscriber{
+		Email:        email,
+		Subscription: subs,
+	}
+
+	if err := db.Create(&subscriber).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func CreateNotification(email string, notification models.Notification) error {
+	var userData UserData
+
+	// Fetch the user data by email
+	result := db.Where("email = ?", email).First(&userData)
+	if result.Error != nil {
+		// Check if the error is a RecordNotFound error
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			// Fail softly by returning nil
+			return nil
+		}
+		// For other types of errors, return the error
+		return result.Error
+	}
+
+	// Unmarshal the JSON notifications into a slice
+	var notifications []models.Notification
+	// Check if the JSON field is not nil before unmarshalling
+	if userData.Notifications != nil && len(userData.Notifications) > 0 {
+		if err := json.Unmarshal(userData.Notifications, &notifications); err != nil {
+			return err
+		}
+	} else {
+		// If the JSON is nil or empty, initialize it to an empty slice to avoid null in JSON output
+		notifications = []models.Notification{}
+	}
+
+	notifications = append(notifications, notification)
+
+	// Marshal the updated notifications slice back into JSON
+	updatedNotifications, err := json.Marshal(notifications)
+	if err != nil {
+		return err
+	}
+	userData.Notifications = updatedNotifications
+
+	// Save the updated user data back to the database
+	result = db.Save(&userData)
+	return result.Error
+}
+
+func MarkNotificationAsRead(email string, notificationTime time.Time) error {
+	var userData UserData
+
+	// Fetch the user data by email
+	result := db.Where("email = ?", email).First(&userData)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	// Unmarshal the JSON notifications into a slice
+	var notifications []models.Notification
+	if err := json.Unmarshal(userData.Notifications, &notifications); err != nil {
+		return err
+	}
+
+	// Mark the notification as read
+	updated := false
+	for i, notification := range notifications {
+		if notification.When.Equal(notificationTime) && !notification.IsRead {
+			notifications[i].IsRead = true
+			updated = true
+			break
+		}
+	}
+
+	// If the notification was found and updated, marshal the slice back to JSON and update the record
+	if updated {
+		updatedNotifications, err := json.Marshal(notifications)
+		if err != nil {
+			return err
+		}
+		userData.Notifications = updatedNotifications
+		result = db.Save(&userData)
+		return result.Error
+	}
+
+	// If no updates were made, return nil to indicate no error occurred
+	return nil
+}
+
+func GetNotifications(email string) ([]models.Notification, error) {
+	var userData UserData
+	result := db.First(&userData).Where("email = ?", email)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	var notifications []models.Notification
+
+	// Check if the JSON field is not nil before unmarshalling
+	if userData.Notifications != nil && len(userData.Notifications) > 0 {
+		if err := json.Unmarshal(userData.Notifications, &notifications); err != nil {
+			return nil, err
+		}
+	} else {
+		// If the JSON is nil or empty, initialize it to an empty slice to avoid null in JSON output
+		notifications = []models.Notification{}
+	}
+
+	return notifications, nil
 }
 
 func UpdateAssassment(assessment models.Assessment, id uint) error {
@@ -575,6 +749,73 @@ func getDatabaseSize() (float64, error) {
 	return sizeInMB, nil
 }
 
+func GetVAAPIprivateKey() (string, error) {
+	settings, err := GetSettings(false)
+	if err != nil {
+		return "", err
+	}
+
+	var webpushSettings WebPushNotificationSettings
+
+	err = json.Unmarshal([]byte(settings.WebPushNotification), &webpushSettings)
+	if err != nil {
+		return "", err
+	}
+
+	return webpushSettings.PrivateKey, nil
+}
+
+func GetVAAPIpublicKey() (string, error) {
+	settings, err := GetSettings(false)
+	if err != nil {
+		return "", err
+	}
+
+	var webpushSettings WebPushNotificationSettings
+
+	if settings.WebPushNotification == "" {
+		return "", nil
+	}
+
+	err = json.Unmarshal([]byte(settings.WebPushNotification), &webpushSettings)
+	if err != nil {
+		return "", err
+	}
+
+	return webpushSettings.PublicKey, nil
+}
+
+func CreateVAAPIprivateKey(privateKey, publicKey string) error {
+	settings, err := GetSettings(false)
+	if err != nil {
+		return err
+	}
+
+	var webpushSettings WebPushNotificationSettings
+
+	if settings.WebPushNotification != "" {
+		err = json.Unmarshal([]byte(settings.WebPushNotification), &webpushSettings)
+		if err != nil {
+			return err
+		}
+		if webpushSettings.PrivateKey != "" {
+			return errors.New("private key already exists")
+		}
+	}
+
+	webpushSettings.PrivateKey = privateKey
+	webpushSettings.PublicKey = publicKey
+
+	webpushJson, err := json.Marshal(webpushSettings)
+	if err != nil {
+		return err
+	}
+
+	settings.WebPushNotification = string(webpushJson)
+
+	return db.Model(settings).Update("WebPushNotification", settings.WebPushNotification).Error
+}
+
 func UpdateSettings(updatedSettings *Settings) error {
 	settingsDb, err := GetSettings(false)
 	if err != nil {
@@ -740,8 +981,8 @@ func PersistComment(id uint, comment models.Comment) error {
 		return err
 	}
 	jsonData.Comments = datatypes.JSON(commentsJSON)
-
 	result := db.Save(jsonData)
+
 	// result := db.Model(&JSONData{}).Where("id = ?", id).Update("Comments", jsonData.Comments)
 	return result.Error
 }

@@ -13,6 +13,8 @@ import (
 
 	"prism/config"
 	"prism/database"
+	"prism/models"
+	"prism/routes"
 )
 
 func EventQueues(c *gin.Context) {
@@ -172,7 +174,138 @@ func getUrlFor(channel string, timestamp string, workspace string) string {
 	return fmt.Sprintf("slack://%s.slack.com/archives/%s/p%s", workspace, channel, formattedTimestamp)
 }
 
+func sendBrowserNotification(event database.EventQueue) {
+
+	if event.Kind != models.NewVulnerability {
+		return
+	}
+
+	finding, err := database.GetJSONData(event.TableID)
+
+	if err != nil {
+		updateEvent(event, err)
+		return
+	}
+
+	var vulnData Vulnerability
+	err = json.Unmarshal(finding.Vulnerability, &vulnData)
+	if err != nil {
+		updateEvent(event, err)
+		return
+	}
+
+	var data VulnerabilityData
+	data.Vulnerability = vulnData
+	data.URL = "/vulnerability/" + strconv.FormatUint(uint64(finding.ID), 10) + "/view"
+
+	usersToNotify := make(map[string]bool)
+	var projectName string
+
+	if finding.ProjectID != nil {
+		project, _ := database.GetProject(*finding.ProjectID)
+		projectName = project.ProjectName
+
+		// Split the HackerName string by comma and add each name to the map
+		for _, hacker := range strings.Split(project.HackerName, ",") {
+			if hacker != "" { // Make sure the string is not empty
+				usersToNotify[hacker] = true
+			}
+		}
+
+		// Split the ClientEmail string by comma and add each email to the map
+		for _, email := range strings.Split(project.ClientEmail, ",") {
+			if email != "" { // Make sure the string is not empty
+				usersToNotify[email] = true
+			}
+		}
+	}
+
+	// missing global users
+	// missing manually subscribed to project notification users
+
+	err = routes.SendMessage(projectName, "New vulnerability "+data.Vulnerability.Title, data.URL, finding.FoundBy, finding.FoundBy, usersToNotify)
+	updateEvent(event, err)
+}
+
+func updateEvent(event database.EventQueue, err error) {
+	if err != nil {
+		// Log the error and mark the event as processed with an error
+		log.Printf("Error processing event: %v", err)
+		event.Error = fmt.Sprintf("Error processing event: %v", err)
+		database.SetEventProcessed(&event)
+	} else {
+		// If no error, mark the event as processed normally
+		database.SetEventProcessed(&event)
+	}
+}
+
+func sendCommentsNotification(event database.EventQueue) {
+
+	if event.Kind != models.NewComment {
+		return
+	}
+
+	finding, err := database.GetJSONData(event.TableID)
+
+	if err != nil {
+		return
+	}
+
+	var vulnData Vulnerability
+	err = json.Unmarshal(finding.Vulnerability, &vulnData)
+	if err != nil {
+		updateEvent(event, err)
+		return
+	}
+
+	var data VulnerabilityData
+	data.Vulnerability = vulnData
+
+	vulnerability, _ := database.GetJSONData(finding.ID)
+
+	var comments []models.Comment
+
+	_ = json.Unmarshal([]byte(vulnerability.Comments), &comments)
+
+	usersToNotify := make(map[string]bool)
+	var lastComment models.Comment
+
+	// Ensure we have at least one comment to initialize lastComment
+	if len(comments) > 0 {
+		lastComment = comments[0]
+	}
+
+	for _, comment := range comments {
+		// usersToNotify = append(usersToNotify, comment.UserEmail)
+		usersToNotify[comment.UserEmail] = true
+		if lastComment.CreatedAt.Before(comment.CreatedAt) {
+			lastComment = comment
+		}
+	}
+
+	data.URL = "/vulnerability/" + strconv.FormatUint(uint64(finding.ID), 10) + "/view#" + lastComment.ID
+
+	// usersToNotify = append(usersToNotify, vulnerability.FoundBy)
+	usersToNotify[vulnerability.FoundBy] = true
+
+	// if finding.ProjectID != nil {
+	// 	project, _ := database.GetProject(*finding.ProjectID)
+
+	// 	usersToNotify = append(usersToNotify, strings.Split(project.HackerName, ",")...)
+	// 	usersToNotify = append(usersToNotify, strings.Split(project.ClientEmail, ",")...)
+	// }
+
+	var message = "Posted a comment"
+
+	err = routes.SendMessage("PRISM", message, data.URL, finding.FoundBy, lastComment.UserEmail, usersToNotify)
+	updateEvent(event, err)
+}
+
 func prepareAndSendSlackMessage(event database.EventQueue) {
+	if event.Kind != models.NewVulnerability {
+		return
+	}
+
 	err := handleEvent(event)
 	if err != nil {
 		// Log the error and mark the event as processed with an error
@@ -202,6 +335,8 @@ func PollEventQueue() {
 		for _, event := range events {
 			eventCopy := event
 			go prepareAndSendSlackMessage(eventCopy)
+			go sendBrowserNotification(eventCopy)
+			go sendCommentsNotification(eventCopy)
 		}
 	}
 }

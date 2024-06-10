@@ -46,6 +46,12 @@ func main() {
 
 	apiRoutes := r.Group("/api")
 	{
+		apiRoutes.GET("/notification/publicKey", routes.GetNotificationPublicKey)
+		apiRoutes.GET("/notification", routes.GetNotificationsHandler)
+		apiRoutes.DELETE("/notification", routes.DeleteNotificationsHandler)
+		apiRoutes.PUT("/notification/:time/read", routes.MarkNotificationReadHandler)
+		apiRoutes.POST("/notification/subscribe", routes.SubscribeNotification)
+
 		apiRoutes.GET("/profile", func(c *gin.Context) { auth.HandleUserRequest(c, sessionStore) })
 		apiRoutes.GET("/profile/session/all", func(c *gin.Context) { session.GetUserSessions(c, sessionStore) })
 		apiRoutes.DELETE("/profile/session/:uuid", func(c *gin.Context) { session.DeleteUserSession(c, sessionStore) })

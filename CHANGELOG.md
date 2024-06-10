@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] - 2024-06-10
+
+### Added
+
+- NOTIFICATIONS 📣
+
+  Notifications is now implemented with the support of browser push notifications. A list of your recent notifications is easily accessible from the top right corner of the application. Indulge in a serene experience and acknowledge each new notification as it arrives, today!
+
+## [0.1.3] - 2024-04-13
+
 ### Added
 
 - Planning is now implemented
