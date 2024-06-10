@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.5] - 2024-06-10
+
+### Added
+
+- Delete User ❌
+
+  It is now possible to delete a user from the system. This feature allows for the removal of unnecessary or inactive users, maintaining the integrity and security of the system.
+
 ## [0.1.4] - 2024-06-10
 
 ### Added

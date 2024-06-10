@@ -639,6 +639,10 @@ func PersistOTPSecret(email string, secret string) error {
 	return db.Model(&UserData{}).Where("email = ?", email).Update("otp_secret", secret).Error
 }
 
+func DeleteUser(id string) error {
+	return db.Where("id = ?", id).Delete(&UserData{}).Error
+}
+
 func DeleteOTPCode(email string) error {
 	return db.Model(&UserData{}).Where("email = ?", email).Update("otp_secret", nil).Error
 }

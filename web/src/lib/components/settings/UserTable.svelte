@@ -2,10 +2,13 @@
 	import { Fetch } from "$lib/fetchUtil";
 	import { onMount } from "svelte";
 	import Dropdown from "../Dropdown.svelte";
+  import DeleteModal from '$lib/components/DeleteModal.svelte';
 
 
   let users = []
   let roles = []
+  let showDeleteModal = false;
+
 
   onMount(async () => {
     users = await Fetch("/api/settings/users/all")
@@ -95,6 +98,26 @@ function formatDate(dateString) {
     await Fetch(`/api/settings/session/otp/reset/${user.email}`, {method: "DELETE"})
     //close all showDropdowns, iterate the array and set it to false
   }
+
+  let userMarkedForDeletion = null
+  let deleteDialogText = ""
+  let deleteDialogButton= ""
+
+  function deleteUser(user){
+    userMarkedForDeletion = user
+
+    deleteDialogText= `Delete ${userMarkedForDeletion?.name}?. This action is irreversible.`
+    deleteDialogButton= "Delete the user!"
+
+    showDeleteModal = true
+  }
+
+  async function deleteUserPrompted(){
+    await Fetch(`/api/settings/user/${userMarkedForDeletion.ID}`, {method: "DELETE"})
+    users = users.filter(user => user.ID !== userMarkedForDeletion.ID);
+    userMarkedForDeletion = null
+    showDeleteModal = false
+  }
 </script>
 
 <div class="card me-3 mb-3 mt-3">
@@ -139,7 +162,8 @@ function formatDate(dateString) {
             <i class="ti ti-dots cursor-pointer" on:click={() => showDropdown[index] = !showDropdown[index]}></i>
             <Dropdown bind:show={showDropdown[index]}>
               <a class="dropdown-item" href="#" on:click={()=> resetMFA(user)}>Reset MFA</a>
-              <!-- <div class="dropdown-divider"></div> -->
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item text-red" href="#" on:click={()=> deleteUser(user)}>Delete User</a>
             </Dropdown>
           </td>
         </tr>
@@ -148,3 +172,11 @@ function formatDate(dateString) {
     </table>
   </div>
 </div>
+
+<DeleteModal bind:showDeleteModal onDelete={deleteUserPrompted} deleteButtonText={deleteDialogButton} text={deleteDialogText}/>
+
+<style>
+  :global(td .dropdown){
+    position: absolute !important;
+  }
+</style>

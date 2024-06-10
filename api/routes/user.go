@@ -79,6 +79,24 @@ func GetAllUsers(c *gin.Context, s *session.SessionStore) {
 	c.JSON(http.StatusOK, users)
 }
 
+func DeleteUser(c *gin.Context, s *session.SessionStore) {
+	id := c.Param("id")
+
+	err := s.DB.Where("id = ?", id).Delete(&database.UserData{}).Error
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user from session store"})
+		return
+	}
+
+	err = database.DeleteUser(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete user"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Successfully deleted user"})
+}
+
 func GetAllProfilesEmailOnly(c *gin.Context, s *session.SessionStore) {
 	users, _ := session.GetAllProfiles(s)
 	c.JSON(http.StatusOK, users)
