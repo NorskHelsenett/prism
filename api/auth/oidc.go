@@ -489,22 +489,21 @@ func HandleCallback(c *gin.Context, store *session.SessionStore) {
 func getAzureProfilePicture(claims jwt.MapClaims, token *oauth2.Token) (string, error) {
 	// Use the access token to call the Graph API for the user's photo
 	accessToken, ok := token.Extra("access_token").(string)
-	if !ok {
+	if !ok || accessToken == "" {
 		return "", fmt.Errorf("no access_token field in OAuth2 token")
 	}
 
-	// Here you would determine the user's ID or userPrincipalName, either through claims or another method
-	userID := getStringFromMapClaims(claims, "sub") // sub is the subject claim, which is often the user's ID
-
-	log.Printf("Claims %v", claims)
-	log.Printf("UserID %s", userID)
-	// Construct the URL for the photo request
-	photoURL := fmt.Sprintf("https://graph.microsoft.com/v1.0/users/%s/photo/$value", userID)
-
-	log.Printf("PhotURL %s", photoURL)
-	if accessToken == "" {
-		log.Printf("Accesstoken is empty")
+	if claims == nil {
+		log.Printf("Empty claims")
 	}
+
+	// Here you would determine the user's ID or userPrincipalName, either through claims or another method
+	// userID := getStringFromMapClaims(claims, "sub") // sub is the subject claim, which is often the user's ID
+
+	// Construct the URL for the photo request
+	// photoURL := fmt.Sprintf("https://graph.microsoft.com/v1.0/users/%s/photo/$value", userID)
+	photoURL := "https://graph.microsoft.com/v1.0/me/photos/240x240/$value"
+
 	// Create a new HTTP request for the photo
 	photoReq, _ := http.NewRequest("GET", photoURL, nil)
 	photoReq.Header.Set("Authorization", "Bearer "+accessToken)
