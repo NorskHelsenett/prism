@@ -518,7 +518,7 @@ func getAzureProfilePicture(claims jwt.MapClaims, token *oauth2.Token) (string, 
 			return "data:image/png;base64," + base64.StdEncoding.EncodeToString(photoData), nil
 		}
 	}
-	return "", fmt.Errorf("an error happened")
+	return "", fmt.Errorf("an error happened %v", photoResp)
 }
 
 func getStringFromMapClaims(claims jwt.MapClaims, key string) string {
