@@ -3,11 +3,13 @@
 	import { onMount } from "svelte";
 	import Dropdown from "../Dropdown.svelte";
   import DeleteModal from '$lib/components/DeleteModal.svelte';
-
+  import InfoModal from '$lib/components/modals/InfoModal.svelte';
+	import { notification } from "$lib/stores/notificationStore";
 
   let users = []
   let roles = []
   let showDeleteModal = false;
+  let showInfoModal = false;
 
 
   onMount(async () => {
@@ -91,13 +93,34 @@ function formatDate(dateString) {
   }
 
   let showDropdown = [false]
+  let userToResetMFA = null
 
-  async function resetMFA(user){
-    showDropdown = [false]
-    // console.log(user)
-    await Fetch(`/api/settings/session/otp/reset/${user.email}`, {method: "DELETE"})
-    //close all showDropdowns, iterate the array and set it to false
+  async function resetMFAok() {
+    const response = await Fetch(`/api/settings/session/otp/reset/${userToResetMFA.email}`, {method: "DELETE"})
+    userToResetMFA = null
+    showInfoModal = false
+
+    if(!response.error) {
+      notification.addAlert({
+        type: 'success',
+        title: 'Reset',
+        message: 'Successfully reset MFA'
+      });
+    } else {
+      notification.addAlert({
+        type: 'warning',
+        title: 'Failure',
+        message: 'Unable to perform task'
+      });
+    }
   }
+
+  function resetMFA(user){
+    userToResetMFA = user
+    showInfoModal = true
+    showDropdown = [false]
+  }
+
 
   let userMarkedForDeletion = null
   let deleteDialogText = ""
@@ -113,10 +136,24 @@ function formatDate(dateString) {
   }
 
   async function deleteUserPrompted(){
-    await Fetch(`/api/settings/user/${userMarkedForDeletion.ID}`, {method: "DELETE"})
+    const response = await Fetch(`/api/settings/user/${userMarkedForDeletion.ID}`, {method: "DELETE"})
     users = users.filter(user => user.ID !== userMarkedForDeletion.ID);
     userMarkedForDeletion = null
     showDeleteModal = false
+
+    if(!response.error) {
+      notification.addAlert({
+        type: 'success',
+        title: 'Reset',
+        message: 'Successfully deleted user'
+      });
+    } else {
+      notification.addAlert({
+        type: 'warning',
+        title: 'Failure',
+        message: 'Unable to perform task'
+      });
+    }
   }
 </script>
 
@@ -174,6 +211,7 @@ function formatDate(dateString) {
 </div>
 
 <DeleteModal bind:showDeleteModal onDelete={deleteUserPrompted} deleteButtonText={deleteDialogButton} text={deleteDialogText}/>
+<InfoModal bind:showInfoModal onOK={resetMFAok} buttonText="Reset MFA" text="This will reset MFA. The next time the user logs in, {userToResetMFA?.name} has to register for a new MFA flow."/>
 
 <style>
   :global(td .dropdown){
