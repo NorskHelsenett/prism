@@ -906,7 +906,9 @@ func SaveOrUpdateUserData(name string, email string, picture string) error {
 
 	// If found, update the existing record
 	existingUserData.Name = name
-	existingUserData.Picture = picture
+	if picture != "" {
+		existingUserData.Picture = picture
+	}
 	return db.Save(&existingUserData).Error
 }
 

@@ -3,6 +3,8 @@ package auth
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"io"
+
 	"os"
 	"path"
 	"strconv"
@@ -462,6 +464,16 @@ func HandleCallback(c *gin.Context, store *session.SessionStore) {
 
 		userInfo.SessionID = uuid.New().String()
 
+		if provider == "azure" {
+			profilePicture, err := getAzureProfilePicture(claims, token)
+			if err != nil {
+				log.Printf("Error getting azure profile picture %s", err)
+			}
+			if profilePicture != "" {
+				userInfo.Picture = profilePicture
+			}
+		}
+
 		database.SaveOrUpdateUserData(userInfo.Name, userInfo.Email, userInfo.Picture)
 		store.SaveOrUpdateUserData(userInfo.Name, userInfo.Email, userInfo.Picture)
 
@@ -472,6 +484,41 @@ func HandleCallback(c *gin.Context, store *session.SessionStore) {
 		c.Redirect(http.StatusFound, config.AppConfig.Cors.Origin)
 	}
 
+}
+
+func getAzureProfilePicture(claims jwt.MapClaims, token *oauth2.Token) (string, error) {
+	// Use the access token to call the Graph API for the user's photo
+	accessToken, ok := token.Extra("access_token").(string)
+	if !ok {
+		return "", fmt.Errorf("no access_token field in OAuth2 token")
+	}
+
+	// Here you would determine the user's ID or userPrincipalName, either through claims or another method
+	userID := getStringFromMapClaims(claims, "sub") // sub is the subject claim, which is often the user's ID
+
+	// Construct the URL for the photo request
+	photoURL := fmt.Sprintf("https://graph.microsoft.com/v1.0/users/%s/photo/$value", userID)
+
+	// Create a new HTTP request for the photo
+	photoReq, _ := http.NewRequest("GET", photoURL, nil)
+	photoReq.Header.Set("Authorization", "Bearer "+accessToken)
+
+	// Execute the request
+	client := &http.Client{}
+	photoResp, err := client.Do(photoReq)
+	if err != nil {
+		// Handle error, e.g., by logging and continuing without the photo
+		return "", fmt.Errorf("error retrieving photo: %s", err)
+	} else {
+		defer photoResp.Body.Close()
+		if photoResp.StatusCode == http.StatusOK {
+			// Read the photo data from the response
+			photoData, _ := io.ReadAll(photoResp.Body)
+
+			return "data:image/png;base64," + base64.StdEncoding.EncodeToString(photoData), nil
+		}
+	}
+	return "", fmt.Errorf("an error happened")
 }
 
 func getStringFromMapClaims(claims jwt.MapClaims, key string) string {
