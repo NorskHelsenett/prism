@@ -502,6 +502,9 @@ func getAzureProfilePicture(claims jwt.MapClaims, token *oauth2.Token) (string, 
 	photoURL := fmt.Sprintf("https://graph.microsoft.com/v1.0/users/%s/photo/$value", userID)
 
 	log.Printf("PhotURL %s", photoURL)
+	if accessToken == "" {
+		log.Printf("Accesstoken is empty")
+	}
 	// Create a new HTTP request for the photo
 	photoReq, _ := http.NewRequest("GET", photoURL, nil)
 	photoReq.Header.Set("Authorization", "Bearer "+accessToken)
