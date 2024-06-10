@@ -464,15 +464,15 @@ func HandleCallback(c *gin.Context, store *session.SessionStore) {
 
 		userInfo.SessionID = uuid.New().String()
 
-		if provider == "azure" {
-			profilePicture, err := getAzureProfilePicture(userInfo.Email, token)
-			if err != nil {
-				log.Printf("Error getting azure profile picture %s", err)
-			}
-			if profilePicture != "" {
-				userInfo.Picture = profilePicture
-			}
-		}
+		// if provider == "azure" {
+		// 	profilePicture, err := getAzureProfilePicture(userInfo.Email, token)
+		// 	if err != nil {
+		// 		log.Printf("Error getting azure profile picture %s", err)
+		// 	}
+		// 	if profilePicture != "" {
+		// 		userInfo.Picture = profilePicture
+		// 	}
+		// }
 
 		database.SaveOrUpdateUserData(userInfo.Name, userInfo.Email, userInfo.Picture)
 		store.SaveOrUpdateUserData(userInfo.Name, userInfo.Email, userInfo.Picture)
