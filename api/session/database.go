@@ -81,7 +81,9 @@ func (s *SessionStore) SaveOrUpdateUserData(name string, email string, picture s
 
 	// If found, update the existing record
 	existingUserData.Name = name
-	existingUserData.Picture = picture
+	if picture != "" {
+		existingUserData.Picture = picture
+	}
 	return s.DB.Save(&existingUserData).Error
 }
 

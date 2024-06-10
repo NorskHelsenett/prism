@@ -1,7 +1,20 @@
 <script>
   import { Fetch } from '$lib/fetchUtil'
+	import { onMount } from 'svelte';
   export let email = '';
-  export let option = { showName: true, size: "xs", emptyFields: false, circle: false}
+  export let option = { }
+
+  const defaultOption = {
+    showName: true,
+    size: "xs",
+    emptyFields: false,
+    circle: false,
+    tooltipEnabled: true
+  };
+
+  onMount(() => {
+    option = {...defaultOption, ...option}
+  })
 
   let user = null;
 
@@ -16,7 +29,8 @@
   let tooltipVisible = false;
 
 	function showTooltip(event) {
-		tooltipVisible = true;
+    if(option.tooltipEnabled)
+		{tooltipVisible = true;}
 	}
 
 	function hideTooltip() {

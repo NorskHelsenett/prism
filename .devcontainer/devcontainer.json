@@ -19,7 +19,8 @@
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	//"postCreateCommand": "ssh-add -L > $HOME/.ssh/yubikey.pub && git config --global gpg.format ssh && git config --global user.signingkey $HOME/.ssh/yubikey.pub",
-	"postAttachCommand": "git config --global user.signingkey $HOME/.ssh/yubikey.pub && ssh-add -L > $HOME/.ssh/yubikey.pub",
+	"postStartCommand": "git config --global user.signingkey $HOME/.ssh/yubikey.pub && ssh-add -L > $HOME/.ssh/yubikey.pub",
+	"postAttachCommand": "cd web && bun run dev",
 
 	// Configure tool-specific properties.
 	// "customizations": {},

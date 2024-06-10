@@ -18,6 +18,7 @@ require (
 )
 
 require (
+	github.com/SherClockHolmes/webpush-go v1.3.0 // indirect
 	github.com/boombuler/barcode v1.0.1 // indirect
 	github.com/bytedance/sonic v1.11.1 // indirect
 	github.com/chenzhuoyu/base64x v0.0.0-20230717121745-296ad89f973d // indirect

@@ -25,6 +25,8 @@ roles:
         action: ["*"]
       - resource: "/planning"
         action: ["*"]
+      - resource: "/notification"
+        action: ["*"]
   visitor:
     description: "Default access to read only"
     permissions:
@@ -36,6 +38,8 @@ roles:
         action: ["read"]
       - resource: "/blob"
         action: ["read"]
+      - resource: "/notification"
+        action: ["*"]
   global_viewer:
     description: "Read-only access to all resources"
     permissions:
@@ -51,6 +55,8 @@ roles:
         action: [""]
       - resource: "/profile"
         action: ["read"]
+      - resource: "/notification"
+        action: ["*"]
   manager:
     description: "Access to the planning feature"
     permissions:
@@ -68,6 +74,8 @@ roles:
         action: ["read"]
       - resource: "/planning"
         action: ["*"]
+      - resource: "/notification"
+        action: ["*"]
   PET01:
     description: "A new pentester team with write access to only a given project"
     permissions:
@@ -77,3 +85,5 @@ roles:
         action: ["*"]
       - resource: "/profile"
         action: ["read"]
+      - resource: "/notification"
+        action: ["*"]
