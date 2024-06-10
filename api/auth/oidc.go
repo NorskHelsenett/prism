@@ -496,9 +496,12 @@ func getAzureProfilePicture(claims jwt.MapClaims, token *oauth2.Token) (string, 
 	// Here you would determine the user's ID or userPrincipalName, either through claims or another method
 	userID := getStringFromMapClaims(claims, "sub") // sub is the subject claim, which is often the user's ID
 
+	log.Printf("Claims %v", claims)
+	log.Printf("UserID %s", userID)
 	// Construct the URL for the photo request
 	photoURL := fmt.Sprintf("https://graph.microsoft.com/v1.0/users/%s/photo/$value", userID)
 
+	log.Printf("PhotURL %s", photoURL)
 	// Create a new HTTP request for the photo
 	photoReq, _ := http.NewRequest("GET", photoURL, nil)
 	photoReq.Header.Set("Authorization", "Bearer "+accessToken)
