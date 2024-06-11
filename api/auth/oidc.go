@@ -464,15 +464,15 @@ func HandleCallback(c *gin.Context, store *session.SessionStore) {
 
 		userInfo.SessionID = uuid.New().String()
 
-		// if provider == "azure" {
-		// 	profilePicture, err := getAzureProfilePicture(userInfo.Email, token)
-		// 	if err != nil {
-		// 		log.Printf("Error getting azure profile picture %s", err)
-		// 	}
-		// 	if profilePicture != "" {
-		// 		userInfo.Picture = profilePicture
-		// 	}
-		// }
+		if provider == "azure" {
+			profilePicture, err := getAzureProfilePicture(userInfo.Email, token)
+			if err != nil {
+				log.Printf("Error getting azure profile picture %s", err)
+			}
+			if profilePicture != "" {
+				userInfo.Picture = profilePicture
+			}
+		}
 
 		database.SaveOrUpdateUserData(userInfo.Name, userInfo.Email, userInfo.Picture)
 		store.SaveOrUpdateUserData(userInfo.Name, userInfo.Email, userInfo.Picture)
@@ -514,9 +514,17 @@ func getAzureProfilePicture(email string, token *oauth2.Token) (string, error) {
 		defer photoResp.Body.Close()
 		if photoResp.StatusCode == http.StatusOK {
 			// Read the photo data from the response
-			photoData, _ := io.ReadAll(photoResp.Body)
+			photoData, err := io.ReadAll(photoResp.Body)
 
-			return "data:image/png;base64," + base64.StdEncoding.EncodeToString(photoData), nil
+			if err != nil {
+				return "", fmt.Errorf("error retrieving photo: %s", err)
+			}
+
+			log.Printf("photodata %.*s", 15, photoData)
+
+			contentType := photoResp.Header.Get("Content-Type")
+			base64Photo := base64.StdEncoding.EncodeToString(photoData)
+			return fmt.Sprintf("data:%s;base64,%s", contentType, base64Photo), nil
 		}
 	}
 	return "", fmt.Errorf("an error happened %v", photoResp)
