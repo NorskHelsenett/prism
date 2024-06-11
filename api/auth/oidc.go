@@ -470,6 +470,7 @@ func HandleCallback(c *gin.Context, store *session.SessionStore) {
 				log.Printf("Error getting azure profile picture %s", err)
 			}
 			if profilePicture != "" {
+				log.Printf("Picture is not empty")
 				userInfo.Picture = profilePicture
 			}
 		}
@@ -487,47 +488,42 @@ func HandleCallback(c *gin.Context, store *session.SessionStore) {
 }
 
 func getAzureProfilePicture(email string, token *oauth2.Token) (string, error) {
-	// Use the access token to call the Graph API for the user's photo
 	accessToken, ok := token.Extra("access_token").(string)
 	if !ok || accessToken == "" {
 		return "", fmt.Errorf("no access_token field in OAuth2 token")
 	}
 
-	// Here you would determine the user's ID or userPrincipalName, either through claims or another method
-	// userID := getStringFromMapClaims(claims, "sub") // sub is the subject claim, which is often the user's ID
-
-	// Construct the URL for the photo request
 	photoURL := fmt.Sprintf("https://graph.microsoft.com/v1.0/users/%s/photos/240x240/$value", email)
-	// photoURL := "https://graph.microsoft.com/v1.0/me/photos/240x240/$value"
 
-	// Create a new HTTP request for the photo
-	photoReq, _ := http.NewRequest("GET", photoURL, nil)
+	photoReq, err := http.NewRequest("GET", photoURL, nil)
+	if err != nil {
+		return "", fmt.Errorf("error creating request for photo: %s", err)
+	}
 	photoReq.Header.Set("Authorization", "Bearer "+accessToken)
 
-	// Execute the request
 	client := &http.Client{}
 	photoResp, err := client.Do(photoReq)
 	if err != nil {
-		// Handle error, e.g., by logging and continuing without the photo
 		return "", fmt.Errorf("error retrieving photo: %s", err)
-	} else {
-		defer photoResp.Body.Close()
-		if photoResp.StatusCode == http.StatusOK {
-			// Read the photo data from the response
-			photoData, err := io.ReadAll(photoResp.Body)
-
-			if err != nil {
-				return "", fmt.Errorf("error retrieving photo: %s", err)
-			}
-
-			log.Printf("photodata %.*s", 15, photoData)
-
-			contentType := photoResp.Header.Get("Content-Type")
-			base64Photo := base64.StdEncoding.EncodeToString(photoData)
-			return fmt.Sprintf("data:%s;base64,%s", contentType, base64Photo), nil
-		}
 	}
-	return "", fmt.Errorf("an error happened %v", photoResp)
+	defer photoResp.Body.Close()
+
+	if photoResp.StatusCode == http.StatusOK {
+		photoData, err := io.ReadAll(photoResp.Body)
+		if err != nil {
+			return "", fmt.Errorf("error reading photo data: %s", err)
+		}
+
+		contentType := photoResp.Header.Get("Content-Type")
+		base64Photo := base64.StdEncoding.EncodeToString(photoData)
+		return fmt.Sprintf("data:%s;base64,%s", contentType, base64Photo), nil
+	}
+
+	// Optionally read the response body for a more informative error message
+	bodyBytes, _ := io.ReadAll(photoResp.Body)
+	bodyString := string(bodyBytes)
+
+	return "", fmt.Errorf("failed to get user photo. Status Code: %d. Response: %s", photoResp.StatusCode, bodyString)
 }
 
 func getStringFromMapClaims(claims jwt.MapClaims, key string) string {
