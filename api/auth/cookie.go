@@ -16,7 +16,7 @@ var blockKey = securecookie.GenerateRandomKey(32)
 var secure = securecookie.New(hashKey, blockKey)
 
 func SetSignedCookie(c *gin.Context, cookieName string, userInfo UserInfo) {
-
+	userInfo.Picture = ""
 	// Encode the base64 string using securecookie
 	encoded, err := secure.Encode(cookieName, userInfo)
 	if err != nil {

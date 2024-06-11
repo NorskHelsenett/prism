@@ -470,7 +470,6 @@ func HandleCallback(c *gin.Context, store *session.SessionStore) {
 				log.Printf("Error getting azure profile picture %s", err)
 			}
 			if profilePicture != "" {
-				log.Printf("Picture is not empty")
 				userInfo.Picture = profilePicture
 			}
 		}
