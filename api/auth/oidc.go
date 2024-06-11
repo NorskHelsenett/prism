@@ -365,7 +365,6 @@ func HandleLogin(c *gin.Context) {
 type UserInfo struct {
 	Name      string `json:"name"`
 	Email     string `json:"email"`
-	Picture   string `json:"picture"`
 	SessionID string `json:"sessionId"`
 }
 
@@ -454,28 +453,28 @@ func HandleCallback(c *gin.Context, store *session.SessionStore) {
 		fmt.Println("Error parsing token:", err)
 		return
 	}
-
+	profilePicture := ""
 	if claims, ok := tokenClaims.Claims.(jwt.MapClaims); ok {
+		profilePicture = getStringFromMapClaims(claims, "picture")
 		userInfo := UserInfo{
-			Name:    getStringFromMapClaims(claims, "name"),
-			Email:   strings.ToLower(getStringFromMapClaims(claims, "email")),
-			Picture: getStringFromMapClaims(claims, "picture"),
+			Name:  getStringFromMapClaims(claims, "name"),
+			Email: strings.ToLower(getStringFromMapClaims(claims, "email")),
 		}
 
 		userInfo.SessionID = uuid.New().String()
 
 		if provider == "azure" {
-			profilePicture, err := getAzureProfilePicture(userInfo.Email, token)
+			profilePictureAzure, err := getAzureProfilePicture(userInfo.Email, token)
 			if err != nil {
 				log.Printf("Error getting azure profile picture %s", err)
 			}
-			if profilePicture != "" {
-				userInfo.Picture = profilePicture
+			if profilePictureAzure != "" {
+				profilePicture = profilePictureAzure
 			}
 		}
 
-		database.SaveOrUpdateUserData(userInfo.Name, userInfo.Email, userInfo.Picture)
-		store.SaveOrUpdateUserData(userInfo.Name, userInfo.Email, userInfo.Picture)
+		database.SaveOrUpdateUserData(userInfo.Name, userInfo.Email, profilePicture)
+		store.SaveOrUpdateUserData(userInfo.Name, userInfo.Email, profilePicture)
 
 		store.PersistSession(userInfo.Email, userInfo.SessionID)
 
@@ -492,7 +491,7 @@ func getAzureProfilePicture(email string, token *oauth2.Token) (string, error) {
 		return "", fmt.Errorf("no access_token field in OAuth2 token")
 	}
 
-	photoURL := fmt.Sprintf("https://graph.microsoft.com/v1.0/users/%s/photos/240x240/$value", email)
+	photoURL := fmt.Sprintf("https://graph.microsoft.com/v1.0/users/%s/photos/96x96/$value", email)
 
 	photoReq, err := http.NewRequest("GET", photoURL, nil)
 	if err != nil {

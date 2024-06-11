@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Profile picture 👨‍🦳
+
+  Profile picture is not downloaded from Azure GraphQL endpoint and populated. No more missing and empty images.
+
 - Delete User ❌
 
   It is now possible to delete a user from the system. This feature allows for the removal of unnecessary or inactive users, maintaining the integrity and security of the system.
