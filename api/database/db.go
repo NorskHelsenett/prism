@@ -1079,13 +1079,36 @@ func UpdateVulnerability(jsonData *JSONData) error {
 	return nil // Return nil if no error occurred
 }
 
-func AllVulnerabilities(all bool, email string) ([]JSONData, error) {
+type MinimalJSONData struct {
+	ID            uint                  `json:"ID"`
+	Vulnerability MinifiedVulnerability `json:"Vulnerability"`
+	FoundBy       string                `json:"FoundBy"`
+	ProjectID     uint                  `json:"ProjectID"`
+	Project       struct {
+		ID          uint   `json:"ID"`
+		ProjectName string `json:"ProjectName"`
+	} `json:"Project"`
+	Status string `json:"Status"`
+}
+
+type MinifiedVulnerability struct {
+	Title          string `json:"title"`
+	IsPublicFacing bool   `json:"isPublicFacing"`
+	Criticality    string `json:"criticality"`
+	Date           string `json:"date"`
+}
+
+func AllVulnerabilities(all bool, email string) ([]MinimalJSONData, error) {
 	var jsonData []JSONData
 
 	if all {
 		// Admin: Get all vulnerabilities
-		result := db.Preload("Project").Order("json_data.created_at desc").Find(&jsonData)
-		return jsonData, result.Error
+		result := db.Preload("Project").
+			Select("json_data.*, json_extract(json_data.vulnerability, '$.title') as vulnerability_title, json_extract(json_data.vulnerability, '$.isPublicFacing') as vulnerability_isPublicFacing, json_extract(json_data.vulnerability, '$.criticality') as vulnerability_criticality, json_extract(json_data.vulnerability, '$.date') as vulnerability_date, json_extract(json_data.vulnerability, '$.visibility') as vulnerability_visibility").
+			Order("json_data.created_at desc").
+			Find(&jsonData)
+		return minifiedVulnerabilityJSON(jsonData), result.Error
+
 	} else {
 		// Non-admin: Find all project IDs where the email is in "client_email"
 		var projectIDs []uint
@@ -1094,17 +1117,30 @@ func AllVulnerabilities(all bool, email string) ([]JSONData, error) {
 
 		if len(projectIDs) == 0 {
 			// No projects found for this email, return empty jsonData
-			return jsonData, nil
+			return minifiedVulnerabilityJSON(jsonData), nil
 		}
 
 		// Get vulnerabilities for those projects
 		result := db.Preload("Project").
+			Select("json_data.*, json_extract(json_data.vulnerability, '$.title') as vulnerability_title, json_extract(json_data.vulnerability, '$.isPublicFacing') as vulnerability_isPublicFacing, json_extract(json_data.vulnerability, '$.criticality') as vulnerability_criticality, json_extract(json_data.vulnerability, '$.date') as vulnerability_date, json_extract(json_data.vulnerability, '$.visibility') as vulnerability_visibility").
 			Where("project_id IN ?", projectIDs).
 			Or("found_by LIKE ?", email).
 			Order("json_data.created_at desc").
 			Find(&jsonData)
-		return jsonData, result.Error
+
+		return minifiedVulnerabilityJSON(jsonData), result.Error
 	}
+}
+
+func minifiedVulnerabilityJSON(jsonData []JSONData) []MinimalJSONData {
+	var minifiedList []MinimalJSONData
+	for _, item := range jsonData {
+		var minifiedVuln MinimalJSONData
+		jsonVuln, _ := json.Marshal(item)
+		json.Unmarshal(jsonVuln, &minifiedVuln)
+		minifiedList = append(minifiedList, minifiedVuln)
+	}
+	return minifiedList
 }
 
 func CountOWASPCategories() (map[string]int, error) {

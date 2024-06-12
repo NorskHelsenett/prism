@@ -1,7 +1,6 @@
 <script>
 	import { Fetch } from "$lib/fetchUtil";
 	import DebouncedInput from "../DebouncedInput.svelte";
-	import { notification } from "$lib/stores/notificationStore";
 	import { toast } from "svelte-sonner";
 
   let persisting = false;

@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   We have a new toast-master! Using the amazing [svelte-sonner](https://github.com/wobsoriano/svelte-sonner) we now have an awesome toaster information experience like no other!
 
+### Fixes
+
+- With our latest update to the `/all` vulnerabilities endpoint, we've significantly reduced the data footprint of the responses. This change is part of our ongoing commitment to environmental sustainability and digital efficiency. This change is a step forward in our journey to support global climate health while continuing to provide our users with the high-quality service they expect.
+
 ## [0.1.5] - 2024-06-10
 
 ### Added
