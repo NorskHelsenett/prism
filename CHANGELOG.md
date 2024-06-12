@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.6] - 2024-06-12
+
+### Added
+
+- Toast 🥪
+
+  We have a new toast-master! Using the amazing [svelte-sonner](https://github.com/wobsoriano/svelte-sonner) we now have an awesome toaster information experience like no other!
+
 ## [0.1.5] - 2024-06-10
 
 ### Added

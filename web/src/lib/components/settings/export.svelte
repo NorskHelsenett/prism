@@ -1,7 +1,7 @@
 <script>
     import { FetchFile } from '$lib/fetchUtil.js';
     import { Fetch } from '$lib/fetchUtil.js';
-  import { notification } from '$lib/stores/notificationStore';
+  import { toast } from 'svelte-sonner';
 
     let showModal = false;
     let modalMessage = ''; // Message to display in the modal
@@ -40,25 +40,13 @@
         });
 
         if (response.message) {
-          notification.addAlert({
-            type: 'success',
-            title: 'Imported successfully',
-            message: response.message
-          });
+          toast.success('Imported successfully');
+
         } else {
-          notification.addAlert({
-            type: 'warning',
-            title: 'The import failed',
-            message: response.error
-          });
+          toast.error('The import failed');
         }
       } catch (error) {
-        console.error('Error uploading file:', error);
-          notification.addAlert({
-            type: 'danger',
-            title: 'Importing',
-            message: error
-          });
+        toast.success(`${error}`);
       }
     }
 </script>

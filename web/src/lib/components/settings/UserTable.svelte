@@ -5,6 +5,7 @@
   import DeleteModal from '$lib/components/DeleteModal.svelte';
   import InfoModal from '$lib/components/modals/InfoModal.svelte';
 	import { notification } from "$lib/stores/notificationStore";
+	import { toast } from "svelte-sonner";
 
   let users = []
   let roles = []
@@ -101,17 +102,9 @@ function formatDate(dateString) {
     showInfoModal = false
 
     if(!response.error) {
-      notification.addAlert({
-        type: 'success',
-        title: 'Reset',
-        message: 'Successfully reset MFA'
-      });
+      toast.success('Successfully reset MFA');
     } else {
-      notification.addAlert({
-        type: 'warning',
-        title: 'Failure',
-        message: 'Unable to perform task'
-      });
+      toast.error('Unable to reset MFA');
     }
   }
 
@@ -142,17 +135,9 @@ function formatDate(dateString) {
     showDeleteModal = false
 
     if(!response.error) {
-      notification.addAlert({
-        type: 'success',
-        title: 'Reset',
-        message: 'Successfully deleted user'
-      });
+      toast.success('Successfully deleted user');
     } else {
-      notification.addAlert({
-        type: 'warning',
-        title: 'Failure',
-        message: 'Unable to perform task'
-      });
+      toast.error('Unable to delete user');
     }
   }
 </script>

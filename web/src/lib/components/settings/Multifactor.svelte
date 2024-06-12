@@ -1,6 +1,6 @@
 <script>
 	import { Fetch } from "$lib/fetchUtil";
-	import { notification } from "$lib/stores/notificationStore";
+	import { toast } from "svelte-sonner";
 
   export let settings = {
     ID: 0,
@@ -20,17 +20,9 @@
 
     const response = await Fetch("/api/settings", { method: "POST", body: JSON.stringify(settings) });
     if(!response.error) {
-      notification.addAlert({
-        type: 'success',
-        title: 'Settings',
-        message: 'Settings updated successfully'
-      });
+      toast.success('Settings updated successfully');
     } else {
-      notification.addAlert({
-        type: 'warning',
-        title: 'Failure',
-        message: 'Failure to update settings'
-      });
+      toast.error('Failure to update settings');
     }
   }
 </script>

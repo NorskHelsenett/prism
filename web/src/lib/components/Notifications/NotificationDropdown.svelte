@@ -7,7 +7,22 @@
   import NotificationButton from "$lib/components/Notifications/NotificationButton.svelte";
 	import NotificationsListItem from './NotificationsListItem.svelte';
 	import { Fetch } from '$lib/fetchUtil.js';
+	import { toast } from 'svelte-sonner';
 
+/**
+ * Notification structure as received from server.
+ * @typedef {Object} Notification
+ * @property {string} who - The identifier of the user who triggered the notification.
+ * @property {string} what - A description of the notification event.
+ * @property {boolean} read - Whether the notification has been read.
+ * @property {string} where - The location associated with the notification event.
+ * @property {string} when - The timestamp of when the notification was created.
+ */
+
+/**
+ * Global array to store notifications.
+ * @type {Notification[]}
+ */
   let notifications = [];
   let notificationPermission = "default";
 
@@ -17,7 +32,24 @@
 
   // Function to sort notifications by 'when' in descending order
   async function sortNotifications() {
+    /** @type {Notification[]} */
     const payload = await Fetch("/api/notification")
+    const newNotifications = payload.filter(notification =>
+      !notifications.some(existing => existing.when === notification.when)
+    );
+
+    // Display toasts for new notifications
+    newNotifications.forEach(async newNotification => {
+      if(newNotification.read == false){
+        const userData = await Fetch(`/api/profile/${newNotification.who}`);
+        toast.info(`${userData.name}- ${newNotification.what}`, {
+                  action: {
+                    label: 'Show',
+                    onClick: () => openAction(newNotification)
+                  }
+                });
+      }
+    });
     notifications = payload.sort((a, b) => new Date(b.when) - new Date(a.when));
   }
 

@@ -4,7 +4,6 @@
   import { initializeApiEndpoint, isLoading, isAuthenticated } from '$lib/stores/configStore';
 	import '@tabler/core/dist/css/tabler.min.css';
 	import { theme } from '$lib/stores/themeStore';
-	import { notification } from '$lib/stores/notificationStore';
 	import { page } from '$app/stores';
   import { derived } from 'svelte/store';
   import { accessLevels } from '$lib/userStore';
@@ -14,6 +13,7 @@
   import { goto } from '$app/navigation';
   import { fly } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
+	import { Toaster } from 'svelte-sonner';
 
   if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js')
@@ -36,10 +36,6 @@
 		$theme = $theme === 'light' ? 'dark' : 'light';
 	}
 
-	function dismissAlert(id) {
-		notification.update((notification) => notification.filter((a) => a.id !== id));
-	}
-
 	const isLoginPage = derived(page, $page => $page.url.pathname === '/login');
 	const isAuthPage = derived(page, $page => $page.url.pathname === '/auth');
 
@@ -55,87 +51,7 @@
 {#if $isLoginPage || $isAuthPage}
   <slot/>
 {:else if $isAuthenticated}
-<div class="alert-container">
-	{#each $notification as alert (alert.id)}
-		<div class="alert alert-{alert.type} alert-dismissible" role="alert" transition:fly={{ delay: 100, duration: 500, x: 1000, y: 0, opacity: 0.8, easing: quintOut }}>
-			<div class="d-flex">
-				<div>
-					{#if alert.type === 'success'}
-						<!-- Download SVG icon from http://tabler-icons.io/i/check -->
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="icon alert-icon"
-							width="24"
-							height="24"
-							viewBox="0 0 24 24"
-							stroke-width="2"
-							stroke="currentColor"
-							fill="none"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M5 12l5 5l10 -10"
-							></path></svg
-						>
-					{:else if alert.type === 'warning'}
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="icon alert-icon"
-							width="24"
-							height="24"
-							viewBox="0 0 24 24"
-							stroke-width="2"
-							stroke="currentColor"
-							fill="none"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M12 9v4"
-							></path><path
-								d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"
-							></path><path d="M12 16h.01"></path></svg
-						>
-					{:else if alert.type === 'danger'}
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="icon alert-icon"
-							width="24"
-							height="24"
-							viewBox="0 0 24 24"
-							stroke-width="2"
-							stroke="currentColor"
-							fill="none"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path
-								d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"
-							></path><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg
-						>
-					{:else if alert.type === 'info'}
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="icon alert-icon"
-							width="24"
-							height="24"
-							viewBox="0 0 24 24"
-							stroke-width="2"
-							stroke="currentColor"
-							fill="none"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path
-								d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"
-							></path><path d="M12 9h.01"></path><path d="M11 12h1v4h1"></path></svg
-						>
-					{/if}
-				</div>
-				<div>
-					<h4 class="alert-title">{alert.title}</h4>
-					<div class="text-secondary">{alert.message}</div>
-				</div>
-			</div>
-			<a class="btn-close" aria-label="close" on:click={() => dismissAlert(alert.id)}></a>
-		</div>
-	{/each}
-</div>
+<Toaster position="top-center" visibleToasts={9} richColors/>
 
 <div class="page">
 	<header class="navbar navbar-expand-sm navbar-light navbar-overlap d-print-none">

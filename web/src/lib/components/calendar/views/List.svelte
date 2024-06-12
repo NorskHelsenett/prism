@@ -4,6 +4,7 @@ import { goto } from '$app/navigation';
 import Dropdown from '$lib/components/Dropdown.svelte';
 import Markdown from '$lib/components/Markdown.svelte';
 import { Fetch } from '$lib/fetchUtil';
+	import { toast } from 'svelte-sonner';
 
 let selectedRow = -1
 let calendarEvents = []
@@ -42,7 +43,7 @@ function copyText(content){
   }
 
   navigator.clipboard.writeText(content).then(() => {
-    // notification.addAlert({message: 'Content copied to clipboard successfully'});
+    toast.info('Content copied to clipboard');
   }).catch(err => {
     console.error('Failed to copy content to clipboard:', err);
   });

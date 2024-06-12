@@ -2,6 +2,7 @@
 	import { Fetch } from "$lib/fetchUtil";
 	import DebouncedInput from "../DebouncedInput.svelte";
 	import { notification } from "$lib/stores/notificationStore";
+	import { toast } from "svelte-sonner";
 
   let persisting = false;
   export let settings = {
@@ -51,17 +52,9 @@
   async function updateChannelIDAPI() {
     const response = await Fetch("/api/settings", { method: "POST", body: JSON.stringify(settings) });
       if(!response.error) {
-				notification.addAlert({
-					type: 'success',
-					title: 'Settings',
-					message: 'Settings updated successfully'
-				});
+        toast.success('Settings updated successfully');
 			} else {
-				notification.addAlert({
-					type: 'warning',
-					title: 'Failure',
-					message: 'Failure to update settings'
-				});
+        toast.error('Failed to update settings');
       }
   }
 
@@ -70,17 +63,9 @@
 
     const response = await Fetch("/api/settings", { method: "POST", body: JSON.stringify(settings) });
         if(!response.error) {
-      notification.addAlert({
-        type: 'success',
-        title: 'Settings',
-        message: 'Settings updated successfully'
-      });
+          toast.success('Settings updated successfully');
     } else {
-      notification.addAlert({
-        type: 'warning',
-        title: 'Failure',
-        message: 'Failure to update settings'
-      });
+      toast.error('Failure to update settings');
     }
   }
 
@@ -89,17 +74,9 @@
 
     const response = await Fetch("/api/settings", { method: "POST", body: JSON.stringify(settings) });
     if(!response.error) {
-      notification.addAlert({
-        type: 'success',
-        title: 'Settings',
-        message: 'Settings updated successfully'
-      });
+      toast.success('Settings updated successfully');
     } else {
-      notification.addAlert({
-        type: 'warning',
-        title: 'Failure',
-        message: 'Failure to update settings'
-      });
+      toast.error('Failure to update settings');
     }
   }
 

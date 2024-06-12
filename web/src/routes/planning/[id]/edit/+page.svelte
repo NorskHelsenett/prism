@@ -5,10 +5,9 @@
 	import { onMount } from 'svelte';
 	import ProjectList from '$lib/components/calendar/ProjectList.svelte';
 	import UserSearch from '$lib/components/UserSearch.svelte';
-  	import { slide } from 'svelte/transition';
+  import { slide } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
 	import Avatar from '$lib/components/Avatar.svelte';
-	import { notification } from '$lib/stores/notificationStore.js';
 
   export let data;
   export let assessment
@@ -27,9 +26,9 @@
     // assessment.requester = requestedBy[0]
     const result = await Fetch(`/api/planning/${data.id}`, {method:"PUT", body: JSON.stringify(assessment)})
     if (result.error) {
-      notification.addAlert({type: "alert", title: "Error", message: result.error})
+      toast.error('Unable to update the assessment');
     } else {
-      notification.addAlert("Saved")
+      toast.error('Update saved');
       goto(`/planning/${assessment.id}/view`)
     }
   }

@@ -7,7 +7,7 @@
   import { fade } from 'svelte/transition';
 	import { scale } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
-	import { notification } from '$lib/stores/notificationStore';
+	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 
   let usersOriginal = []
@@ -36,13 +36,9 @@
     const result = await Fetch("/api/planning/new", {method: "POST", body: JSON.stringify(assassment)})
     if(result.error) {
       error = result.error
-      notification.addAlert({
-        type: 'warning',
-        message: result.error,
-        title: 'Unable to save'
-      })
+      toast.error('Unable to save the plan');
     } else {
-      notification.addAlert("Successfully created")
+      toast.success('Plan has been created');
       assassment = resetData()
       showModal = false
       goto(`/planning/${result.id}/edit`)

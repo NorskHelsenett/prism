@@ -1,6 +1,6 @@
 <script>
   import { onMount } from "svelte";
-	import { notification } from '$lib/stores/notificationStore';
+	import { toast } from 'svelte-sonner';
 	import { Fetch } from '$lib/fetchUtil.js';
 	import Modal from '../Modal.svelte';
 	import UserSearch from '../UserSearch.svelte';
@@ -69,22 +69,13 @@
 			if (!response) {
 				throw new Error('Network response was not ok');
 			}
-
-			notification.addAlert({
-				type: 'success',
-				title: 'Project added',
-				message: 'Project succesfully stored'
-			});
+      toast.success('Project succesfully stored');
 
 			closeModal();
 
 			// Handle response here
 		} catch (error) {
-			notification.addAlert({
-				type: 'error',
-				title: 'Error',
-				message: 'Unable to store new vulnerability!'
-			});
+      toast.error('Unable to store new vulnerability');
 			console.error('There was a problem storing the new project:', error);
 			isPersisting = false
 		}

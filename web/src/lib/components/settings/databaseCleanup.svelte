@@ -1,21 +1,13 @@
 <script>
 	import { Fetch } from "$lib/fetchUtil";
-	import { notification } from "$lib/stores/notificationStore";
+	import { toast } from "svelte-sonner";
 
   async function cleanup(){
     const response = await Fetch("/api/settings/cleanup")
     if(!response.error) {
-      notification.addAlert({
-        type: 'success',
-        title: 'Settings',
-        message: 'Database optimized successfully'
-      });
+      toast.success('Database optimized successfully');
     } else {
-      notification.addAlert({
-        type: 'warning',
-        title: 'Failure',
-        message: 'Unable to perform task'
-      });
+      toast.error('Unable to perform task');
     }
     warningAccepted = false
   }
