@@ -11,8 +11,6 @@
 	import Loader from '$lib/components/Loader.svelte';
 	import NotificationDropdown from '$lib/components/Notifications/NotificationDropdown.svelte';
   import { goto } from '$app/navigation';
-  import { fly } from 'svelte/transition';
-	import { quintOut } from 'svelte/easing';
 	import { Toaster } from 'svelte-sonner';
 
   if ('serviceWorker' in navigator) {
