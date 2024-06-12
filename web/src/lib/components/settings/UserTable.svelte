@@ -4,7 +4,6 @@
 	import Dropdown from "../Dropdown.svelte";
   import DeleteModal from '$lib/components/DeleteModal.svelte';
   import InfoModal from '$lib/components/modals/InfoModal.svelte';
-	import { notification } from "$lib/stores/notificationStore";
 	import { toast } from "svelte-sonner";
 
   let users = []
@@ -53,6 +52,12 @@
         method: 'PUT',
         body: JSON.stringify(user)
       });
+
+      if(!response.error) {
+        toast.success('User updated');
+      } else {
+        toast.error('Unable to perform task');
+      }
     };
   }
 
