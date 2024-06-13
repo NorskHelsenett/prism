@@ -12,11 +12,12 @@ api:
     mountPath: /config
     fromSecret: api-config-secret
     readOnly: true
-  - name: data #create a PVC and PV when fromSecret, or fromConfig or inMemory is not present
+  - name: data
     mountPath: /data
     readOnly: false
     storage: 10Gi
-  - name: tmp #create a PVC and PV when fromSecret, or fromConfig or inMemory is not present
+    statefulSet: true
+  - name: tmp
     inMemory: true
     mountPath: /tmp
     readOnly: false

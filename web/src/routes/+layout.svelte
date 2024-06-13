@@ -1,6 +1,6 @@
 <script>
   import '../app.css'
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
   import { initializeApiEndpoint, isLoading, isAuthenticated } from '$lib/stores/configStore';
 	import '@tabler/core/dist/css/tabler.min.css';
 	import { theme } from '$lib/stores/themeStore';
@@ -12,6 +12,7 @@
 	import NotificationDropdown from '$lib/components/Notifications/NotificationDropdown.svelte';
   import { goto } from '$app/navigation';
 	import { Toaster } from 'svelte-sonner';
+
 
   if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js')
@@ -39,9 +40,38 @@
 
 	let isInitialized = false;
 
+  let socket
+  let notifications = []
   onMount(async () => {
     await initializeApiEndpoint();
+    const currentDomain = window.location.host;
+
+    const protocolSchema = currentDomain == "localhost:5173" ? "ws" : "wss"
+
+    socket = new WebSocket(`${protocolSchema}://${currentDomain == "localhost:5173" ? "localhost:8080": currentDomain}/ws`);
+
+    socket.onopen = function(event) {
+        console.log('Connected to WebSocket');
+    };
+
+    socket.onmessage = function(event) {
+        const message = JSON.parse(event.data);
+
+        if (message.type == "notifications"){
+          notifications = message.data
+        }
+    };
+
+    socket.onclose = function(event) {
+        console.log('Disconnected from WebSocket');
+    };
   });
+
+  onDestroy(() => {
+        if (socket) {
+            socket.close();
+        }
+    });
 
 	$: isInitialized = !$isLoading;
 </script>
@@ -102,7 +132,7 @@
 						{/if}
 					</a>
 					<div class="nav-item dropdown d-none d-md-flex me-3">
-						<NotificationDropdown />
+						<NotificationDropdown {notifications}/>
 						<div class="dropdown-menu dropdown-menu-arrow dropdown-menu-end dropdown-menu-card">
 							<div class="card">
 								<div class="card-header">

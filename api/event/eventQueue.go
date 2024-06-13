@@ -184,6 +184,7 @@ func sendBrowserNotification(event database.EventQueue) {
 
 	if err != nil {
 		updateEvent(event, err)
+		log.Printf("Error getting the event from table %s", err)
 		return
 	}
 
@@ -191,6 +192,8 @@ func sendBrowserNotification(event database.EventQueue) {
 	err = json.Unmarshal(finding.Vulnerability, &vulnData)
 	if err != nil {
 		updateEvent(event, err)
+		log.Printf("Error unmarshelling the event %s", err)
+
 		return
 	}
 
@@ -224,6 +227,9 @@ func sendBrowserNotification(event database.EventQueue) {
 	// missing manually subscribed to project notification users
 
 	err = routes.SendMessage(projectName, "New vulnerability "+data.Vulnerability.Title, data.URL, finding.FoundBy, finding.FoundBy, usersToNotify)
+	if err != nil {
+		log.Printf("Error sending the message %s", err)
+	}
 	updateEvent(event, err)
 }
 

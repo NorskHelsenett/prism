@@ -2,6 +2,8 @@ package routes
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -30,9 +32,7 @@ const (
 	initialBackoff = 2 * time.Second
 )
 
-func init() {
-
-	database.InitDB()
+func InitNotification() {
 
 	for retries := 0; retries < maxRetries; retries++ {
 		var vapidKey string
@@ -51,13 +51,9 @@ func init() {
 	}
 
 	if vapidPublicKey == "" {
-		vapidPrivateKey, vapidPublicKey, err = webpush.GenerateVAPIDKeys()
+		err = createAndPersistVAAPIKeys()
 		if err != nil {
 			log.Fatalf("Unable to generate VAAPI keys: %v", err)
-		}
-		err = database.CreateVAAPIprivateKey(vapidPrivateKey, vapidPublicKey)
-		if err != nil {
-			log.Fatalf("Unable to store VAAPI keys: %v", err)
 		}
 	} else {
 		vapidPrivateKey, err = database.GetVAAPIprivateKey()
@@ -65,6 +61,18 @@ func init() {
 			log.Fatalf("Unable to retrieve VAAPI private key: %v", err)
 		}
 	}
+}
+
+func createAndPersistVAAPIKeys() error {
+	vapidPrivateKey, vapidPublicKey, err = webpush.GenerateVAPIDKeys()
+	if err != nil {
+		return fmt.Errorf("Unable to generate VAAPI keys: %v", err)
+	}
+	err = database.CreateVAAPIprivateKey(vapidPrivateKey, vapidPublicKey)
+	if err != nil {
+		return fmt.Errorf("Unable to store VAAPI keys: %v", err)
+	}
+	return nil
 }
 
 type Subscriber struct {
@@ -150,7 +158,24 @@ func SubscribeNotification(c *gin.Context) {
 		return
 	}
 
-	c.Status(http.StatusCreated)
+	c.JSON(http.StatusCreated, gin.H{"status": "created"})
+}
+
+func ResetNotifications(c *gin.Context) {
+	err := database.ResetNotifications()
+	if err != nil {
+		log.Printf("Unable to reset VAAPI keys %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Unable to perform requested task"})
+		return
+	}
+
+	err = createAndPersistVAAPIKeys()
+	if err != nil {
+		log.Printf("Unable to persist VAAPI keys %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Unable to perform requested task"})
+		return
+	}
+	c.JSON(http.StatusCreated, gin.H{"success": "VAAPI keys reseted and created"})
 }
 
 func SendMessage(title, body, url, foundBy, ignoreEmail string, usersToNotify map[string]bool) error {
@@ -240,6 +265,18 @@ func sendPushNotification(subscriptionJson []byte, title, body, url string) erro
 		// Handle error
 		log.Printf("Error sending web push %v", err)
 		return err
+	}
+	if resp.StatusCode != 200 && resp.StatusCode != 202 {
+		// Read response body for additional error details
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.Printf("Error reading response body: %v", err)
+		}
+		bodyString := string(bodyBytes)
+
+		// Log detailed error message
+		log.Printf("Error sending web push. Status Code: %d, Status: %s, Response Body: %s",
+			resp.StatusCode, resp.Status, bodyString)
 	}
 	defer resp.Body.Close() // Close the response body when done reading
 	return nil

@@ -5,6 +5,7 @@
 	import { Fetch } from "$lib/fetchUtil";
 	import { onMount } from "svelte";
 	import Multifactor from "./Multifactor.svelte";
+  import ResetWebPush from "./resetWebPush.svelte";
 
 	let settings
 	onMount(async () => {
@@ -14,5 +15,6 @@
 
 <Slack {settings} />
 <Multifactor {settings} />
+<ResetWebPush />
 <DatabaseCleanup {settings}/>
 <Export />
