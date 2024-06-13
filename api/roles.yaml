@@ -87,3 +87,5 @@ roles:
         action: ["read"]
       - resource: "/notification"
         action: ["*"]
+      - resource: "/blob"
+        action: ["*"]

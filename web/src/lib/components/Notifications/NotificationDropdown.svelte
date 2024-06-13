@@ -23,18 +23,17 @@
  * Global array to store notifications.
  * @type {Notification[]}
  */
-  let notifications = [];
+  export let notifications = [];
   let notificationPermission = "default";
 
-  // Define the polling interval in seconds
-  const pollingInterval = 5; // Poll every 5 seconds
-  let intervalId = 0;
+  $: if (notifications) {
+    sortNotifications()
+  }
 
   // Function to sort notifications by 'when' in descending order
-  async function sortNotifications() {
+  function sortNotifications() {
     /** @type {Notification[]} */
-    const payload = await Fetch("/api/notification")
-    const newNotifications = payload.filter(notification =>
+    const newNotifications = notifications.filter(notification =>
       !notifications.some(existing => existing.when === notification.when)
     );
 
@@ -50,7 +49,7 @@
                 });
       }
     });
-    notifications = payload.sort((a, b) => new Date(b.when) - new Date(a.when));
+    notifications = notifications.sort((a, b) => new Date(b.when) - new Date(a.when));
   }
 
   onMount(async () => {
@@ -58,15 +57,6 @@
     if ('Notification' in window) {
       notificationPermission = Notification.permission;
     }
-    intervalId = setInterval(async() => {await sortNotifications()}, pollingInterval * 1000);
-  });
-
-    // Clear the interval when the component is destroyed
-    onDestroy(() => {
-    if (intervalId) {
-      clearInterval(intervalId);
-    }
-    unsubscribe()
   });
 
   let isHidden = true;

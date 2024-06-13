@@ -15,6 +15,7 @@ import (
 	"prism/event"
 	"prism/routes"
 	"prism/session"
+	"prism/ws"
 
 	"fmt"
 	"net/http"
@@ -24,6 +25,8 @@ import (
 var session_db *gorm.DB // Global variable for the database
 
 func main() {
+	config.LoadConfig()
+
 	if config.AppConfig == nil {
 		log.Fatalf("Configuration is loaded from auth.OIDC.init()")
 	}
@@ -31,6 +34,7 @@ func main() {
 	initSessionDatabase()
 	sessionStore := session.NewSessionStore(session_db)
 	session.LoadSessionStore(sessionStore)
+	routes.InitNotification()
 	// Set up the primary Gin router for the main application
 	r := gin.Default()
 	r.Use(CORSMiddleware())
@@ -44,6 +48,7 @@ func main() {
 	// Authenticated users
 	r.Use(auth.AuthMiddleware(sessionStore))
 
+	r.GET("/ws", ws.WSHandler)
 	apiRoutes := r.Group("/api")
 	{
 		apiRoutes.GET("/notification/publicKey", routes.GetNotificationPublicKey)
@@ -115,6 +120,7 @@ func main() {
 		apiRoutes.GET("/settings/cleanup", routes.CleanUpDatabase)
 		apiRoutes.PUT("/settings/events/:id/update/:status", event.UpdateEventQueues)
 		apiRoutes.DELETE("/settings/events/:id", event.DeleteEventQueue)
+		apiRoutes.DELETE("/settings/notification", routes.ResetNotifications)
 		apiRoutes.GET("/settings/export", routes.ExportAllData)
 		apiRoutes.GET("/settings/audit", audit.GetAllAudits)
 		apiRoutes.POST("/settings/import", routes.ImportData)
@@ -145,7 +151,7 @@ func main() {
 	}
 
 	if err := healthServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		fmt.Println("Health check server failed to start: %v", err)
+		fmt.Printf("Health check server failed to start: %v", err)
 	}
 }
 

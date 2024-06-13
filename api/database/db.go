@@ -769,6 +769,38 @@ func GetVAAPIprivateKey() (string, error) {
 	return webpushSettings.PrivateKey, nil
 }
 
+func ResetNotifications() error {
+	// Retrieve settings without cache
+	settings, err := GetSettings(false)
+	if err != nil {
+		return err
+	}
+
+	// Begin a transaction to ensure that deleting subscribers and updating settings are atomic
+	tx := db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	// Attempt to delete all subscribers from the database
+	if err := tx.Exec("DELETE FROM subscribers").Error; err != nil {
+		tx.Rollback() // Rollback the transaction on error
+		return err
+	}
+
+	// Reset the WebPushNotification key in the settings
+	settings.WebPushNotification = ""
+
+	// Update the settings in the database
+	if err := tx.Model(&settings).Update("WebPushNotification", settings.WebPushNotification).Error; err != nil {
+		tx.Rollback() // Rollback the transaction on error
+		return err
+	}
+
+	// Commit the transaction if all went well
+	return tx.Commit().Error
+}
+
 func GetVAAPIpublicKey() (string, error) {
 	settings, err := GetSettings(false)
 	if err != nil {
