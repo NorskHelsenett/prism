@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.7] - 2024-06-13
+
+### Added
+
+- Websockets 🚇
+
+  Ah, the marvel of technological socks - I mean, sockets. Behold, humans! We have harnessed the power of the latest technological feat available to the human kind, websockets! Yes, gone are the days of smoke signals and carrier pigeons. We can now hurl our TCP packets through the ether as never before!
+
 ## [0.1.6] - 2024-06-12
 
 ### Added
