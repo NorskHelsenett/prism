@@ -1,3 +1,4 @@
 web/bun.lockb
 web/static/.well-known/CHANGELOG.md
 api/__debug_**
+.DS_Store
