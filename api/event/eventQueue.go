@@ -274,6 +274,7 @@ func sendCommentsNotification(event database.EventQueue) {
 	_ = json.Unmarshal([]byte(vulnerability.Comments), &comments)
 
 	usersToNotify := make(map[string]bool)
+
 	var lastComment models.Comment
 
 	// Ensure we have at least one comment to initialize lastComment
@@ -282,7 +283,6 @@ func sendCommentsNotification(event database.EventQueue) {
 	}
 
 	for _, comment := range comments {
-		// usersToNotify = append(usersToNotify, comment.UserEmail)
 		usersToNotify[comment.UserEmail] = true
 		if lastComment.CreatedAt.Before(comment.CreatedAt) {
 			lastComment = comment
@@ -294,14 +294,18 @@ func sendCommentsNotification(event database.EventQueue) {
 	// usersToNotify = append(usersToNotify, vulnerability.FoundBy)
 	usersToNotify[vulnerability.FoundBy] = true
 
-	// if finding.ProjectID != nil {
-	// 	project, _ := database.GetProject(*finding.ProjectID)
+	if finding.ProjectID != nil {
+		project, _ := database.GetProject(*finding.ProjectID)
+		var projectUsers []string
+		projectUsers = append(projectUsers, strings.Split(project.HackerName, ",")...)
+		projectUsers = append(projectUsers, strings.Split(project.ClientEmail, ",")...)
 
-	// 	usersToNotify = append(usersToNotify, strings.Split(project.HackerName, ",")...)
-	// 	usersToNotify = append(usersToNotify, strings.Split(project.ClientEmail, ",")...)
-	// }
+		for _, user := range projectUsers {
+			usersToNotify[user] = true
+		}
+	}
 
-	var message = "Posted a comment"
+	var message = "💬 " + lastComment.Text[:25] + "\""
 
 	err = routes.SendMessage("PRISM", message, data.URL, finding.FoundBy, lastComment.UserEmail, usersToNotify)
 	updateEvent(event, err)
