@@ -26,6 +26,7 @@ import (
 
 	"prism/config"
 	"prism/database"
+	"prism/routes"
 	"prism/session"
 )
 
@@ -279,6 +280,27 @@ func contains(slice []string, item string) bool {
 
 func AuthMiddleware(store *session.SessionStore) gin.HandlerFunc {
 	return func(c *gin.Context) {
+
+		apiKey := c.GetHeader("x-api-key")
+		if apiKey != "" {
+			if email, valid := routes.ValidateAPIKey(apiKey); valid {
+				c.Set(EmailContextKey, email)
+
+				role := store.GetRole(email)
+				permissions := config.AppConfig.Roles[role].Permissions
+
+				c.Set("isGlobalProject", globalAccess(permissions, "/project"))
+				c.Set("isGlobalVulnerability", globalAccess(permissions, "/vulnerability"))
+				c.Set("role", "api")
+
+				c.Next()
+				return
+			} else {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+				return
+			}
+		}
+
 		userInfo, err := GetSignedCookie(c, cookieName)
 		if err != nil {
 			// Handle error or invalid session

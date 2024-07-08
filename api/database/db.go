@@ -217,6 +217,7 @@ func InitDB() {
 	db.AutoMigrate(&ImageData{})
 	db.AutoMigrate(&AssessmentJSON{})
 	db.AutoMigrate(&Subscriber{})
+	db.AutoMigrate(&models.APIKey{})
 
 	db.Exec("DROP TRIGGER IF EXISTS jsondata_insert;")
 	db.Exec("DROP TRIGGER IF EXISTS jsondata_update_comments;")
@@ -401,6 +402,74 @@ func UpdateAssassment(assessment models.Assessment, id uint) error {
 	}
 
 	return db.Model(&AssessmentJSON{}).Where("id = ?", id).Update("assessment", data).Error
+}
+
+func ValidateAPIKey(hashedAPIKey string) (string, bool) {
+	var storedKey models.APIKey
+
+	err := db.Where("hashed_api_key = ? AND expiry_at > ?", hashedAPIKey, time.Now()).First(&storedKey).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			// API key is invalid or expired
+			return "", false
+		}
+		// Other errors while accessing the database
+		return "", false
+	}
+
+	// The API key is valid, update the updated_at column
+	if err := db.Model(&storedKey).Update("updated_at", time.Now()).Error; err != nil {
+		// Handle error in updating the record
+		return "", false
+	}
+
+	email := storedKey.Email
+
+	return email, true
+}
+
+var ErrForbidden = errors.New("forbidden")
+
+func DeleteApiKey(id uint, email string) error {
+	var apikey models.APIKey
+	result := db.Where("id = ?", id).First(&apikey)
+
+	// Check for errors in retrieving the API key
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil // No record found, nothing to delete
+		}
+		return result.Error
+	}
+
+	// Check if the email matches the API key's email
+	if apikey.Email != email {
+		return ErrForbidden // Email does not match, return 403 forbidden error
+	}
+
+	// Email matches, proceed to delete the API key
+	if err := db.Delete(&apikey).Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func GetApiKeys(email string) (*[]models.APIKey, error) {
+	var apikeys []models.APIKey
+	result := db.Where("email = ?", email).Find(&apikeys)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &apikeys, nil
+}
+
+func PersistApiKey(apikey *models.APIKey) (*models.APIKey, error) {
+	if err := db.Create(&apikey).Error; err != nil {
+		return nil, err
+	}
+	return apikey, nil
 }
 
 func PersistAssessment(assessment models.Assessment) (uint, error) {
