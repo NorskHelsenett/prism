@@ -305,7 +305,7 @@ func sendCommentsNotification(event database.EventQueue) {
 		}
 	}
 
-	var message = "💬 " + lastComment.Text[:25] + "\""
+	var message = "💬 " + lastComment.Text[:50]
 
 	err = routes.SendMessage("PRISM", message, data.URL, finding.FoundBy, lastComment.UserEmail, usersToNotify)
 	updateEvent(event, err)
