@@ -20,3 +20,5 @@ events:
 slack:
   token: ""
   webhookUrl: ""
+secrets:
+  HMAC_SECRET_KEY: "DO_NOT_LET_ME_CATCH_YOU_USING_THIS_IN_PROD"

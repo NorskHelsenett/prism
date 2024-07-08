@@ -36,6 +36,7 @@ type Config struct {
 	Events   Events                `yaml:"events"`
 	Slack    Slack                 `yaml:"slack"`
 	Roles    map[string]Role       `yaml:"-"`
+	Secrets  map[string]string     `yaml:"secrets"`
 }
 
 type RolesFile struct {

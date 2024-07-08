@@ -89,3 +89,18 @@ roles:
         action: ["*"]
       - resource: "/blob"
         action: ["*"]
+  api:
+    description: "API token role for what is allowed or not"
+    permissions:
+      - resource: "/project"
+        action: ["read"]
+      - resource: "/project/:id"
+        action: ["read"]
+      - resource: "/vulnerability"
+        action: ["read", "write"]
+      - resource: "/vulnerability/:id"
+        action: ["read", "write"]
+      - resource: "/profile"
+        action: ["read"]
+      - resource: "/planning"
+        action: ["read"]

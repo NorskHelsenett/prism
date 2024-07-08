@@ -3,6 +3,7 @@ package audit
 import (
 	"prism/auth"
 	"prism/database"
+	"prism/routes"
 
 	"fmt"
 	"log"
@@ -35,17 +36,29 @@ func AuditMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		var email string
+		method := c.Request.Method
+
+		apiKey := c.GetHeader("x-api-key")
+		if apiKey != "" {
+			emailFound, _ := routes.ValidateAPIKey(apiKey)
+			method += " [x-api-key]"
+			email = emailFound
+		}
+
 		userInfo, err := auth.GetSignedCookie(c, "session_cookie")
 		if err != nil {
 			fmt.Println(err)
+		} else {
+			email = userInfo.Email
 		}
 
 		// Initialize your audit log with HTTP method
 		auditLog := database.AuditLog{
 			Timestamp: time.Now(),
 			Action:    c.Request.URL.Path,
-			Method:    c.Request.Method, // Capture the HTTP method
-			UserEmail: userInfo.Email,
+			Method:    method, // Capture the HTTP method
+			UserEmail: email,
 		}
 
 		// Process request

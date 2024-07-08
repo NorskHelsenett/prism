@@ -57,6 +57,10 @@ func main() {
 		apiRoutes.PUT("/notification/:time/read", routes.MarkNotificationReadHandler)
 		apiRoutes.POST("/notification/subscribe", routes.SubscribeNotification)
 
+		apiRoutes.POST("/profile/apikey", routes.CreateAPIKey)
+		apiRoutes.GET("/profile/apikey", routes.GetAPIKey)
+		apiRoutes.DELETE("/profile/apikey/:id", routes.DeleteAPIKey)
+
 		apiRoutes.GET("/profile", func(c *gin.Context) { auth.HandleUserRequest(c, sessionStore) })
 		apiRoutes.GET("/profile/session/all", func(c *gin.Context) { session.GetUserSessions(c, sessionStore) })
 		apiRoutes.DELETE("/profile/session/:uuid", func(c *gin.Context) { session.DeleteUserSession(c, sessionStore) })

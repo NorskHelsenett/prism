@@ -1,6 +1,7 @@
 <script>
 	import Export from "$lib/components/settings/export.svelte";
   import Profile from "$lib/components/settings/profile.svelte";
+  import APIKeys from "$lib/components/settings/apikeys.svelte";
   import About from "$lib/components/settings/about.svelte";
   import Settings from "$lib/components/settings/settings.svelte";
   import Events from "$lib/components/settings/eventQueue.svelte";
@@ -32,6 +33,7 @@
           <h4 class="subheader">Business settings</h4>
           <div class="list-group list-group-transparent">
             <a href="#" class:active="{activeComponent === Profile}" class="list-group-item list-group-item-action d-flex align-items-center" on:click|preventDefault={() => show(Profile)}>My Account</a>
+            <a href="#" class:active="{activeComponent === APIKeys}" class="list-group-item list-group-item-action d-flex align-items-center" on:click|preventDefault={() => show(APIKeys)}>API keys</a>
             <a href="#" class:active="{activeComponent === About}" class="list-group-item list-group-item-action d-flex align-items-center" on:click|preventDefault={() => show(About)}>About</a>
           </div>
           {#if $accessLevels["/settings"]}
