@@ -5,6 +5,7 @@
   import About from "$lib/components/settings/about.svelte";
   import Settings from "$lib/components/settings/settings.svelte";
   import Events from "$lib/components/settings/eventQueue.svelte";
+  import ShareDocs from "$lib/components/settings/shareDocuments.svelte";
 	import Auditlog from "$lib/components/settings/auditlog.svelte";
 	import { accessLevels } from "$lib/userStore";
 	import UserTable from "$lib/components/settings/UserTable.svelte";
@@ -34,6 +35,7 @@
           <div class="list-group list-group-transparent">
             <a href="#" class:active="{activeComponent === Profile}" class="list-group-item list-group-item-action d-flex align-items-center" on:click|preventDefault={() => show(Profile)}>My Account</a>
             <a href="#" class:active="{activeComponent === APIKeys}" class="list-group-item list-group-item-action d-flex align-items-center" on:click|preventDefault={() => show(APIKeys)}>API keys</a>
+            <a href="#" class:active="{activeComponent === ShareDocs}" class="list-group-item list-group-item-action" on:click|preventDefault={() => show(ShareDocs)}>Public Links</a>
             <a href="#" class:active="{activeComponent === About}" class="list-group-item list-group-item-action d-flex align-items-center" on:click|preventDefault={() => show(About)}>About</a>
           </div>
           {#if $accessLevels["/settings"]}

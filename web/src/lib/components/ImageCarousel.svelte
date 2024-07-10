@@ -54,7 +54,7 @@
             {#each images as image, index}
               <div class={`carousel-item ${index === currentImageIndex ? 'active' : ''}`}>
                 <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-                <img src={`${$baseUrl}/api/blob/${image}`} class="d-block cursor-zoom-out" alt={`Image ${index}`} on:click={closeModal}>
+                <img src={image.length > 40 ? `data:image/png;base64,${image}` : `${$baseUrl}/api/blob/${image}`} class="d-block cursor-zoom-out" alt={`Image ${index}`} on:click={closeModal}>
               </div>
             {/each}
           </div>

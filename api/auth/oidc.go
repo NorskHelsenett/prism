@@ -154,6 +154,19 @@ func ACLMiddleware() gin.HandlerFunc {
 				return
 			}
 
+			vulnerability, err := database.GetVulnerabilityIds(false, email.(string), []uint{uint(findingsID)})
+			if err != nil {
+				c.AbortWithStatus(http.StatusForbidden)
+				return
+			}
+
+			hasAccessToVulnerability := len(vulnerability) > 0
+
+			if hasAccessToVulnerability {
+				c.Next()
+				return
+			}
+
 			projectIDFromVulnerability, err := database.GetProjectIdFromVulnerabilityID(uint(findingsID))
 			if err != nil {
 				// Handle error from GetProjectIdFromVulnerabilityID
@@ -321,9 +334,10 @@ func AuthMiddleware(store *session.SessionStore) gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized - session not found"})
 			return
 		}
+
 		settings, _ := database.GetSettings(false)
-		if settings.MFAEnabled == true {
-			if !validation.IsOTPVerified && c.Request.URL.Path != "/api/session/otp/generate" && c.Request.URL.Path != "/api/session/otp/validate" {
+		if settings.MFAEnabled {
+			if !validation.IsOTPVerified && !strings.HasPrefix(c.Request.URL.Path, "/api/share/") && c.Request.URL.Path != "/api/session/otp/generate" && c.Request.URL.Path != "/api/session/otp/validate" {
 				// OTP is not verified, initiate OTP verification process
 				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "OTP is not verified", "initiateOTP": true})
 				return
@@ -339,7 +353,7 @@ func AuthMiddleware(store *session.SessionStore) gin.HandlerFunc {
 
 		c.Set("isGlobalProject", globalAccess(permissions, "/project"))
 		c.Set("isGlobalVulnerability", globalAccess(permissions, "/vulnerability"))
-		c.Set("role", store.GetRole(userInfo.Email))
+		c.Set("role", role)
 
 		c.Next()
 	}

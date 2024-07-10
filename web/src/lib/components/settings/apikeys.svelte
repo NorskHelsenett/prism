@@ -4,6 +4,7 @@
   import { fade } from 'svelte/transition'
 	import { toast } from 'svelte-sonner';
 	import { formatDateToYYYYMMDD } from '$lib/utils';
+	import { accessLevels } from '$lib/userStore';
 // @ts-check
   /**
    * @typedef {import('$lib/models/apikey').APIKey} APIKey
@@ -85,6 +86,8 @@
   <div class="text-secondary">
     <p>API keys are unique identifiers for authenticating users or applications to an API, meant to be kept secure and not exposed publicly. They help control API usage and prevent abuse. Keys should be monitored, rotated for security, and stored safely. Exposed or compromised keys must be revoked and replaced immediately. Audit API key usage regularly to ensure compliance with security policies.</p>
   </div>
+  {#if $accessLevels["/profile"]?.write }
+
   <div class="row">
     <div class="col-9"></div>
     <div class="col-3 d-flex flex-row justify-content-end">
@@ -93,6 +96,7 @@
         class:bg-azure-lt={isHovering}>
       Create new API Key</a></div>
   </div>
+  {/if}
   {#if apiKeys.length > 0}
   <div class="row">
     <table class="table table-vcenter card-table table-striped">
@@ -147,7 +151,6 @@
           {:else}
           <div class="col">
             <div class="input-group input-group-flat">
-
               <input type="text" bind:value={newApiKeySecret} class="form-control disabled text-truncate" autocomplete="off">
               <span class="input-group-text">
                 <a title="Copy apikey to clipboard" class="link-secondary cursor-pointer" data-bs-toggle="tooltip" aria-label="Copy api key" data-bs-original-title="Copy api key" on:click|preventDefault={handleCopyContent}>

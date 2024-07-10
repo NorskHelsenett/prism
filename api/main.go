@@ -13,8 +13,10 @@ import (
 	"prism/config"
 	"prism/database"
 	"prism/event"
+	"prism/middleware"
 	"prism/routes"
 	"prism/session"
+	"prism/share"
 	"prism/ws"
 
 	"fmt"
@@ -45,6 +47,12 @@ func main() {
 		auth.HandleCallback(c, sessionStore)
 	})
 
+	shareGroup := r.Group("/api")
+	{
+		shareGroup.Use(middleware.RateLimiter())
+		shareGroup.POST("/share/:token", func(c *gin.Context) { share.GetPublicVulnerability(c, sessionStore) })
+	}
+
 	// Authenticated users
 	r.Use(auth.AuthMiddleware(sessionStore))
 
@@ -57,22 +65,25 @@ func main() {
 		apiRoutes.PUT("/notification/:time/read", routes.MarkNotificationReadHandler)
 		apiRoutes.POST("/notification/subscribe", routes.SubscribeNotification)
 
+		apiRoutes.GET("/logout", func(c *gin.Context) { auth.HandleLogout(c, sessionStore) })
+		apiRoutes.GET("/dashboard", routes.HandleDashboard)
+
+		//-- RBAC MIDDLEWARE FROM HERE ON --//
+		apiRoutes.Use(auth.RBACMiddleware())
+		
+		apiRoutes.GET("/profile", func(c *gin.Context) { auth.HandleUserRequest(c, sessionStore) })
+		apiRoutes.GET("/profile/:email", routes.GetUserInfo) //handle when a user logs in, store in both databases
+
 		apiRoutes.POST("/profile/apikey", routes.CreateAPIKey)
 		apiRoutes.GET("/profile/apikey", routes.GetAPIKey)
 		apiRoutes.DELETE("/profile/apikey/:id", routes.DeleteAPIKey)
 
-		apiRoutes.GET("/profile", func(c *gin.Context) { auth.HandleUserRequest(c, sessionStore) })
-		apiRoutes.GET("/profile/session/all", func(c *gin.Context) { session.GetUserSessions(c, sessionStore) })
-		apiRoutes.DELETE("/profile/session/:uuid", func(c *gin.Context) { session.DeleteUserSession(c, sessionStore) })
-		apiRoutes.GET("/profile/:email", routes.GetUserInfo) //handle when a user logs in, store in both databases
-		apiRoutes.GET("/logout", func(c *gin.Context) { auth.HandleLogout(c, sessionStore) })
-		apiRoutes.GET("/dashboard", routes.HandleDashboard)
-
 		apiRoutes.GET("/session/otp/generate", session.HandleOTPGenerate)
 		apiRoutes.POST("/session/otp/validate", func(c *gin.Context) { session.HandleOTPValidate(c, sessionStore) })
 		apiRoutes.GET("/session/otp/reset", func(c *gin.Context) { session.HandleOTPReset(c, sessionStore) })
+		apiRoutes.GET("/session/all", func(c *gin.Context) { session.GetUserSessions(c, sessionStore) })
+		apiRoutes.DELETE("/session/:uuid", func(c *gin.Context) { session.DeleteUserSession(c, sessionStore) })
 
-		apiRoutes.Use(auth.RBACMiddleware())
 		apiRoutes.GET("/profile/access-list", routes.GetAccessListRoutes)
 
 		apiRoutes.POST("/planning/new", routes.NewAssassment)
@@ -81,6 +92,8 @@ func main() {
 		apiRoutes.GET("/planning/:id/assignedHackers", routes.FindNonAvailablePersons)
 		apiRoutes.PUT("/planning/:id", routes.PutAssessmentsHandler)
 		apiRoutes.DELETE("/planning/:id", routes.DeleteAssessmentsHandler)
+
+		apiRoutes.GET("/vulnerability/share/all", share.GetAll)
 
 		// Group with ACL middleware
 		protectedRoutes := apiRoutes.Group("/")
@@ -91,9 +104,26 @@ func main() {
 			protectedRoutes.GET("/project/:projectID/vulnerabilities", routes.GetProjectVulnerabilitiesForProject)
 			protectedRoutes.GET("/vulnerability/:findingsID", routes.GetVulnerability)
 
-			apiRoutes.GET("/project/all", routes.GetProjects)
-			apiRoutes.GET("/vulnerability/all", routes.GetAllVulnerabilities)
+			protectedRoutes.PUT("/project/:projectID", routes.HandleProjectPut)
+			protectedRoutes.DELETE("/project/:projectID", routes.DeleteProject)
+
+			protectedRoutes.PUT("/vulnerability/:findingsID", routes.PutVulnerability)
+			protectedRoutes.DELETE("/vulnerability/:findingsID", routes.DeleteVulnerability)
+
+			protectedRoutes.POST("/vulnerability/:findingsID/comment", routes.NewComment)
+			protectedRoutes.PUT("/vulnerability/:findingsID/comment", routes.UpdateComment)
+			protectedRoutes.DELETE("/vulnerability/:findingsID/comment/:cid", routes.DeleteComment)
+			protectedRoutes.PUT("/vulnerability/:findingsID/status/:status", routes.ChangeStatusVulnerability)
+
+			protectedRoutes.GET("/vulnerability/share/:findingsID", share.GetShareVulnerability)
+			protectedRoutes.POST("/vulnerability/share/:findingsID", share.ShareVulnerability)
+			protectedRoutes.DELETE("/vulnerability/share/:findingsID", share.DeleteShareVulnerability)
+			protectedRoutes.PUT("/vulnerability/share/:findingsID", share.ShareVulnerability)
 		}
+
+		apiRoutes.POST("/project", routes.HandleProjectPost)
+		apiRoutes.GET("/project/all", routes.GetProjects)
+		apiRoutes.GET("/vulnerability/all", routes.GetAllVulnerabilities)
 
 		apiRoutes.GET("/profile/all", func(c *gin.Context) { routes.GetAllProfilesEmailOnly(c, sessionStore) })
 		apiRoutes.GET("/slack/channels", routes.GetSlackChannels)
@@ -102,17 +132,7 @@ func main() {
 		apiRoutes.POST("/blob/upload", routes.HandleBlobUpload)
 		apiRoutes.DELETE("/blob/:filename", routes.HandleBlobDelete)
 
-		apiRoutes.POST("/project", routes.HandleProjectPost)
-		apiRoutes.PUT("/project/:projectID", routes.HandleProjectPut)
-		apiRoutes.DELETE("/project/:projectID", routes.DeleteProject)
-
 		apiRoutes.POST("/vulnerability", routes.PostVulnerability)
-		apiRoutes.PUT("/vulnerability/:id", routes.PutVulnerability)
-		apiRoutes.DELETE("/vulnerability/:id", routes.DeleteVulnerability)
-		apiRoutes.POST("/vulnerability/:id/comment", routes.NewComment)
-		apiRoutes.PUT("/vulnerability/:id/comment", routes.UpdateComment)
-		apiRoutes.DELETE("/vulnerability/:id/comment/:cid", routes.DeleteComment)
-		apiRoutes.PUT("/vulnerability/:id/status/:status", routes.ChangeStatusVulnerability)
 
 		apiRoutes.GET("/settings/users/all", func(c *gin.Context) { routes.GetAllUsers(c, sessionStore) })
 		apiRoutes.DELETE("/settings/user/:id", func(c *gin.Context) { routes.DeleteUser(c, sessionStore) })

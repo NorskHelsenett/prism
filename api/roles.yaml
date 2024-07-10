@@ -9,6 +9,8 @@ roles:
   pentester:
     description: "Access to projects and findings"
     permissions:
+      - resource: "/session"
+        action: ["*"]
       - resource: "/project"
         action: ["read", "write", "delete"]
       - resource: "/project/:id"
@@ -36,6 +38,8 @@ roles:
         action: ["read"]
       - resource: "/profile"
         action: ["read"]
+      - resource: "/session"
+        action: ["*"]
       - resource: "/blob"
         action: ["read"]
       - resource: "/notification"
@@ -43,6 +47,8 @@ roles:
   global_viewer:
     description: "Read-only access to all resources"
     permissions:
+      - resource: "/session"
+        action: ["*"]
       - resource: "/project"
         action: ["read"]
       - resource: "/project/:id"
@@ -60,6 +66,8 @@ roles:
   manager:
     description: "Access to the planning feature"
     permissions:
+      - resource: "/session"
+        action: ["*"]
       - resource: "/project"
         action: ["read", "write", "delete"]
       - resource: "/project/:id"
@@ -79,6 +87,8 @@ roles:
   PET01:
     description: "A new pentester team with write access to only a given project"
     permissions:
+      - resource: "/session"
+        action: ["*"]
       - resource: "/project"
         action: ["*"]
       - resource: "/vulnerability"

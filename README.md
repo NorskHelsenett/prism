@@ -64,6 +64,18 @@ Summon the API with the ancient Go runes:
 SLACK_PATH="tmp/slackMessage.json" GO_END=dev go run *.go
 ```
 
+### Security
+
+```bash
+go install golang.org/x/vuln/cmd/govulncheck@latest
+govulncheck ./...
+
+go list -m -u all
+go get -u ./... #upgrade all packages
+
+bun update
+```
+
 ### Weaving the Web Interface
 
 Navigate to the mystical lands of web:
