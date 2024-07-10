@@ -7,6 +7,12 @@
   let alreadyActivated = false
 
   onMount(async () => {
+
+    const redirectShare = localStorage.getItem('redirectToAfterLogin')
+    if(redirectShare?.startsWith("/s/")){
+      window.location.href = redirectShare
+    }
+
     data = await Fetch('/api/session/otp/generate');
     if (data?.otp_activated){
       alreadyActivated = data.otp_activated

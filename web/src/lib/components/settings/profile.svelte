@@ -29,7 +29,7 @@
   onDestroy(unsubscribe);
 
   onMount(async () => {
-    sessions = await Fetch("/api/profile/session/all")
+    sessions = await Fetch("/api/session/all")
   });
 
   async function resetMFA() {
@@ -38,9 +38,9 @@
   }
 
   async function endSession(id) {
-    const response = await Fetch(`/api/profile/session/${id}`, {method: "DELETE"})
+    const response = await Fetch(`/api/session/${id}`, {method: "DELETE"})
     if (!response?.error){
-      sessions = await Fetch("/api/profile/session/all")
+      sessions = await Fetch("/api/session/all")
     }
   }
 

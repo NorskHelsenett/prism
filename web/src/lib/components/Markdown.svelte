@@ -1,6 +1,4 @@
 <script>
-import { accessLevels } from '$lib/userStore';
-
 import DOMPurify from 'dompurify'
 import { marked } from 'marked';
 import { createEventDispatcher } from 'svelte';

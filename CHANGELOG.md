@@ -7,21 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.8] - 2024-07-10
+
+### Added
+- **📬 Share Vulnerabilities:** Found something worth sharing? Now you can! Choose who to share with, set a duration, and protect those secrets with a passphrase!
+  - **🌐 Public Access:** Create a public link, no authentication needed
+  - **🏢 Organization:** Accessible to every logged-in user
+  - **🔒 Passphrase:** Secure access with a passphrase
+  - **🎟️ VIP Access:** Only invited users can view the document
+  - **⏳ Expiry Date:** Set an expiry date for the public link
+  - **📈 Audit Trail:** Keep track of all public link activities
+  - **⛔ Rate Limiter:** Secured behind a rate limiter to prevent brute-force attacks on the share token.
+
+### Security
+- **🔐 Broken Access Control:** Fixes #PRISM:237 where it was possible to edit and delete projects and vulnerabilities not owned by the requester.
+
+### Fixes
+- **📄 Unable to Read Documents:** Fixes a problem where a document not assigned to a project was inaccessible for the hacker who reported the security issue, because the check was on the project alone, and not the actual document.
+- **💬 Comment PANIC:** Who posts comments shorter than 50 characters? Well, some of you did. And that triggered a panic and forced a restart of the container.
+- **👤 User is Undefined:** Better error handling of empty users in the `History.svelte`. Not necessary in real-world scenarios, but fixed nonetheless.
+- **🛡️ RBAC:** Improved the Role-Based Access Control logic to ensure more precise permission checks and better security.
+
+## [0.1.8] - 2024-07-08
+
+### Added
+
+- **🤖 API keys:** Added API keys for automated queries against the `/api` endpoint. Every API key has a default expiry set for 90 days.
+
 ## [0.1.7] - 2024-06-13
 
 ### Added
 
-- Websockets 🚇
-
-  Ah, the marvel of technological socks - I mean, sockets. Behold, humans! We have harnessed the power of the latest technological feat available to the human kind, websockets! Yes, gone are the days of smoke signals and carrier pigeons. We can now hurl our TCP packets through the ether as never before!
+- **🚇 Websockets:** Ah, the marvel of technological socks - I mean, sockets. Behold, humans! We have harnessed the power of the latest technological feat available to the human kind, websockets! Yes, gone are the days of smoke signals and carrier pigeons. We can now hurl our TCP packets through the ether as never before!
 
 ## [0.1.6] - 2024-06-12
 
 ### Added
 
-- Toast 🥪
-
-  We have a new toast-master! Using the amazing [svelte-sonner](https://github.com/wobsoriano/svelte-sonner) we now have an awesome toaster information experience like no other!
+- **🥪 Toast :** We have a new toast-master! Using the amazing [svelte-sonner](https://github.com/wobsoriano/svelte-sonner) we now have an awesome toaster information experience like no other!
 
 ### Fixes
 

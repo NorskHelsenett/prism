@@ -14,7 +14,9 @@ export async function Fetch(endpoint, options = {}) {
 
       if (response.status === 401) {
         const returnPath = window.location.pathname + window.location.search;
-        localStorage.setItem('redirectToAfterLogin', returnPath);
+        if (returnPath != "/login"){
+          localStorage.setItem('redirectToAfterLogin', returnPath);
+        }
         window.location.href = '/login';
         return Promise.resolve(null);
       }

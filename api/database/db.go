@@ -218,6 +218,7 @@ func InitDB() {
 	db.AutoMigrate(&AssessmentJSON{})
 	db.AutoMigrate(&Subscriber{})
 	db.AutoMigrate(&models.APIKey{})
+	db.AutoMigrate(&models.SharedDocument{})
 
 	db.Exec("DROP TRIGGER IF EXISTS jsondata_insert;")
 	db.Exec("DROP TRIGGER IF EXISTS jsondata_update_comments;")
@@ -277,6 +278,59 @@ func GetAllSubscribers() ([]Subscriber, error) {
 		return nil, result.Error
 	}
 	return subscriberList, nil
+}
+
+func ExistsShare(token string) (*models.SharedDocument, error) {
+	var share models.SharedDocument
+
+	query := db.Table("shared_documents").
+		Select("shared_documents.*").
+		Joins("INNER JOIN json_data ON shared_documents.document_id = json_data.id").
+		Where("json_data.deleted_at IS NULL").
+		Where("shared_documents.share_token = ?", token).
+		First(&share)
+
+	if query.Error != nil {
+		return nil, query.Error
+	}
+
+	return &share, nil
+}
+
+func GetAllShares() (*[]models.SharedDocument, error) {
+	var shares []models.SharedDocument
+	result := db.Find(&shares)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &shares, nil
+}
+
+func GetShareDocument(id uint) (*models.SharedDocument, error) {
+	var share models.SharedDocument
+	result := db.Where("document_id = ?", id).First(&share)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &share, nil
+}
+
+func DeleteShareDocument(id uint) error {
+	var shareDoc models.SharedDocument
+	shareDoc.DocumentID = id
+	if err := db.Delete(&shareDoc).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func PersistShareDocument(share *models.SharedDocument) error {
+	if err := db.Save(&share).Error; err != nil {
+		return err
+	}
+	return nil
 }
 
 func AppendSubscriber(email string, subs []byte) error {
@@ -1197,6 +1251,31 @@ type MinifiedVulnerability struct {
 	IsPublicFacing bool   `json:"isPublicFacing"`
 	Criticality    string `json:"criticality"`
 	Date           string `json:"date"`
+}
+
+func GetVulnerabilityIds(isGlobal bool, email string, ids []uint) ([]uint, error) {
+	var accessibleIds []uint
+
+	query := db.Table("json_data").
+		Select("json_data.id").
+		Where("json_data.id IN ?", ids)
+
+	if !isGlobal {
+		query = query.Where(
+			db.Where("json_data.project_id IN (?) AND deleted_at IS NULL",
+				db.Table("project_data").
+					Select("id").
+					Where("client_email LIKE ? OR hacker_name LIKE ?", "%"+email+"%", "%"+email+"%"),
+			).Or("json_data.found_by LIKE ? AND deleted_at IS NULL", "%"+email+"%"),
+		)
+	}
+
+	err := query.Pluck("json_data.id", &accessibleIds).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return accessibleIds, nil
 }
 
 func AllVulnerabilities(all bool, email string) ([]MinimalJSONData, error) {

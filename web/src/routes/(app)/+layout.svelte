@@ -1,5 +1,5 @@
 <script>
-  import '../app.css'
+  import '../../app.css'
 	import { onDestroy, onMount } from 'svelte';
   import { initializeApiEndpoint, isLoading, isAuthenticated } from '$lib/stores/configStore';
 	import '@tabler/core/dist/css/tabler.min.css';
@@ -12,7 +12,6 @@
 	import NotificationDropdown from '$lib/components/Notifications/NotificationDropdown.svelte';
   import { goto } from '$app/navigation';
 	import { Toaster } from 'svelte-sonner';
-
 
   if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/service-worker.js')
