@@ -25,12 +25,19 @@
   let showUnauthorizedMessage = false
   let showNotFoundMessage = false
   let showRateLimitMessage = false
+  let showCaseClosed = false
 
   onMount(async() => {
     localStorage.removeItem("redirectToAfterLogin")
     const result = await Fetch(`/api/share/${token}`, {method: "POST", body: "{}"})
     console.log(result)
-      if(result?.error == "Passphrase is required"){
+
+    assertResult(result)
+  });
+
+  function assertResult(result){
+    requirePassphrase = false
+    if(result?.error == "Passphrase is required"){
         requirePassphrase = true
       } else if (result?.error == "expired"){
         showExpiredMessage = true
@@ -40,10 +47,12 @@
         showNotFoundMessage = true
       } else if (result?.error == "Rate limit exceeded"){
         showRateLimitMessage = true
+      } else if (result?.error == "closed"){
+        showCaseClosed = true
       } else {
       vulnerability = result
     }
-  });
+  }
 
   let showModal = false;
   let currentImageIndex = 0;
@@ -57,12 +66,7 @@
   async function submitPassphrase() {
     const url = `/api/share/${token}`
     const result = await Fetch(url, {method: "POST", body: `{"passphrase":"${passphrase}"}`})
-    if(result?.error == "Passphrase is required"){
-      requirePassphrase = true
-    }else {
-      vulnerability = result
-      requirePassphrase = false
-    }
+    assertResult(result)
   }
   async function handleKeydown(event) {
     if (event.key === 'Enter') {
@@ -76,7 +80,30 @@
   }
 </script>
 
-{#if showRateLimitMessage}
+{#if showCaseClosed}
+<div class="d-flex justify-content-center align-items-center vh-100" transition:fade={{ delay: 250, duration: 300 }}>
+  <div class="card">
+    <div class="card-status-top bg-success"></div>
+    <div class="card-body text-center pb-0" style="min-width: 30em;">
+      <div class="display-2 fw-bold my-3 text-success">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon-tabler icon-tabler-shield-check-filled" width="96" height="96" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+          <path d="M11.998 2l.118 .007l.059 .008l.061 .013l.111 .034a.993 .993 0 0 1 .217 .112l.104 .082l.255 .218a11 11 0 0 0 7.189 2.537l.342 -.01a1 1 0 0 1 1.005 .717a13 13 0 0 1 -9.208 16.25a1 1 0 0 1 -.502 0a13 13 0 0 1 -9.209 -16.25a1 1 0 0 1 1.005 -.717a11 11 0 0 0 7.531 -2.527l.263 -.225l.096 -.075a.993 .993 0 0 1 .217 -.112l.112 -.034a.97 .97 0 0 1 .119 -.021l.115 -.007zm3.71 7.293a1 1 0 0 0 -1.415 0l-3.293 3.292l-1.293 -1.292l-.094 -.083a1 1 0 0 0 -1.32 1.497l2 2l.094 .083a1 1 0 0 0 1.32 -.083l4 -4l.083 -.094a1 1 0 0 0 -.083 -1.32z" stroke-width="0" fill="currentColor" />
+        </svg>
+      </div>
+    </div>
+    <div class="empty pt-0">
+      <p class="empty-title text-success">Operation Finished</p>
+      <p class="empty-subtitle text-secondary mt-0">
+        This campaign has ended.
+      </p>
+        <p class="empty-subtitle text-secondary mt-0 mb-0">Yes, we're as shocked as you are.</p>
+        <p class="empty-subtitle text-secondary mt-0 mb-0">It's like spotting a unicorn in the wild.</p>
+        <p class="empty-subtitle text-secondary mt-0 mb-0">But hey, miracles do happen!</p>
+    </div>
+  </div>
+</div>
+{:else if showRateLimitMessage}
 <div class="d-flex justify-content-center align-items-center vh-100" transition:fade={{ delay: 250, duration: 300 }}>
   <div class="card">
     <div class="card-status-top bg-danger"></div>

@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **⏳ Expiry Date:** Set an expiry date for the public link
   - **📈 Audit Trail:** Keep track of all public link activities
   - **⛔ Rate Limiter:** Secured behind a rate limiter to prevent brute-force attacks on the share token.
+  - **✔ Campaign finished:** Show a nice appreciation when the case is closed.
 
 ### Security
 - **🔐 Broken Access Control:** Fixes #PRISM:237 where it was possible to edit and delete projects and vulnerabilities not owned by the requester.

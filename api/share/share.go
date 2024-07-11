@@ -319,6 +319,12 @@ func GetPublicVulnerability(c *gin.Context, store *session.SessionStore) {
 		return
 	}
 
+	if(vuln.Status == "Resolved" || vuln.Status == "Rejected"){
+		fmt.Printf("Status is closed")
+		c.AbortWithStatusJSON(http.StatusOK, gin.H{"error": "closed"})
+		return
+	}
+
 	var vulnerability map[string]interface{}
 	if err := json.Unmarshal(vuln.Vulnerability, &vulnerability); err != nil {
 		fmt.Printf("failed to unmarshal vulnerability data, %v", err)
