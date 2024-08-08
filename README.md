@@ -61,7 +61,7 @@ cd api
 Summon the API with the ancient Go runes:
 
 ```bash
-SLACK_PATH="tmp/slackMessage.json" GO_END=dev go run *.go
+SLACK_PATH="tmp/slackMessage.json" GO_ENV=dev CONFIG_PATH="tmp/config.yaml" go run *.go
 ```
 
 ### Security
