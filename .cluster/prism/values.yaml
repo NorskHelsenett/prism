@@ -41,7 +41,7 @@ api:
             "type": "section",
             "text": {
               "type": "mrkdwn",
-              "text": "*Title:* \n{{.Vulnerability.Title}}\n\n*Criticality:*\n{{.Vulnerability.Criticality}}\n\n*Category:*\n{{.Vulnerability.Category}}"
+              "text": "*Criticality:*\n{{.Vulnerability.Criticality}}\n\n*Category:*\n{{.Vulnerability.Category}}"
             },
             "accessory": {
               "type": "image",
