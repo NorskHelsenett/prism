@@ -11,7 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **👥 Guilds**: Add Teams and Guilds functionality
+- **👥 Guilds:** Add Teams and Guilds functionality
+
+### Fixes
+
+- **🛠️ The Great Resource Optimization Saga of 2024:** Fixed our overzealous vulnerability fetcher that was apparently trying to download the entire internet. We've now implemented a revolutionary "Ask Nicely" protocol, reducing backend requests by 99%. The remaining 1% is reserved for when our lone server hamster needs a coffee break. Users should now experience faster response times and fewer instances of growing a full beard while waiting for results. As an added bonus, our backend team can finally remember what their families look like.
 
 ## [0.1.9] - 2024-08-08
 
