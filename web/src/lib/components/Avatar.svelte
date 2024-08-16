@@ -1,8 +1,10 @@
 <script>
-  import { Fetch } from '$lib/fetchUtil'
-	import { onMount } from 'svelte';
+  import { Fetch } from '$lib/fetchUtil';
+  import { onMount } from 'svelte';
+  import { userStore } from '$lib/stores/userStore';
+
   export let email = '';
-  export let option = { }
+  export let option = {};
 
   const defaultOption = {
     showName: true,
@@ -13,38 +15,35 @@
   };
 
   onMount(() => {
-    option = {...defaultOption, ...option}
-  })
+    option = { ...defaultOption, ...option };
+  });
 
   let user = null;
 
-  async function getUser(email) {
-    return await Fetch(`/api/profile/${email}`);
-  }
-
   $: if (email) {
-    getUser(email).then(u => user = u)
+    userStore.getUser(email);
+    userStore.subscribe(store => {
+      user = store[email];
+    });
   }
 
   let tooltipVisible = false;
 
-	function showTooltip(event) {
-    if(option.tooltipEnabled)
-		{tooltipVisible = true;}
-	}
+  function showTooltip(event) {
+    if (option.tooltipEnabled) {
+      tooltipVisible = true;
+    }
+  }
 
-	function hideTooltip() {
-		tooltipVisible = false;
-	}
+  function hideTooltip() {
+    tooltipVisible = false;
+  }
 
   function getSize() {
-    if (option.size === "sm")
-      return "avatar-sm"
-    if (option.size === "md")
-      return "avatar-md"
-    if (option.size === "lg")
-      return "avatar-lg"
-    return "avatar-xs"
+    if (option.size === "sm") return "avatar-sm";
+    if (option.size === "md") return "avatar-md";
+    if (option.size === "lg") return "avatar-lg";
+    return "avatar-xs";
   }
 
   function calculateInitials(fullname) {
@@ -52,11 +51,10 @@
     return `${words[0][0]}${words[words.length - 1][0]}`;
   }
 
-  function calculateInitialsFromEmail(email){
-    const mail = email.split("@")[0]
-    const name = mail.split(".")
-
-    return calculateInitials(`${name[0]} ${name[name.length-1]}`)
+  function calculateInitialsFromEmail(email) {
+    const mail = email.split("@")[0];
+    const name = mail.split(".");
+    return calculateInitials(`${name[0]} ${name[name.length-1]}`);
   }
 </script>
 
