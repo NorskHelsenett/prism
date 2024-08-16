@@ -83,12 +83,6 @@
     color: var(--tblr-body-color);
   }
 
-  :global(.ts-dropdown-content) {
-    background: var(--tblr-modal-bg);
-    color: var(--tblr-body-color);
-    background: var(--tblr-card-bg);
-  }
-
   :global(.ts-wrapper.multi .ts-control > div) {
     background: var(--tblr-bg-surface-secondary);
     border: 1px solid var(--tblr-border-color);

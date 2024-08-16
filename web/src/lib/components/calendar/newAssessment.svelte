@@ -233,11 +233,6 @@ $: if(showHackersList){
 		height: 2.7em;
 	}
 
-	:global(.ts-dropdown-content) {
-    background: var(--tblr-card-bg);
-    color: var(--tblr-body-color);
-  }
-
   li.option:hover{
     cursor: pointer;
     background-color: rgba(var(--tblr-secondary-rgb),.08);
