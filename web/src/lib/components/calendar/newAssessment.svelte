@@ -3,10 +3,7 @@
 	import TomSelect from 'tom-select';
   import 'tom-select/dist/css/tom-select.bootstrap5.min.css';
 	import { Fetch } from '$lib/fetchUtil';
-	import Avatar from '$lib/components/Avatar.svelte';
-  import { fade } from 'svelte/transition';
-	import { scale } from 'svelte/transition';
-	import { quintOut } from 'svelte/easing';
+  import AvatarList from '$lib/components/calendar/Avatarlist.svelte';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 
@@ -15,7 +12,7 @@
   let projectSelectElement;
   export let showModal = false
 
-  let assassment = resetData()
+  let assessment = resetData()
 
   function resetData() {
     return {
@@ -28,18 +25,18 @@
     }
   }
 
-  $: if(showModal) { assassment = resetData() }
+  $: if(showModal) { assessment = resetData() }
 
   let error
 
-  async function postAssassment() {
-    const result = await Fetch("/api/planning/new", {method: "POST", body: JSON.stringify(assassment)})
+  async function postassessment() {
+    const result = await Fetch("/api/planning/new", {method: "POST", body: JSON.stringify(assessment)})
     if(result.error) {
       error = result.error
       toast.error('Unable to save the plan');
     } else {
       toast.success('Plan has been created');
-      assassment = resetData()
+      assessment = resetData()
       showModal = false
       goto(`/planning/${result.id}/edit`)
     }
@@ -47,7 +44,8 @@
 
 	onMount(async () => {
 		const projects = await Fetch('/api/project/all');
-		usersOriginal = await Fetch('/api/profile/all');
+		const profiles = await Fetch('/api/profile/all');
+		usersOriginal = profiles.users
     users = usersOriginal
 
 		let tomSelect = new TomSelect(projectSelectElement, {
@@ -60,7 +58,7 @@
 			create: false,
       onChange: (values) => {
         // 'values' should be an array of selected IDs
-        assassment.projects = values.map(value => {
+        assessment.projects = values.map(value => {
           let project = projects.find(project => project.ID == value);
           return project ? { id: project.ID, name: project.ProjectName } : null;
         }).filter(id => id !== null);
@@ -95,18 +93,18 @@
 
   function addHacker(user){
   // Add the user to the hackers list if not already included
-  if (!assassment.hackers.includes(user)) {
-    assassment.hackers.push(user);
+  if (!assessment.hackers.includes(user)) {
+    assessment.hackers.push(user);
   }
 
   // Filter the users list to exclude users that are in the hackers list
-  users = users.filter(u => !assassment.hackers.includes(u));
-  assassment.hackers = assassment.hackers
+  users = users.filter(u => !assessment.hackers.includes(u));
+  assessment.hackers = assessment.hackers
   }
 
 function removeHacker(user) {
   // Remove the user from the hackers list
-  assassment.hackers = assassment.hackers.filter(h => h !== user);
+  assessment.hackers = assessment.hackers.filter(h => h !== user);
 
   // Optionally, add the user back to the users list if not already present
   if (!users.includes(user)) {
@@ -120,7 +118,7 @@ let filterText = ""
 function filterUsers(event){
   filterText = event.target.value.toLowerCase()
   if (filterText == "") {
-    users = usersOriginal.filter(u => !assassment.hackers.includes(u));
+    users = usersOriginal?.filter(u => !assessment.hackers.includes(u));
   } else {
     users = users.filter(user =>
       user.name.toLowerCase().includes(filterText) // Convert user.name to lowercase as well
@@ -132,7 +130,7 @@ $: if(showHackersList){
   document.getElementById("filterQuery")?.focus()
 } else {
   filterText = ""
-  users = usersOriginal.filter(u => !assassment.hackers.includes(u));
+  users = usersOriginal?.filter(u => !assessment.hackers.includes(u));
 }
 </script>
 
@@ -151,7 +149,7 @@ $: if(showHackersList){
 				name="example-text-input"
 				placeholder="Title"
 				autofocus
-				bind:value={assassment.title}
+				bind:value={assessment.title}
 			/>
 		</div>
 
@@ -170,38 +168,13 @@ $: if(showHackersList){
 		<div class="row">
 			<div class="col-sm-5">
 				<div class="mb-3">
-					<input type="date" class="form-control" bind:value={assassment.dateFrom} />
-          <input type="date" class="form-control" bind:value={assassment.dateTo} min={assassment.dateFrom}/>
+					<input type="date" class="form-control" bind:value={assessment.dateFrom} />
+          <input type="date" class="form-control" bind:value={assessment.dateTo} min={assessment.dateFrom}/>
 				</div>
 			</div>
 		</div>
 
-      <div class="avatar-list" style="position:relative">
-        {#each assassment.hackers as hacker, index (hacker.email)}
-          <!-- svelte-ignore a11y-no-static-element-interactions -->
-          <div class="avatar-container" on:mouseenter={() => showRemoveHacker[index] = true} on:mouseleave={() => showRemoveHacker[index] = false} transition:scale={{ duration: 300, delay: 0, opacity: 0.5, start: 0.0, easing: quintOut }}>
-            <Avatar email="{hacker.email}" option={{ showName: false, size: "sm", emptyFields: false, circle: true}}/>
-            {#if showRemoveHacker[index]}
-              <i class="overlay ti ti-x rounded-circle" transition:fade={{ delay: 50, duration: 500 }} on:click="{removeHacker(hacker)}"></i>
-            {/if}
-          </div>
-        {/each}
-          <!-- svelte-ignore a11y-click-events-have-key-events -->
-          <!-- svelte-ignore a11y-no-static-element-interactions -->
-          <span class="avatar rounded-circle avatar-sm cursor-pointer" on:click|stopPropagation="{() => showHackersList = !showHackersList}"><i class="ti ti-plus"></i></span>
-          {#if showHackersList}
-        <div id="hackersDropdownList" class="card" style="position:absolute;margin-top: 42px;">
-          <div class="">
-            <input id="filterQuery" type="text" bind:value={filterText} on:keyup={e => filterUsers(e)}/>
-            <ul>
-              {#each users as user}
-                <li class="option selected p-2" on:click="{addHacker(user)}"><Avatar email={user.email}/></li>
-              {/each}
-            </ul>
-          </div>
-        </div>
-        {/if}
-      </div>
+    <AvatarList hackers={assessment.hackers} on:updateHackers="{e => assessment.hackers = e.detail}"/>
 
 <div class="row">
       <div class="mt-3">
@@ -209,14 +182,14 @@ $: if(showHackersList){
 			<textarea
 				class="form-control"
 				placeholder="Notes..."
-				bind:value={assassment.note}
+				bind:value={assessment.note}
 			/>
 		</div>
 </div>
 
     </div>
     <div class="card-footer text-end">
-      <a href="#" class="btn btn-primary" on:click="{postAssassment}">Save</a>
+      <a href="#" class="btn btn-primary" on:click="{postassessment}">Save</a>
     </div>
   </div>
 

@@ -1,39 +1,37 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
+  import { slide } from 'svelte/transition';
 
   export let show = false;
-  let justOpened = true
+  let dropdownElement;
 
   function handleClickOutside(event) {
-    const dropdownElement = event.target.closest('.dropdown');
-    if (!dropdownElement && !justOpened) {
+    if (show && dropdownElement && !dropdownElement.contains(event.target)) {
       show = false;
     }
-    justOpened = !justOpened
   }
 
   onMount(() => {
-    window.addEventListener('click', handleClickOutside);
+    document.addEventListener('click', handleClickOutside);
   });
 
   onDestroy(() => {
-    window.removeEventListener('click', handleClickOutside);
+    document.removeEventListener('click', handleClickOutside);
   });
 </script>
 
 {#if show}
-  <div class="dropdown" on:click|stopPropagation>
-    <div class="dropdown-menu dropdown-menu-right show">
+  <div class="dropdown" bind:this={dropdownElement}>
+    <div class="dropdown-menu dropdown-menu-right show" transition:slide="{{ duration: 100, axis: 'y' }}">
       <slot />
     </div>
   </div>
 {/if}
 
-
 <style>
-  .dropdown-menu-right{
-    top: 100%;
-    right: -20px;
+  .dropdown-menu-right {
+    top: 10px;
+    right: -15px;
   }
 
   .dropdown {

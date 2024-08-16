@@ -73,10 +73,10 @@ func DeleteShareVulnerability(c *gin.Context) {
 
 func ShareVulnerability(c *gin.Context) {
 	var input struct {
-		InvitedEmails  string `json:"invitedEmails"`
-		ExpirationDate string `json:"expirationDate"`
-		Passphrase     string `json:"passphrase"`
-		AccessType     string `json:"accessType" binding:"required"`
+		InvitedEmailsJSON []string `json:"invitedEmails"`
+		ExpirationDate    string   `json:"expirationDate"`
+		Passphrase        string   `json:"passphrase"`
+		AccessType        string   `json:"accessType" binding:"required"`
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
@@ -104,7 +104,7 @@ func ShareVulnerability(c *gin.Context) {
 	if input.ExpirationDate != "" {
 		parsedDate, err := time.Parse("2006-01-02", input.ExpirationDate)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format. Expected YYYY-MM-DD"})
 			return
 		}
 		if parsedDate.Before(time.Now()) {
@@ -125,42 +125,37 @@ func ShareVulnerability(c *gin.Context) {
 			}
 
 			sharedDocument = &models.SharedDocument{
-				CreatedAt:      time.Now(),
-				DocumentID:     id,
-				ShareToken:     shareToken,
-				SharedByEmail:  email.(string),
-				ExpirationDate: expirationDate,
-				AccessType:     input.AccessType,
+				CreatedAt:         time.Now(),
+				DocumentID:        id,
+				ShareToken:        shareToken,
+				SharedByEmail:     email.(string),
+				ExpirationDate:    expirationDate,
+				AccessType:        input.AccessType,
+				InvitedEmailsJSON: input.InvitedEmailsJSON,
+				Passphrase:        input.Passphrase,
 			}
 		} else {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-	}
-
-	// Update only the specified fields
-	if input.AccessType == "passphrase-protected" {
-		if input.Passphrase == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Passphrase is required for passphrase-protected access type"})
-			return
-		}
+	} else {
+		// Update existing document
+		sharedDocument.ExpirationDate = expirationDate
+		sharedDocument.AccessType = input.AccessType
+		sharedDocument.InvitedEmailsJSON = input.InvitedEmailsJSON
 		sharedDocument.Passphrase = input.Passphrase
-	} else {
-		sharedDocument.Passphrase = ""
 	}
 
-	if input.AccessType == "only-invited" {
-		if input.InvitedEmails == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "InvitedEmails are required for only-invited access type"})
-			return
-		}
-		sharedDocument.InvitedEmails = input.InvitedEmails
-	} else {
-		sharedDocument.InvitedEmails = ""
+	// Validate input
+	if sharedDocument.AccessType == "passphrase-protected" && sharedDocument.Passphrase == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Passphrase is required for passphrase-protected access type"})
+		return
 	}
 
-	sharedDocument.ExpirationDate = expirationDate
-	sharedDocument.AccessType = input.AccessType
+	if sharedDocument.AccessType == "only-invited" && len(sharedDocument.InvitedEmailsJSON) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "InvitedEmails are required for only-invited access type"})
+		return
+	}
 
 	// Persist the shared document
 	err = database.PersistShareDocument(sharedDocument)
@@ -235,6 +230,20 @@ func intersect(a, b []uint) []uint {
 	return result
 }
 
+func generateRandomString(n int) (string, error) {
+	const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+	bytes := make([]byte, n)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+
+	for i := 0; i < n; i++ {
+		bytes[i] = letters[int(bytes[i])%len(letters)]
+	}
+
+	return string(bytes), nil
+}
+
 func GetPublicVulnerability(c *gin.Context, store *session.SessionStore) {
 	token := c.Param("token")
 	if token == "" {
@@ -243,7 +252,6 @@ func GetPublicVulnerability(c *gin.Context, store *session.SessionStore) {
 	}
 
 	exists, err := database.ExistsShare(token)
-
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "notFound"})
 		return
@@ -277,19 +285,16 @@ func GetPublicVulnerability(c *gin.Context, store *session.SessionStore) {
 		}
 
 		if exists.AccessType == "only-invited" {
-			// Split the comma-separated list into a slice of emails
-			invitedEmails := strings.Split(exists.InvitedEmails, ",")
 			emailAllowed := false
-			// Iterate over the slice to find a match
-			for _, invitedEmail := range invitedEmails {
+			for _, invitedEmail := range exists.InvitedEmailsJSON {
 				if strings.TrimSpace(userInfo.Email) == strings.TrimSpace(invitedEmail) {
 					emailAllowed = true
 					break
 				}
 			}
-			// If the email is not found in the list, abort with an unauthorized status
+
 			if !emailAllowed {
-				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "unauthorized"})
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 				return
 			}
 		}
@@ -306,7 +311,7 @@ func GetPublicVulnerability(c *gin.Context, store *session.SessionStore) {
 
 		// Verify the passphrase
 		if input.Passphrase != exists.Passphrase {
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Passphrase is required"})
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid passphrase"})
 			return
 		}
 	}
@@ -319,7 +324,7 @@ func GetPublicVulnerability(c *gin.Context, store *session.SessionStore) {
 		return
 	}
 
-	if(vuln.Status == "Resolved" || vuln.Status == "Rejected"){
+	if vuln.Status == "Resolved" || vuln.Status == "Rejected" {
 		fmt.Printf("Status is closed")
 		c.AbortWithStatusJSON(http.StatusOK, gin.H{"error": "closed"})
 		return
@@ -381,18 +386,4 @@ func GetPublicVulnerability(c *gin.Context, store *session.SessionStore) {
 
 	// Return the updated vulnerability data
 	c.JSON(http.StatusOK, vuln)
-}
-
-func generateRandomString(n int) (string, error) {
-	const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	bytes := make([]byte, n)
-	if _, err := rand.Read(bytes); err != nil {
-		return "", err
-	}
-
-	for i := 0; i < n; i++ {
-		bytes[i] = letters[int(bytes[i])%len(letters)]
-	}
-
-	return string(bytes), nil
 }

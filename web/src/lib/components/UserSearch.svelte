@@ -1,5 +1,5 @@
 <script>
-	import { Fetch } from "$lib/fetchUtil";
+  import { Fetch } from "$lib/fetchUtil";
   import { onMount } from "svelte";
   import TomSelect from 'tom-select';
   import 'tom-select/dist/css/tom-select.bootstrap5.min.css';
@@ -10,56 +10,58 @@
   let selectElement;
   export let selectedValues = [];
 
-  let users = [];
-  let tomSelect
+  let users = {
+    teams: [],
+    users: []
+  };
 
-onMount(async () => {
-  users = await Fetch(`/api/profile/all`);
+  let tomSelect;
 
-  if (users) {
-    tomSelect = new TomSelect(selectElement, {
-      plugins: ['remove_button'],
-      persist: false,
-      createOnBlur: true,
-      createFilter: /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/,
-      create: function(input) {
-        return {
-          value: input,
-          text: input
-        };
-      },
-      onItemAdd: function() {
-        this.setTextboxValue('');
-      }
-    });
+  onMount(async () => {
+    users = await Fetch(`/api/profile/all`);
 
-    users.forEach(user => {
+    if (users.teams.length > 0) {
+      tomSelect = new TomSelect(selectElement, {
+        plugins: ['remove_button'],
+        persist: false,
+        createOnBlur: true,
+        createFilter: /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/,
+        create: function(input) {
+          return {
+            value: input,
+            text: input
+          };
+        },
+        onItemAdd: function() {
+          this.setTextboxValue('');
+        }
+      });
+
+      users.users.forEach(user => {
       tomSelect.addOption({ value: user.email, text: user.name });
     });
-    tomSelect.refreshOptions(false);
-  }
-});
 
+      tomSelect.refreshOptions(false);
+    }
+  });
 
-$: if(tomSelect && selectedValues){
-    let selectedEmails = selectedValues.filter(email => email.trim() !== ""); // Fjerner tomme strenger
+  $: if(tomSelect && Array.isArray(selectedValues)){
+    let selectedEmails = selectedValues.filter(email => email.trim() !== "");
     selectedEmails.forEach(email => {
-      // Sjekk om e-posten allerede finnes som et alternativ, hvis ikke, legg til som nytt alternativ
-      if (email && !tomSelect.options[email]) { // Sjekker at e-posten ikke er tom
+      if (email && !tomSelect.options[email]) {
         tomSelect.addOption({ value: email, text: email });
       }
     });
 
-    // Sett de valgte verdiene, men ignorer tomme strenger
     if (selectedEmails.length > 0) {
       tomSelect.setValue(selectedEmails);
     }
-}
+  }
 
-function handleSelectChange(event) {
-  const selectedValues = Array.from(event.target.selectedOptions).map(o => o.value);
-  dispatch('selection', { selectedEmails: selectedValues });
-}
+  function handleSelectChange(event) {
+    const selectedValues = tomSelect.getValue();
+    dispatch('selection', { selectedEmails: selectedValues });
+  }
 </script>
 
 <select
@@ -98,8 +100,8 @@ function handleSelectChange(event) {
   }
 
   :global(.ts-wrapper .ts-control) {
-    flex-wrap: wrap; /* Allow items to wrap onto the next line */
-    min-height: auto; /* Override the default height to allow expansion */
-    height: auto; /* Set height to auto to grow with content */
+    flex-wrap: wrap;
+    min-height: auto;
+    height: auto;
   }
 </style>

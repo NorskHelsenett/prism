@@ -219,6 +219,7 @@ func InitDB() {
 	db.AutoMigrate(&Subscriber{})
 	db.AutoMigrate(&models.APIKey{})
 	db.AutoMigrate(&models.SharedDocument{})
+	db.AutoMigrate(&models.Team{})
 
 	db.Exec("DROP TRIGGER IF EXISTS jsondata_insert;")
 	db.Exec("DROP TRIGGER IF EXISTS jsondata_update_comments;")
@@ -254,6 +255,112 @@ func CloseConnection() error {
 	}
 
 	return sqlDB.Close() // close the underlying SQL database
+}
+
+func GetAllTeams() ([]models.Team, error) {
+	var teams []models.Team
+	result := db.Find(&teams)
+	return teams, result.Error
+}
+
+func GetTeamByID(id uint) (*models.Team, error) {
+	var team models.Team
+	result := db.First(&team, id)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &team, nil
+}
+
+func CreateTeam(team *models.Team) error {
+	return db.Create(team).Error
+}
+
+func UpdateTeam(team *models.Team) error {
+	return db.Save(team).Error
+}
+
+func DeleteTeam(id uint) error {
+	return db.Delete(&models.Team{}, id).Error
+}
+
+func ArchiveTeam(id uint) error {
+	return db.Model(&models.Team{}).Where("id = ?", id).Update("archived", true).Error
+}
+
+func AddMemberToTeam(teamID uint, email string) error {
+	var team models.Team
+	if err := db.First(&team, teamID).Error; err != nil {
+		return err
+	}
+
+	for _, member := range team.MembersJSON {
+		if member == email {
+			return nil // Member already exists
+		}
+	}
+
+	team.MembersJSON = append(team.MembersJSON, email)
+	return db.Save(&team).Error
+}
+
+func RemoveMemberFromTeam(teamID uint, email string) error {
+	var team models.Team
+	if err := db.First(&team, teamID).Error; err != nil {
+		return err
+	}
+
+	for i, member := range team.MembersJSON {
+		if member == email {
+			team.MembersJSON = append(team.MembersJSON[:i], team.MembersJSON[i+1:]...)
+			return db.Save(&team).Error
+		}
+	}
+
+	return nil // Member not found
+}
+
+func GetTeamsByMemberEmail(email string) ([]models.Team, error) {
+	var teams []models.Team
+	result := db.Where("archived = ?", false).Where("JSON_CONTAINS(members, ?)", fmt.Sprintf("\"%s\"", email)).Find(&teams)
+	return teams, result.Error
+}
+
+type ProfileResponse struct {
+	Teams []models.Team `json:"teams"`
+	Users []UserData    `json:"users"`
+}
+
+func GetAllProfilesWithTeams() (*ProfileResponse, error) {
+	var teams []models.Team
+	var users []UserData
+
+	if err := db.Where("archived = ?", false).Find(&teams).Error; err != nil {
+		return nil, err
+	}
+
+	if err := db.Select("Name", "Picture", "Email", "Role").Order("role desc").Find(&users).Error; err != nil {
+		return nil, err
+	}
+
+	usersInTeams := make(map[string]bool)
+	for _, team := range teams {
+		for _, email := range team.MembersJSON {
+			usersInTeams[email] = true
+		}
+	}
+
+	var individualUsers []UserData
+	for _, user := range users {
+		if !usersInTeams[user.Email] {
+		}
+		individualUsers = append(individualUsers, user)
+	}
+
+	return &ProfileResponse{
+		Teams: teams,
+		Users: individualUsers,
+	}, nil
 }
 
 func DeleteNotifications(email string) error {
@@ -571,7 +678,7 @@ func RetrieveAssessments(startDate, endDate string, page, pageSize int) ([]Asses
 	offset := (page - 1) * pageSize
 
 	// Build a query using json_extract to filter by dates within the JSON blob
-	query := fmt.Sprintf(`json_extract(assessment, '$.dateFrom') >= ? AND json_extract(assessment, '$.dateTo') <= ?`)
+	query := fmt.Sprintf("json_extract(assessment, '$.dateFrom') >= ? AND json_extract(assessment, '$.dateTo') <= ?")
 
 	// Execute the query with pagination
 	result := db.Model(&AssessmentJSON{}).

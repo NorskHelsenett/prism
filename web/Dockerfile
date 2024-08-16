@@ -1,11 +1,20 @@
-FROM ncr.sky.nhn.no/dockerhub/node:alpine AS build
+FROM ncr.sky.nhn.no/dockerhub/oven/bun:1 AS build
 
 WORKDIR /app
-COPY package.json package-lock.json .
-RUN npm install --force
+
+# Copy package.json and bun.lockb (if you're using bun.lockb instead of package-lock.json)
+COPY package.json bun.lockb* ./
+
+# Install dependencies
+RUN bun install --frozen-lockfile
+
+# Copy the rest of the application code
 COPY . .
 
-RUN npm run build
+# Build the application
+RUN bun run build
+
+# Copy Nginx configuration
 RUN mkdir -p /etc/nginx/conf.d/
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 

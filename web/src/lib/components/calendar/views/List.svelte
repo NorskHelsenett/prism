@@ -174,7 +174,7 @@ $: if (calendarEvents) {
                       </td>
                       <td>
                         {#if event?.note}
-                          <i class="ti ti-notes cursor-pointer" on:click="{() => showDropdown[index] = true}"></i>
+                          <i class="ti ti-notes cursor-pointer" on:click|preventDefault|stopPropagation="{() => showDropdown[index] = true}"></i>
                           <Dropdown bind:show={showDropdown[index]}>
                               <div class="card-body">
                                 <Markdown markdown={event.note}/>
