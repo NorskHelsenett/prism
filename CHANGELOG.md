@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.1.9] - 2024-08-18
+## [0.1.10] - 2024-08-15
+
+### Added
+
+- **👥 Guilds**: Add Teams and Guilds functionality
+
+## [0.1.9] - 2024-08-08
 
 ### Added
 

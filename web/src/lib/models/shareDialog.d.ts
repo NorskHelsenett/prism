@@ -1,6 +1,6 @@
 export interface ShareInput {
   documentId: number;
-  invitedEmails?: string;
+  invitedEmails?: string[];
   sharedByEmail?: string;
   expirationDate?: Date;
   passphrase?: string;

@@ -29,7 +29,7 @@
     if (result.error) {
       toast.error('Unable to update the assessment');
     } else {
-      toast.error('Update saved');
+      toast.success('Update saved');
       goto(`/planning/${assessment.id}/view`)
     }
   }
@@ -77,11 +77,6 @@ function calculateTeamSize() {
   }
 
   return Math.floor(assessment.estimate / (numberOfDays * workingHours)) || 1;
-}
-
-function isAvailable(user) {
-  console.log(user)
-  return false
 }
 </script>
 

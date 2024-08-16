@@ -16,7 +16,6 @@
       const result = await Fetch(`/api/vulnerability/share/${deletePublicLinkID}`, {
         method: "DELETE"
       });
-      console.log(result)
       if(!result){
         toast.error("Unable to delete public link")
       }else {

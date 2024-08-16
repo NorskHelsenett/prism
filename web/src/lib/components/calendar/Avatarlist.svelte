@@ -1,26 +1,48 @@
 <script>
-	import { onDestroy, onMount } from 'svelte';
-  import 'tom-select/dist/css/tom-select.bootstrap5.min.css';
-	import { Fetch } from '$lib/fetchUtil';
-	import Avatar from '$lib/components/Avatar.svelte';
-  import { fade } from 'svelte/transition';
-	import { scale } from 'svelte/transition';
-	import { quintOut } from 'svelte/easing';
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onDestroy, onMount } from 'svelte';
+  import { Fetch } from '$lib/fetchUtil';
+  import Avatar from '$lib/components/Avatar.svelte';
+  import { fade, slide } from 'svelte/transition';
+  import { scale } from 'svelte/transition';
+  import { quintOut } from 'svelte/easing';
 
   const dispatch = createEventDispatcher();
 
-  let usersOriginal = []
-  let users = []
-  export let hackers = []
+  let allUsers = [];
+  let availableUsers = [];
+  export let hackers = [];
+  let allTeams = [];
+  let filterText = '';
 
-	onMount(async () => {
-		usersOriginal = await Fetch('/api/profile/all');
-    users = usersOriginal
-    users = usersOriginal.filter(user => !hackers.some(hacker => hacker.email === user.email));
-
+  onMount(async () => {
+    try {
+      const response = await Fetch('/api/profile/all');
+      allUsers = response.users || [];
+      allTeams = response.teams || [];
+      updateAvailableUsers();
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+    }
     window.addEventListener('click', handleClickOutside);
   });
+
+  function updateAvailableUsers() {
+      availableUsers = allUsers.filter(user => !hackers.some(hacker => hacker.email === user.email));
+  }
+
+  $: if (hackers) {
+    updateAvailableUsers();
+  }
+
+  $: filteredUsers = availableUsers.filter(user =>
+    user.email.toLowerCase().includes(filterText.toLowerCase()) ||
+    (user.name && user.name.toLowerCase().includes(filterText.toLowerCase()))
+  );
+
+  $: filteredTeams = allTeams.filter(team =>
+    team.name.toLowerCase().includes(filterText.toLowerCase()) ||
+    team.members.some(email => email.toLowerCase().includes(filterText.toLowerCase()))
+  );
 
   function handleClickOutside(event) {
     const cardElement = document.getElementById('hackersDropdownList');
@@ -29,77 +51,129 @@
     }
   }
 
-  $: if(hackers) {
-    users = usersOriginal.filter(user => !hackers.some(hacker => hacker.email === user.email));
-  }
-
   onDestroy(() => {
     window.removeEventListener('click', handleClickOutside);
   });
 
-  let showRemoveHacker = []
-  let showHackersList = false
+  let showRemoveHacker = [];
+  let showHackersList = false;
 
-function addHacker(user) {
-    user.email = user.email; // Ensure the email property is standardized
+  function addHacker(userOrEmail) {
+    let email;
 
-    // Check if the user is already in the hackers list based on email
-    if (!hackers.some(hacker => hacker.email === user.email)) {
-        hackers = [...hackers, user]; // Use spread syntax for immutability
+    if (typeof userOrEmail === 'string') {
+      email = userOrEmail;
+    } else if (userOrEmail && typeof userOrEmail === 'object' && userOrEmail.email) {
+      email = userOrEmail.email;
+    } else {
+      console.error('Invalid input to addHacker function');
+      return;
     }
 
-    // Filter the users list to exclude users that are now in the hackers list
-    users = users.filter(u => !hackers.some(hacker => hacker.email === u.email));
-    dispatch('updateHackers', hackers);
-}
-
-function removeHacker(user) {
-    user.email = user.email; // Ensure the email property is standardized
-
-    // Filter out the user from the hackers list
-    hackers = hackers.filter(hacker => hacker.email !== user.email);
-
-    // Add the user back to the users list if they're not already present
-    if (!users.some(u => u.email === user.email)) {
-        users = [...users, user]; // Use spread syntax for immutability
+    if (!hackers.some(hacker => hacker.email === email)) {
+      hackers = [...hackers, { email }];
+      updateAvailableUsers();
+      dispatch('updateHackers', hackers);
     }
-    dispatch('updateHackers', hackers);
-}
+    showHackersList = false;
+    filterText = '';
+  }
 
+  function removeHacker(hacker) {
+    hackers = hackers.filter(h => h.email !== hacker.email);
+    updateAvailableUsers();
+    dispatch('updateHackers', hackers);
+  }
+
+  function isUserAvailable(email) {
+    return !hackers.some(hacker => hacker.email === email);
+  }
+
+  function hasAvailableMembers(team) {
+    return team.members.some(email => isUserAvailable(email));
+  }
 </script>
 
 <div class="avatar-list" style="position:relative">
   {#each hackers as hacker, index (hacker.email)}
-    <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <div class="avatar-container" on:mouseenter={() => showRemoveHacker[index] = true} on:mouseleave={() => showRemoveHacker[index] = false} transition:scale={{ duration: 300, delay: 0, opacity: 0.5, start: 0.0, easing: quintOut }}>
-      <Avatar email="{hacker.email}" option={{ showName: false, size: "sm", emptyFields: false, circle: true}}/>
-      {#if showRemoveHacker[index]}
-        <i class="overlay ti ti-x rounded-circle" transition:fade={{ delay: 50, duration: 500 }} on:click="{removeHacker(hacker)}"></i>
+    {#if hacker && hacker.email}
+      <div class="avatar-container"
+           on:mouseenter={() => showRemoveHacker[index] = true}
+           on:mouseleave={() => showRemoveHacker[index] = false}
+           transition:scale={{ duration: 300, delay: 0, opacity: 0.5, start: 0.0, easing: quintOut }}>
+        <Avatar email="{hacker.email}" option={{ showName: false, size: "sm", emptyFields: false, circle: true}}/>
+        {#if showRemoveHacker[index]}
+          <i class="overlay ti ti-x rounded-circle"
+             transition:fade={{ delay: 50, duration: 500 }}
+             on:click="{() => removeHacker(hacker)}"></i>
+        {/if}
+      </div>
+    {/if}
+  {/each}
+  <span class="avatar rounded-circle avatar-sm cursor-pointer"
+        on:click|stopPropagation="{() => showHackersList = !showHackersList}">
+    <i class="ti ti-plus"></i>
+  </span>
+  {#if showHackersList}
+    <div id="hackersDropdownList" class="card" transition:slide="{{ duration: 100, axis: 'y' }}">
+      <div class="filter-input">
+        <input type="text" bind:value={filterText} placeholder="Filter users..." />
+      </div>
+      <div class="">
+        {#each filteredTeams as team}
+          {#if team.members !== null && team.members.length > 0 && hasAvailableMembers(team)}
+            <h5 class="list-header">{team.name}</h5>
+            <ul class="team-list">
+              {#each team.members as email}
+                {#if isUserAvailable(email) && email.toLowerCase().includes(filterText.toLowerCase())}
+                  <li class="option selected p-2" on:click="{() => addHacker(email)}">
+                    <Avatar email={email}/>
+                  </li>
+                {/if}
+              {/each}
+            </ul>
+            <hr />
+          {/if}
+        {/each}
+        <ul>
+          {#each filteredUsers as user (user.email)}
+            <li class="option selected p-2" on:click="{() => addHacker(user)}">
+              <Avatar email={user.email}/>
+            </li>
+          {/each}
+        </ul>
+      </div>
+      {#if filteredUsers.length === 0 && filteredTeams.every(team => !hasAvailableMembers(team))}
+        <div class="centered">
+          No users match the filter
+        </div>
       {/if}
     </div>
-  {/each}
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
-    <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <span class="avatar rounded-circle avatar-sm cursor-pointer" on:click|stopPropagation="{() => showHackersList = !showHackersList}"><i class="ti ti-plus"></i></span>
-  <div id="hackersDropdownList" class="card" style="position:absolute;margin-top: 42px;" hidden={!showHackersList}>
-    <div class="">
-      <ul>
-        {#each users as user}
-          <li class="option selected p-2" on:click="{addHacker(user)}"><Avatar email={user.email}/></li>
-        {/each}
-      </ul>
-    </div>
-  </div>
+  {/if}
 </div>
 
 <style>
-  #hackersDropdownList {
-    z-index: 1000;
+  .centered {
+    text-align: center;
+    padding: 10px;
+    color: #888;
   }
+  .team-list{
+    margin-left: 0em;
+  }
+
+  #hackersDropdownList{
+    position:absolute;
+    margin-top: 42px;
+    z-index: 100;
+    max-height: 25em;
+    overflow: scroll;
+  }
+
   .avatar-container {
     cursor: pointer;
     position: relative;
-    display: inline-block; /* Or 'block' depending on your layout */
+    display: inline-block;
   }
 
   .overlay {
@@ -108,12 +182,12 @@ function removeHacker(user) {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.5); /* 50% black overlay */
+    background-color: rgba(0, 0, 0, 0.5);
     display: flex;
-    justify-content: center; /* Center horizontally */
-    align-items: center; /* Center vertically */
-    color: white; /* Text color */
-    font-size: 16px; /* Adjust as needed */
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 16px;
   }
 
   ul {
@@ -121,19 +195,31 @@ function removeHacker(user) {
     padding: 0;
     margin: 0;
   }
-  :global(.item) {
-    background: var(--tblr-modal-bg);
-    color: var(--tblr-body-color);
-  }
 
-  :global(input) {
-    background: var(--tblr-modal-bg);
-    color: var(--tblr-body-color);
-  }
-
-  li.option:hover{
+  li.option:hover {
     cursor: pointer;
-    background-color: rgba(var(--tblr-secondary-rgb),.08);
+    background-color: rgba(var(--tblr-secondary-rgb), .08);
     color: inherit;
+  }
+
+  .list-header{
+    margin-left: 5%;
+    margin-top: 5%;
+    margin-bottom: 0;
+  }
+
+  hr{
+    margin: 0;
+  }
+
+  .filter-input {
+    padding: 10px;
+  }
+
+  .filter-input input {
+    width: 100%;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
   }
 </style>

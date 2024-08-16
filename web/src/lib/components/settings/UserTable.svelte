@@ -5,6 +5,11 @@
   import DeleteModal from '$lib/components/DeleteModal.svelte';
   import InfoModal from '$lib/components/modals/InfoModal.svelte';
 	import { toast } from "svelte-sonner";
+	import Icon from "../Icon.svelte";
+	import Avatar from "../Avatar.svelte";
+	import Avatarlist from "../calendar/Avatarlist.svelte";
+	import Team from "./teams/Team.svelte";
+	import UserStats from "./UserStats.svelte";
 
   let users = []
   let roles = []
@@ -146,8 +151,17 @@ function formatDate(dateString) {
     }
   }
 </script>
+<!-- <div class="row">
+  <h3 class="card-title mt-4">Team</h3>
+  <p class="card-subtitle"> With Slack notification activated, you'll receive instant Slack notifications for each new vulnerability detected. This integration ensures you stay informed in real-time, enabling quicker responses and seamless collaboration within your team.
+  </p>
+</div> -->
 
-<div class="card me-3 mb-3 mt-3">
+
+<Team />
+<!-- <UserStats /> -->
+
+<div class="card me-3 mb-3 mt-3 ml-1">
   <div class="table-responsive">
     <table class="table table-vcenter table-mobile-md card-table">
       <thead>
@@ -186,7 +200,7 @@ function formatDate(dateString) {
             </select>
           </td>
           <td>
-            <i class="ti ti-dots cursor-pointer" on:click={() => showDropdown[index] = !showDropdown[index]}></i>
+            <i class="ti ti-dots cursor-pointer" on:click|preventDefault|stopPropagation={() => showDropdown[index] = !showDropdown[index]}></i>
             <Dropdown bind:show={showDropdown[index]}>
               <a class="dropdown-item" href="#" on:click={()=> resetMFA(user)}>Reset MFA</a>
               <div class="dropdown-divider"></div>
@@ -206,5 +220,9 @@ function formatDate(dateString) {
 <style>
   :global(td .dropdown){
     position: absolute !important;
+  }
+
+  .ml-1{
+    margin-left: 1em !important;
   }
 </style>

@@ -70,7 +70,7 @@ func main() {
 
 		//-- RBAC MIDDLEWARE FROM HERE ON --//
 		apiRoutes.Use(auth.RBACMiddleware())
-		
+
 		apiRoutes.GET("/profile", func(c *gin.Context) { auth.HandleUserRequest(c, sessionStore) })
 		apiRoutes.GET("/profile/:email", routes.GetUserInfo) //handle when a user logs in, store in both databases
 
@@ -99,6 +99,7 @@ func main() {
 		protectedRoutes := apiRoutes.Group("/")
 		{
 			protectedRoutes.Use(auth.ACLMiddleware())
+
 			protectedRoutes.GET("/project/:projectID", routes.GetProject)
 			protectedRoutes.GET("/project/:projectID/vulnerabilities/total", routes.GetProjectVulnerabilitiesTotal)
 			protectedRoutes.GET("/project/:projectID/vulnerabilities", routes.GetProjectVulnerabilitiesForProject)
@@ -125,7 +126,7 @@ func main() {
 		apiRoutes.GET("/project/all", routes.GetProjects)
 		apiRoutes.GET("/vulnerability/all", routes.GetAllVulnerabilities)
 
-		apiRoutes.GET("/profile/all", func(c *gin.Context) { routes.GetAllProfilesEmailOnly(c, sessionStore) })
+		apiRoutes.GET("/profile/all", routes.GetAllProfilesEmailOnly)
 		apiRoutes.GET("/slack/channels", routes.GetSlackChannels)
 
 		apiRoutes.GET("/blob/:filename", routes.GetBlob)
@@ -133,6 +134,16 @@ func main() {
 		apiRoutes.DELETE("/blob/:filename", routes.HandleBlobDelete)
 
 		apiRoutes.POST("/vulnerability", routes.PostVulnerability)
+
+		apiRoutes.GET("/settings/teams", routes.GetTeams)
+		apiRoutes.GET("/settings/teams/:id", routes.GetTeam)
+		apiRoutes.POST("/settings/teams", routes.PostTeam)
+		apiRoutes.PUT("/settings/teams/:id", routes.UpdateTeam)
+		apiRoutes.DELETE("/settings/teams/:id", routes.DeleteTeam)
+		apiRoutes.POST("/settings/teams/:id/archive", routes.ArchiveTeam)
+		apiRoutes.POST("/settings/teams/:id/members", routes.AddMemberToTeam)
+		apiRoutes.DELETE("/settings/teams/:id/members", routes.RemoveMemberFromTeam)
+		apiRoutes.GET("/profile/memberof", routes.GetUserTeams)
 
 		apiRoutes.GET("/settings/users/all", func(c *gin.Context) { routes.GetAllUsers(c, sessionStore) })
 		apiRoutes.DELETE("/settings/user/:id", func(c *gin.Context) { routes.DeleteUser(c, sessionStore) })

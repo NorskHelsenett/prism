@@ -30,8 +30,6 @@
   onMount(async() => {
     localStorage.removeItem("redirectToAfterLogin")
     const result = await Fetch(`/api/share/${token}`, {method: "POST", body: "{}"})
-    console.log(result)
-
     assertResult(result)
   });
 

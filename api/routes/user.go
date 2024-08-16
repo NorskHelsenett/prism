@@ -97,7 +97,11 @@ func DeleteUser(c *gin.Context, s *session.SessionStore) {
 	c.JSON(http.StatusOK, gin.H{"message": "Successfully deleted user"})
 }
 
-func GetAllProfilesEmailOnly(c *gin.Context, s *session.SessionStore) {
-	users, _ := session.GetAllProfiles(s)
+func GetAllProfilesEmailOnly(c *gin.Context) {
+	users, err := database.GetAllProfilesWithTeams()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 	c.JSON(http.StatusOK, users)
 }
