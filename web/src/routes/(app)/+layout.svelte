@@ -413,8 +413,4 @@
     cursor: pointer;
   }
 
-  :global(.ts-dropdown) {
-    background: var(--tblr-modal-bg, var(--tblr-card-bg, default-bg-color));
-    color: var(--tblr-body-color, default-body-color);
-  }
 </style>
