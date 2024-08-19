@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.11] - 2024-08-19
+
+### Added
+
+- **📦 Cache:** Local cache of the new vulnerabilty findings
+- **🌟 New vulnerability window:** A new and sleek way to register new vulnerabilities than ever before!
+
+### Fixes
+
+- **🎨 Dropdown background:** Fixes the dreaded transparent dropdown menus found all around the place.
+
 ## [0.1.10] - 2024-08-15
 
 ### Added

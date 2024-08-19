@@ -98,4 +98,9 @@
     min-height: auto;
     height: auto;
   }
+
+  :global(.ts-dropdown) {
+    background: var(--tblr-card-bg, var(--tblr-modal-bg, default-bg-color));
+    color: var(--tblr-body-color, default-body-color);
+  }
 </style>

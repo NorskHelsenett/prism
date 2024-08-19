@@ -252,4 +252,9 @@ $: if(showHackersList){
   :global(.ts-wrapper.plugin-remove_button:not(.rtl) .item .remove) {
     border-left: 1px solid var(--tblr-border-color);
   }
+
+  :global(.ts-dropdown) {
+    background: var(--tblr-card-bg, var(--tblr-modal-bg, default-bg-color));
+    color: var(--tblr-body-color, default-body-color);
+  }
 </style>
