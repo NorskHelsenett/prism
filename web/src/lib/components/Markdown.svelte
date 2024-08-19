@@ -132,4 +132,8 @@ function updateText(index) {
   :global(td){
     vertical-align: top;
   }
+
+  :global(img){
+    border-radius: 5px;
+  }
 </style>
