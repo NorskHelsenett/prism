@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixes
 
 - **🎨 Dropdown background:** Fixes the dreaded transparent dropdown menus found all around the place.
+- **🪟 Open links in new tab:** Links inside markdowns are now opened in a new tab by default.
 
 ## [0.1.10] - 2024-08-15
 

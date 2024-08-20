@@ -43,12 +43,38 @@ renderer.listitem = function(text) {
   `;
 };
 
+// Add a custom renderer for links
+renderer.link = function(href, title, text) {
+  // Ensure the href has the 'https://' prefix
+  if (!href.startsWith('http://') && !href.startsWith('https://')) {
+    href = 'https://' + href;
+  }
+  const target = '_blank'; // Open link in a new tab
+  const rel = 'noopener noreferrer'; // Security attributes
+  const titleAttr = title ? `title="${title}"` : '';
+  return `<a href="${href}" target="${target}" rel="${rel}" ${titleAttr}>${text}</a>`;
+};
+
+// Configure DOMPurify to allow 'target' and 'rel' attributes on 'a' tags
+const domPurifyConfig = {
+  ALLOWED_TAGS: [
+    'a', 'b', 'i', 'em', 'strong', 'p', 'ul', 'ol', 'li',
+    'table', 'thead', 'tbody', 'tr', 'th', 'td', 'img',
+    'label', 'input', 'span', 'div', 'hr', 'h1', 'h2',
+    'h3', 'h4', 'h5', 'h6', 'pre', 'code', 'blockquote'
+  ],
+  ALLOWED_ATTR: [
+    'href', 'title', 'target', 'rel', 'class', 'src',
+    'alt', 'data-index', 'type', 'checked', 'disabled'
+  ]
+};
+
 let renderedMarkdown = ""
 
  $: {
     checked = 0;
     todo = 0; // Reset todo before each rendering
-    renderedMarkdown = DOMPurify.sanitize(marked.parse(markdown, { renderer }));
+    renderedMarkdown = DOMPurify.sanitize(marked.parse(markdown, { renderer }), domPurifyConfig);
   }
 
 onMount(() => {
@@ -83,8 +109,8 @@ function updateText(index) {
   markdown = lines.join('\n');
   dispatch('markdownChanged', { updatedMarkdown: markdown });
 }
-
 </script>
+
 <div>
 {#if todo > 0 && todo != checked}
 <span class="badge text-azure mb-3"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-checklist" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9.615 20h-2.615a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v8" /><path d="M14 19l2 2l4 -4" /><path d="M9 8h4" /><path d="M9 12h2" /></svg>
