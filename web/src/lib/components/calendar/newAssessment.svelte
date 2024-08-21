@@ -231,6 +231,8 @@ $: if(showHackersList){
 
 	:global(.ts-control) {
 		height: 2.7em;
+    padding-top: 0px !important;
+    padding-bottom: 0px !important;
 	}
 
   li.option:hover{

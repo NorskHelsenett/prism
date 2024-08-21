@@ -123,7 +123,9 @@ function updateProjects(value, allProjects, add = true) {
   }
 
 	:global(.ts-control) {
-		height: 2.7em;
+    padding-top: 0px !important;
+    padding-bottom: 0px !important;
+    height: 2.7em;
 	}
 
   li.option:hover{

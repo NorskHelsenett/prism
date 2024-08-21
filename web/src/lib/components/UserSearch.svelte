@@ -99,6 +99,12 @@
     height: auto;
   }
 
+  :global(.ts-control){
+    padding-top: 0px !important;
+    padding-bottom: 0px !important;
+    height: 2.7em;
+  }
+
   :global(.ts-dropdown) {
     background: var(--tblr-card-bg, var(--tblr-modal-bg, default-bg-color));
     color: var(--tblr-body-color, default-body-color);
