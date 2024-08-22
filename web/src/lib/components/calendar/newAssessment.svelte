@@ -233,7 +233,13 @@ $: if(showHackersList){
 		height: 2.7em;
     padding-top: 0px !important;
     padding-bottom: 0px !important;
+    color: var(--tblr-body-color);
 	}
+
+  :global(.ts-wrapper){
+    height: 100%;
+    margin-bottom: 0px !important;
+  }
 
   li.option:hover{
     cursor: pointer;

@@ -4,6 +4,15 @@
     text-align: left;
     display: inline-block;
     position: relative;
+
+    text-decoration: none !important;
+    color: inherit;
+    font-weight: normal;
+    font-style: normal;
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
   }
 
   .link::after {
@@ -17,6 +26,17 @@
     background-color: var(--tblr-azure);
     transform-origin: bottom right;
     transition: transform 0.25s ease-out;
+  }
+
+  .link:hover{
+    text-decoration: none !important;
+    color: inherit;
+    font-weight: normal;
+    font-style: normal;
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
   }
 
   .link:hover::after {

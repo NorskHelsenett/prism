@@ -103,6 +103,12 @@
     padding-top: 0px !important;
     padding-bottom: 0px !important;
     height: 2.7em;
+    color: var(--tblr-body-color);
+  }
+
+  :global(.ts-wrapper){
+    height: 100%;
+    margin-bottom: 0px !important;
   }
 
   :global(.ts-dropdown) {

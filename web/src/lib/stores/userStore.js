@@ -8,20 +8,27 @@ function createUserStore() {
     const { subscribe, set, update } = writable(initialData);
 
     function persistToLocalStorage(store) {
-        if (browser) {
-            const persistedData = Object.fromEntries(
-                Object.entries(store).map(([email, userData]) => [
-                    email,
-                    {
-                        email: userData.email,
-                        name: userData.name,
-                        picture: userData.picture
-                    }
-                ])
-            );
-            localStorage.setItem('userStore', JSON.stringify(persistedData));
-        }
-    }
+      if (browser) {
+          const persistedData = Object.fromEntries(
+              Object.entries(store).map(([email, userData]) => {
+                  if (userData && userData.email && userData.name && userData.picture) {
+                      return [
+                          email,
+                          {
+                              email: userData.email,
+                              name: userData.name,
+                              picture: userData.picture
+                          }
+                      ];
+                  } else {
+                      console.warn(`Incomplete userData for email: ${email}`, userData);
+                      return [email, null]; // or handle as needed
+                  }
+              }).filter(([email, data]) => data !== null) // Remove entries that are null
+          );
+          localStorage.setItem('userStore', JSON.stringify(persistedData));
+      }
+  }
 
     return {
         subscribe,
