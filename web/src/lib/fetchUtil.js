@@ -77,20 +77,42 @@ export async function FetchFile(endpoint, filename = "") {
     const response = await fetch(url, { credentials: 'include' });
 
     if (!response.ok) {
-      console.error(`Error: ${response.status}`);
-      return;
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const blob = await response.blob();
     const downloadUrl = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
+    a.style.display = 'none'; // Hide the anchor element
     a.href = downloadUrl;
     a.download = filename || endpoint.split('/').pop();
     document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(downloadUrl);
-    document.body.removeChild(a);
+
+    return new Promise((resolve, reject) => {
+      const cleanup = () => {
+        window.URL.revokeObjectURL(downloadUrl);
+        if (document.body.contains(a)) {
+          document.body.removeChild(a);
+        }
+      };
+
+      a.onclick = () => {
+        setTimeout(() => {
+          cleanup();
+          resolve();
+        }, 100);
+      };
+
+      a.click();
+
+      // Fallback in case the click event doesn't fire
+      setTimeout(() => {
+        cleanup();
+        resolve();
+      }, 1000);
+    });
   } catch (error) {
     console.error('Error downloading file:', error);
+    throw error;
   }
 }

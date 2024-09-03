@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🌟 New vulnerability window:** A new and sleek way to register new vulnerabilities than ever before!
 
 ### Fixes
-
+- **⬇️ Export:** Shows a loading icon and disable the export buttons on export.
 - **🎨 Dropdown background:** Fixes the dreaded transparent dropdown menus found all around the place.
 - **🪟 Open links in new tab:** Links inside markdowns are now opened in a new tab by default.
 
