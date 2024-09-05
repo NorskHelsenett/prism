@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **⬇️ Export:** Shows a loading icon and disable the export buttons on export.
 - **🎨 Dropdown background:** Fixes the dreaded transparent dropdown menus found all around the place.
 - **🪟 Open links in new tab:** Links inside markdowns are now opened in a new tab by default.
+- **🖼️ Fixes dead links:** Work around for dead image links are now fixed.
+- **👾 Small UI fixes:** Small UI fixes are now implemented, its the little things.
 
 ## [0.1.10] - 2024-08-15
 

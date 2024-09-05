@@ -130,7 +130,7 @@ function updateProjects(value, allProjects, add = true) {
 	}
 
   :global(.ts-wrapper){
-    height: 100%;
+    height: 3em;
     margin-bottom: 0px !important;
   }
 
