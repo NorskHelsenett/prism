@@ -258,7 +258,7 @@ let showEditModal = false
         </div>
       </div>
 
-  <div class="col-8">
+  <div class="col-12">
     <div class="card h-100">
       <div class="card-body" style="min-height: 10rem">
         <div class="datagrid">
@@ -355,23 +355,23 @@ let showEditModal = false
     </div>
   </div>
 
-  <div class="col-5">
+  <!-- <div class="col-5">
     <div class="card h-100" >
       <div class="card-body">
-        <!-- <div class="grid-container">
+        <div class="grid-container">
           <i class="ti ti-player-record-filled text-green" title="Approved"></i>
           <div>Team size</div>
           <i class="ti ti-player-record-filled text-green" title="Approved"></i>
           <div>It is approved</div>
           <i class="ti ti-player-record-filled text-green" title="Approved"></i>
           <div>All team members are available</div>
-        </div> -->
+        </div>
       </div>
     </div>
-  </div>
+  </div> -->
 
 
-  <div class="col-7" >
+  <div class="col-8" >
     <div class="card h-100" >
       <div class="card-body">
         <div class="table-responsive w-100">
