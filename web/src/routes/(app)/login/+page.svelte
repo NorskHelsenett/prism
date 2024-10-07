@@ -37,8 +37,8 @@
               {/each}
 						</div>
 					</div>
-					<div class="text-center text-secondary mt-3">
-						Made with ❤️ from us at Norsk helsenett SF
+					<div class="text-center text-secondary mt-3 hover">
+						Made with <span class="pulse">❤️</span> from us at <a href="nhn.no">Norsk helsenett SF</a>
 					</div>
 				</div>
 			</div>
@@ -48,3 +48,22 @@
 		</div>
 	</div>
 </div>
+
+<style>
+.hover:hover .pulse {
+    animation: pulseAnimation 1s infinite;
+    display: inline-block
+}
+
+@keyframes pulseAnimation {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.3);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+</style>
