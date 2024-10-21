@@ -9,7 +9,7 @@ import (
 )
 
 var (
-	rateLimit    = 5 // requests per minute
+	rateLimit    = 12 // requests per minute
 	cleanupTime  = 10 * time.Minute
 	requestStore = make(map[string]*requestCounter)
 	mu           sync.Mutex
