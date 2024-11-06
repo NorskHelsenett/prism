@@ -413,4 +413,56 @@
     cursor: pointer;
   }
 
+
+	:global(.ts-control) {
+    padding-top: 0px !important;
+    padding-bottom: 0px !important;
+    height: 2.7em;
+    color: var(--tblr-body-color);
+	}
+
+  :global(.ts-wrapper){
+    height: 3em;
+    margin-bottom: 0px !important;
+    background-color: var(--tblr-bg-forms) !important;
+  }
+
+  li.option:hover{
+    cursor: pointer;
+    background-color: rgba(var(--tblr-secondary-rgb),.08);
+    color: inherit;
+  }
+
+  :global(.ts-wrapper.multi .ts-control > div) {
+    background: var(--tblr-bg-surface-secondary);
+    border: 1px solid var(--tblr-border-color);
+    color: var(--tblr-body-color);
+  }
+
+	:global(.ts-control .item) {
+    background-color: var(--tblr-bg-forms) !important;
+		color: var(--tblr-body-color);
+    cursor: pointer;
+	}
+  :global(.ts-control){
+    cursor: pointer !important;
+  }
+
+  :global(.ts-wrapper.plugin-remove_button:not(.rtl) .item .remove) {
+    border-left: 1px solid var(--tblr-border-color);
+  }
+
+  :global(.option-content){
+    margin-bottom: 0.5em;
+  }
+
+  :global(.option.selected > .option-header){
+    color: #1da1f2;
+  }
+  
+  :global(.ts-dropdown) {
+    background: var(--tblr-card-bg, var(--tblr-modal-bg, default-bg-color));
+    color: var(--tblr-body-color, default-body-color);
+  }
+
 </style>

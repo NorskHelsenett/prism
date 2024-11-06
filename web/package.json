@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "shx cp ../CHANGELOG.md static/.well-known && vite dev",
+    "dev": "shx cp ../CHANGELOG.md static/.well-known && vite dev --host 0.0.0.0",
     "build": "NODE_ENV=production vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",

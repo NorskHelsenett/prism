@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.12] - 2024-11-05
+
+### Added
+- **📂 Drag & Drop:** New full-page overlay when dragging files 
+
+### Fixed
+- **📤 File Input:** Improved file selection and handling
+- **🎯 Event Handling:** Better drag & drop event management
+- **💅 UI Components:** Consolidated tom-select styling and dropdown backgrounds
+- **🛠️ Development:** Streamlined devcontainer configuration and environment setup
+
+### Changed
+- **♻️ Components:** Refactored vulnerability form handling and file management
+
 ## [0.1.11] - 2024-08-19
 
 ### Added
