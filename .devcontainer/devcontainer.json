@@ -10,30 +10,29 @@
 	"containerEnv": {
 		"HOME": "/home/vscode",
 	},
-
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
-
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	"forwardPorts": [8080, 1473],
-
+	"forwardPorts": [
+		8080,
+		1473
+	],
 	// Use 'postCreateCommand' to run commands after the container is created.
 	//"postCreateCommand": "ssh-add -L > $HOME/.ssh/yubikey.pub && git config --global gpg.format ssh && git config --global user.signingkey $HOME/.ssh/yubikey.pub",
 	"postStartCommand": "git config --global user.signingkey $HOME/.ssh/yubikey.pub && ssh-add -L > $HOME/.ssh/yubikey.pub",
-	"postAttachCommand": "cd web && bun run dev",
-
+	"postAttachCommand": "cd web && bun install && bun run dev -- -",
 	// Configure tool-specific properties.
 	// "customizations": {},
 	"runArgs": [
-		"--userns=keep-id:uid=1000,gid=1000",
+		// "--userns=keep-id:uid=1000,gid=1000",
 	],
 	"containerUser": "vscode",
-  "updateRemoteUserUID": true,
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "svelte.svelte-vscode"
-      ]
-    }
-  }
+	"updateRemoteUserUID": false, //this and runArgs when using podman
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"svelte.svelte-vscode"
+			]
+		}
+	}
 }

@@ -1,7 +1,9 @@
+import { baseUrl } from '$lib/stores';
 
-import {baseUrl} from '$lib/stores';
 export const ssr = false;
-export async function load() {
+
+/** @type {import('@sveltejs/kit').Load} */
+export async function load({ fetch }) {  // Add fetch parameter here
   try {
     sessionStorage.removeItem('vulnerabilities');
 
@@ -11,7 +13,14 @@ export async function load() {
     }
     const config = await response.json();
     baseUrl.set(config.apiEndpoint);
+
+    return {
+      config  // Return the loaded data
+    };
   } catch (error) {
     console.error('Could not fetch API endpoint:', error);
+    return {
+      error: 'Failed to load configuration'
+    };
   }
 }
