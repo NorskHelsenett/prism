@@ -1298,6 +1298,7 @@ func GetUserDataByEmail(email string) (*UserData, error) {
 
 	return &userData, nil
 }
+
 func GetAllUsers() (*[]UserData, error) {
 	var userData []UserData
 	result := db.Find(&userData)

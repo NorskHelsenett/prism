@@ -27,6 +27,11 @@
   let showRateLimitMessage = false
   let showCaseClosed = false
 
+  let foundBy = {
+    avatar: "",
+    name: ""
+  }
+
   onMount(async() => {
     localStorage.removeItem("redirectToAfterLogin")
     const result = await Fetch(`/api/share/${token}`, {method: "POST", body: "{}"})
@@ -48,7 +53,8 @@
       } else if (result?.error == "closed"){
         showCaseClosed = true
       } else {
-      vulnerability = result
+        vulnerability = result
+        foundBy = JSON.parse(vulnerability.FoundBy)
     }
   }
 
@@ -222,7 +228,7 @@
 
 
 {:else if vulnerability}
-<div class="page container mt-4 mb-4">
+<div class="page container mt-4 mb-4 pb-6">
   <div class="d-flex g-2 align-items-center">
     <div class="h-100 fs-1 br-2 justify-center">{vulnerability?.ID}</div>
     <div class="col">
@@ -310,22 +316,18 @@
         <div class="datagrid col-6">
 
         <div class="datagrid-item">
-          <div class="datagrid-title">Date</div>
-          <div class="datagrid-content">{vulnerability?.Vulnerability.date}</div>
+          <div class="datagrid-title">Reported by</div>
+          <div class="datagrid-content">
+            <span>
+              <img src="{foundBy.avatar}" alt="{foundBy.name}" class="avatar avatar-xs me-2 rounded"> 
+              <span class="align-middle pl-2">{foundBy.name}</span> 
+            </span>
+          </div>
         </div>
 
         <div class="datagrid-item">
-          <div class="datagrid-title">Visibility</div>
-          <div class="datagrid-content">
-            {#if vulnerability?.Vulnerability.visibility == "public"}
-              <Icon icon="world" />
-            {:else if vulnerability?.Vulnerability.visibility == "private"}
-              <Icon icon="eye-closed" />
-            {:else if vulnerability?.Vulnerability.visibility == "hidden"}
-              <Icon icon="eye-off" />
-            {/if}
-            {vulnerability?.Vulnerability.visibility}
-          </div>
+          <div class="datagrid-title">Date</div>
+          <div class="datagrid-content">{vulnerability?.Vulnerability.date}</div>
         </div>
 
         <div class="datagrid-item">

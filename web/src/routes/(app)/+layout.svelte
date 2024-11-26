@@ -47,7 +47,7 @@
 
     const protocolSchema = currentDomain == "localhost:5173" ? "ws" : "wss"
 
-    socket = new WebSocket(`${protocolSchema}://${currentDomain == "localhost:5173" ? "localhost:8080": currentDomain}/ws`);
+    socket = new WebSocket(`${protocolSchema}://${currentDomain == "localhost:5173" ? "localhost:5173": currentDomain}/ws`);
 
     socket.onopen = function(event) {
         console.log('Connected to WebSocket');
