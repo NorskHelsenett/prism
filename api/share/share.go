@@ -337,26 +337,11 @@ func GetPublicVulnerability(c *gin.Context, store *session.SessionStore) {
 		return
 	}
 
-	imageBase64Map := make(map[string]string)
-	if images, ok := vulnerability["images"].([]interface{}); ok {
-		for i, img := range images {
-			if imageName, ok := img.(string); ok {
-				// Retrieve the image data from the database
-				imageData, err := database.GetImage(imageName)
-				if err != nil {
-					c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to read image data"})
-					return
-				}
-
-				// Convert the image data to a base64 string and store it in the map
-				base64Data := base64.StdEncoding.EncodeToString(imageData.Data)
-				imageBase64Map[imageName] = base64Data
-
-				// Update the image entry in the images slice
-				images[i] = imageData.Data
-			}
-		}
-		vulnerability["images"] = images
+	// Extract images and get their base64 values
+	if err := extractMarkdownImagesWithBase64(vulnerability); err != nil {
+		fmt.Printf("failed to process images: %v", err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to process images"})
+		return
 	}
 
 	// Get the evidence markdown from the vulnerability map
@@ -364,13 +349,6 @@ func GetPublicVulnerability(c *gin.Context, store *session.SessionStore) {
 	if !ok {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "evidence is not a string"})
 		return
-	}
-
-	// Replace all markdown image links with base64 data
-	for imageName, base64Data := range imageBase64Map {
-		// Use a regular expression to replace the image link with a base64 string
-		re := regexp.MustCompile(`!\[` + regexp.QuoteMeta(imageName) + `\]\((http[s]?:\/\/.*?/api/blob/` + regexp.QuoteMeta(imageName) + `)\)`)
-		evidenceMarkdown = re.ReplaceAllString(evidenceMarkdown, fmt.Sprintf("![%s](data:image/jpeg;base64,%s)", imageName, base64Data))
 	}
 
 	// Update the evidence in the vulnerability map
@@ -384,6 +362,107 @@ func GetPublicVulnerability(c *gin.Context, store *session.SessionStore) {
 	}
 	vuln.Vulnerability = datatypes.JSON(vulnBytes)
 
+	var foundby struct {
+		Avatar string `json:"avatar"`
+		Name   string `json:"name"`
+	}
+
+	user, _ := database.GetUserDataByEmail(vuln.FoundBy)
+	if user != nil {
+		foundby.Avatar = user.Picture
+		foundby.Name = user.Name
+	}
+
+	foundBytes, err := json.Marshal(foundby)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to marshal updated vulnerability data"})
+		return
+	}
+
+	vuln.FoundBy = string(foundBytes) //doesnt work now does it!
+
 	// Return the updated vulnerability data
 	c.JSON(http.StatusOK, vuln)
+}
+
+func extractMarkdownImagesWithBase64(vulnerability map[string]interface{}) error {
+	// Fields to process
+	markdownFields := []string{"evidence", "remediation"}
+
+	// Regex pattern for UUID-style files with 3 or 4 char extensions
+	pattern := `/api/blob/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.[a-zA-Z]{3,4}`
+	re := regexp.MustCompile(pattern)
+
+	// Map to store image data (prevent fetching same image multiple times)
+	imageBase64Map := make(map[string]string)
+
+	// Process each markdown field
+	for _, field := range markdownFields {
+		markdown, ok := vulnerability[field].(string)
+		if !ok {
+			continue // Skip if field doesn't exist or isn't a string
+		}
+
+		// Find all matches in the markdown
+		matches := re.FindAllString(markdown, -1)
+
+		// Process each matched image path
+		for _, match := range matches {
+			// Extract just the filename from the path
+			imageName := match[len("/api/blob/"):]
+
+			// Get base64 data if we haven't already
+			if _, exists := imageBase64Map[imageName]; !exists {
+				// Get the image data from database
+				imageData, err := database.GetImage(imageName)
+				if err != nil {
+					fmt.Printf("failed to get image %s: %v\n", imageName, err)
+					continue
+				}
+
+				// Convert to base64
+				base64Data := base64.StdEncoding.EncodeToString(imageData.Data)
+				imageBase64Map[imageName] = base64Data
+			}
+
+			// Replace the URL with base64 data
+			markdown = strings.Replace(
+				markdown,
+				match,
+				fmt.Sprintf("data:image/jpeg;base64,%s", imageBase64Map[imageName]),
+				-1,
+			)
+		}
+
+		// Update the field in vulnerability map
+		vulnerability[field] = markdown
+	}
+
+	// Update images array with base64 data
+	if images, ok := vulnerability["images"].([]interface{}); ok {
+		for i, img := range images {
+			if imageName, ok := img.(string); ok {
+				// Skip if we already have this image
+				if base64Data, exists := imageBase64Map[imageName]; exists {
+					images[i] = base64Data
+					continue
+				}
+
+				// Get the image data from database
+				imageData, err := database.GetImage(imageName)
+				if err != nil {
+					fmt.Printf("failed to get image %s: %v\n", imageName, err)
+					continue
+				}
+
+				// Convert to base64
+				base64Data := base64.StdEncoding.EncodeToString(imageData.Data)
+				images[i] = base64Data
+				imageBase64Map[imageName] = base64Data
+			}
+		}
+		vulnerability["images"] = images
+	}
+
+	return nil
 }

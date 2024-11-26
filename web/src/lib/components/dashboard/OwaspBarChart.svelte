@@ -57,7 +57,7 @@
 
 </script>
 
-<table class="table table-vcenter card-table w-auto table-fixed">
+<table class="table table-vcenter card-table table-fixed">
   <thead class="th-lg" hidden>
     <tr>
       <th>OWASP</th>

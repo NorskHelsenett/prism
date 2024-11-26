@@ -3,9 +3,10 @@
 {
 	"name": "Go",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/go:1-1.22-bookworm",
+	"image": "mcr.microsoft.com/devcontainers/go:1-1.23-bookworm",
 	"features": {
-		"ghcr.io/lumenpink/devcontainer-features/bun:0": {}
+		"ghcr.io/lumenpink/devcontainer-features/bun:0": {},
+		"ghcr.io/devcontainers/features/node:1": {}
 	},
 	"containerEnv": {
 		"HOME": "/home/vscode",
@@ -14,7 +15,6 @@
 	// "features": {},
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	"forwardPorts": [
-		8080,
 		1473
 	],
 	// Use 'postCreateCommand' to run commands after the container is created.
@@ -31,7 +31,9 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"svelte.svelte-vscode"
+				"svelte.svelte-vscode",
+				"dbaeumer.vscode-eslint",
+				"golang.go"
 			]
 		}
 	}

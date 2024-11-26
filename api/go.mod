@@ -1,6 +1,6 @@
 module prism
 
-go 1.21.5
+go 1.23
 
 require (
 	github.com/SherClockHolmes/webpush-go v1.3.0

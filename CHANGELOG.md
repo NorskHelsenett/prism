@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.12] - 2024-11-26
+
+### Fixed
+
+- **🤝 Image Sharing:** Fixes HTTP/403 on images, which now are served as base64 encoded pictures.
+
 ## [0.1.12] - 2024-11-05
 
 ### Added
