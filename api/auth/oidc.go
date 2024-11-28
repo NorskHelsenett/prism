@@ -2,8 +2,11 @@ package auth
 
 import (
 	"crypto/rand"
+	"crypto/rsa"
 	"encoding/base64"
+	"encoding/json"
 	"io"
+	"math/big"
 
 	"os"
 	"path"
@@ -482,11 +485,22 @@ func HandleCallback(c *gin.Context, store *session.SessionStore) {
 		return
 	}
 
-	// Parse the token without validating the signature
-	tokenClaims, _, err := new(jwt.Parser).ParseUnverified(idToken, jwt.MapClaims{})
+	// Parse and verify the token
+	parser := &jwt.Parser{
+		ValidMethods: []string{"RS256", "RS384", "RS512"}, // Allow only RS256 signing method
+	}
+
+	claims := jwt.MapClaims{}
+
+	// Parse with validation
+	tokenClaims, err := parser.ParseWithClaims(idToken, claims, keyFunc(provider))
 	if err != nil {
-		// Handle error
-		fmt.Println("Error parsing token:", err)
+		c.JSON(http.StatusUnauthorized, gin.H{"error": fmt.Sprintf("Invalid token: %v", err)})
+		return
+	}
+
+	if !tokenClaims.Valid {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token signature"})
 		return
 	}
 	profilePicture := ""
@@ -518,7 +532,104 @@ func HandleCallback(c *gin.Context, store *session.SessionStore) {
 
 		c.Redirect(http.StatusFound, config.AppConfig.Cors.Origin)
 	}
+}
 
+// JWK represents a JSON Web Key
+type JWK struct {
+	KID string `json:"kid"`
+	Kty string `json:"kty"`
+	Alg string `json:"alg"`
+	Use string `json:"use"`
+	N   string `json:"n"`
+	E   string `json:"e"`
+}
+
+// JWKSResponse represents the JWKS response structure
+type JWKSResponse struct {
+	Keys []JWK `json:"keys"`
+}
+
+type OpenIDConfiguration struct {
+	Jwks_uri string `json:"jwks_uri"`
+}
+
+// keyFunc creates a jwt.Keyfunc that uses the JWKS to verify signatures
+func keyFunc(provider string) jwt.Keyfunc {
+	return func(token *jwt.Token) (interface{}, error) {
+		// Get the key ID from the token header
+		kid, ok := token.Header["kid"].(string)
+		if !ok {
+			return nil, fmt.Errorf("kid header not found in token")
+		}
+
+		// Get provider configuration
+		providerConfig := config.AppConfig.OIDC[provider]
+
+		resp, _ := http.Get(providerConfig.ProviderURI + "/.well-known/openid-configuration")
+		var openidConfig OpenIDConfiguration
+		if err := json.NewDecoder(resp.Body).Decode(&openidConfig); err != nil {
+			return nil, fmt.Errorf("YOU DIED %v", err)
+		}
+		defer resp.Body.Close()
+
+		// Fetch JWKS from the provider
+		resp, err := http.Get(openidConfig.Jwks_uri)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch JWKS: %v", err)
+		}
+		defer resp.Body.Close()
+
+		var jwks JWKSResponse
+		if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
+			return nil, fmt.Errorf("failed to decode JWKS: %v", err)
+		}
+
+		// Find the key matching the kid
+		for _, key := range jwks.Keys {
+			if key.KID == kid {
+				return constructRSAPublicKey(key.N, key.E)
+			}
+		}
+
+		return nil, fmt.Errorf("no matching key found for kid: %s", kid)
+	}
+}
+
+func decodeBase64(s string) ([]byte, error) {
+	// Add padding if needed
+	if m := len(s) % 4; m != 0 {
+		s += strings.Repeat("=", 4-m)
+	}
+	return base64.URLEncoding.DecodeString(s)
+}
+
+// constructRSAPublicKey creates an RSA public key from modulus and exponent
+func constructRSAPublicKey(n, e string) (*rsa.PublicKey, error) {
+	// Decode the modulus
+	modulus, err := decodeBase64(n)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode modulus: %v", err)
+	}
+
+	// Decode the exponent
+	exponent, err := decodeBase64(e)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode exponent: %v", err)
+	}
+
+	// Convert modulus bytes to big int
+	n_big := new(big.Int).SetBytes(modulus)
+
+	// Convert exponent bytes to int
+	var e_int int
+	for i := 0; i < len(exponent); i++ {
+		e_int = e_int*256 + int(exponent[i])
+	}
+
+	return &rsa.PublicKey{
+		N: n_big,
+		E: e_int,
+	}, nil
 }
 
 func getAzureProfilePicture(email string, token *oauth2.Token) (string, error) {
