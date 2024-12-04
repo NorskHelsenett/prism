@@ -1,5 +1,3 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/go
 {
 	"name": "Go",
 	"image": "mcr.microsoft.com/devcontainers/go:1-1.23-bookworm",
@@ -12,10 +10,12 @@
 	"forwardPorts": [
 		1473
 	],
-	"postStartCommand": "git config --global user.signingkey $HOME/.ssh/yubikey.pub && ssh-add -L > $HOME/.ssh/yubikey.pub",
 	"postAttachCommand": "mkdir -p api/.tmp/ && touch .tmp/config.yaml && cd web && npm install && npm run dev -- -",
+	"runArgs": [
+		"--userns=keep-id:uid=1000,gid=1000"
+	],
 	"containerUser": "vscode",
-	"updateRemoteUserUID": false, //this and runArgs when using podman
+	"updateRemoteUserUID": false,
 	"customizations": {
 		"vscode": {
 			"extensions": [

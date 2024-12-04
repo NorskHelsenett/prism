@@ -2,19 +2,19 @@ oidc:
   gitlab:
     clientID: ""
     clientSecret: ""
-    redirectUri: "http://localhost:8080/api/callback"
+    redirectUri: "http://localhost:5173/api/callback"
     providerUri: ""
   github:
     clientID: ""
     clientSecret: ""
-    redirectUri: "http://localhost:8080/api/callback"
+    redirectUri: "http://localhost:5173/api/callback"
     providerUri: ""
 cors:
   origin: "http://localhost:5173"
 admins:
   - example@email.com
 database:
-  path: "./tmp"
+  path: ".tmp/"
 events:
   interval: 10
 slack:

@@ -28,9 +28,14 @@ function createUserStore() {
         return acc;
       }, {});
       accessLevels.set(accessList);
-    } else {
-      console.error('Failed to fetch user data');
+    } else if (response.status == 401 && window.location.pathname !== "/login") {
       set({ loading: false });
+      window.location.href = "/login"
+    } else if (response.status == 403 && window.location.pathname !== "/auth"){
+      set({ loading: false });
+      window.location.href = "/auth"}
+    else {
+      console.error('Failed to fetch user data', response.status);
     }
   }
 
