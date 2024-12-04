@@ -16,10 +16,10 @@
 					<div class="card card-md">
 						<div class="card-body">
 							<div class="text-secondary small lh-base">
-								Empower your security team with precision: Pentest Report Information Security
-								Management - your comprehensive, team-centric solution for efficient vulnerability
+								Empower your security team with precision: <strong class="text-teal">Pentest Report Information Security
+								Management</strong> - your comprehensive, team-centric solution for efficient vulnerability
 								identification, reporting, and follow-up. Ensuring maximum security and stability in
-								your cybersecurity operations.
+								your cybersecurity organization.
 							</div>
 							<div class="hr-text">login</div>
               {#each $providers as provider}

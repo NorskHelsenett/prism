@@ -1,18 +1,18 @@
-FROM ncr.sky.nhn.no/dockerhub/oven/bun:1 AS build
+FROM ncr.sky.nhn.no/dockerhub/library/node AS build
 
 WORKDIR /app
 
 # Copy package.json and bun.lockb (if you're using bun.lockb instead of package-lock.json)
-COPY package.json bun.lockb* ./
+COPY package.json package-lock.json ./
 
 # Install dependencies
-RUN bun install --frozen-lockfile
+RUN npm install
 
 # Copy the rest of the application code
 COPY . .
 
 # Build the application
-RUN bun run build
+RUN npm run build
 
 # Copy Nginx configuration
 RUN mkdir -p /etc/nginx/conf.d/
