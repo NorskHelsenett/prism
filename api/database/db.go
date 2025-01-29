@@ -1311,8 +1311,23 @@ func GetAllUsers() (*[]UserData, error) {
 }
 
 // createJSONData saves new JSON data to the database
-func CreateJSONData(jsonData *JSONData) {
-	db.Create(jsonData)
+func CreateJSONData(jsonData *JSONData) error {
+	// Check for existing vulnerability with same data
+	var existingCount int64
+	err := db.Model(&JSONData{}).
+		Where("vulnerability = ?", jsonData.Vulnerability).
+		Count(&existingCount).Error
+
+	if err != nil {
+		return err
+	}
+
+	if existingCount > 0 {
+		return errors.New("this vulnerability has already been reported")
+	}
+
+	// Create the entry if no duplicate found
+	return db.Create(jsonData).Error
 }
 
 func SetVulnerabilitySlackUrl(id uint, url string) error {
