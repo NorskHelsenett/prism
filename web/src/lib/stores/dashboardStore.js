@@ -7,14 +7,14 @@ function createDashboardStore() {
 
   let intervalId;
 
-  async function fetchData() {
+  async function fetchData(year = new Date().getFullYear()) {
     try {
       // Fetching local configuration file
       const endpointResponse = await fetch('/.well-known/config.json');
       const config = await endpointResponse.json();
 
       // Use customFetch for API call
-      const data = await Fetch(`/api/dashboard`);
+      const data = await Fetch(`/api/dashboard?year=${year}`);
 
       set(data);
     } catch (error) {

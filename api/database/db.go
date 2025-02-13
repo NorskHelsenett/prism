@@ -702,6 +702,47 @@ func SetEventProcessed(event *EventQueue) {
 	db.Model(&event).Update("processed", true).Update("error", event.Error)
 }
 
+func GetFilteredVulnerabilities(isGlobal bool, email string, year string, status string, severity string, projectID uint) ([]JSONData, error) {
+	var jsonData []JSONData
+	query := db.Preload("Project").
+		Select(`
+			json_data.*, 
+			json_extract(json_data.vulnerability, '$.title') as vulnerability_title, 
+			json_extract(json_data.vulnerability, '$.isPublicFacing') as vulnerability_isPublicFacing, 
+			json_extract(json_data.vulnerability, '$.criticality') as vulnerability_criticality, 
+			json_extract(json_data.vulnerability, '$.date') as vulnerability_date
+		`)
+
+	if !isGlobal {
+		// Non-admin: Find all project IDs where the email is in "client_email" or "hacker_name"
+		emailPattern := "%" + email + "%"
+		subQuery := db.Table("project_data").
+			Select("id").
+			Where("client_email LIKE ? OR hacker_name LIKE ?", emailPattern, emailPattern)
+		
+		query = query.Where(
+			db.Where("project_id IN (?) AND deleted_at IS NULL", subQuery).
+			Or("found_by LIKE ? AND deleted_at IS NULL", email))
+	}
+
+	if year != "" {
+		query = query.Where("strftime('%Y', json_extract(json_data.vulnerability, '$.date')) = ?", year)
+	}
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+	if severity != "" {
+		query = query.Where("json_extract(json_data.vulnerability, '$.criticality') = ?", severity)
+	}
+	if projectID != 0 {
+		query = query.Where("project_id = ?", projectID)
+	}
+
+	query = query.Order("json_extract(json_data.vulnerability, '$.date') desc")
+	result := query.Find(&jsonData)
+	return jsonData, result.Error
+}
+
 func CleanUpDatabase() error {
 	// Wrap the cleanup in a transaction
 	tx := db.Begin()
@@ -1446,162 +1487,20 @@ func minifiedVulnerabilityJSON(jsonData []JSONData) []MinimalJSONData {
 	return minifiedList
 }
 
-func CountOWASPCategories() (map[string]int, error) {
-	var jsonData []JSONData
-	result := db.Find(&jsonData)
-	if result.Error != nil {
-		return nil, result.Error
-	}
 
-	categoryCounts := make(map[string]int)
-	for _, data := range jsonData {
-		var vuln Vulnerability
-		// Assuming the vulnerability data is nested under a 'vulnerability' key
-		err := json.Unmarshal(data.Vulnerability, &vuln)
-		if err != nil {
-			// Handle the error, perhaps continue to the next item
-			continue
-		}
-		category := vuln.Category
-		if category == "" {
-			category = "uncategorized"
-		}
-		categoryCounts[category]++
-	}
-
-	return categoryCounts, nil
-}
 
 type VulnerabilityData struct {
 	Category    string `json:"category"`
 	Criticality string `json:"criticality"`
 }
 
-func FetchOWASPCriticalities() (map[string]map[string]int, error) {
-	var jsonData []JSONData
-	result := db.Find(&jsonData)
-	if result.Error != nil {
-		return nil, result.Error
-	}
 
-	owaspData := make(map[string]map[string]int)
-	for _, data := range jsonData {
-		var vuln VulnerabilityData
-		err := json.Unmarshal(data.Vulnerability, &vuln)
-		if err != nil {
-			return nil, err
-		}
-
-		// If category is empty, default it to "Uncategorized"
-		category := vuln.Category
-		if category == "" {
-			category = "Uncategorized"
-		}
-
-		// If the category doesn't exist yet, initialize the criticality count maps
-		if _, exists := owaspData[category]; !exists {
-			owaspData[category] = map[string]int{
-				"information": 0,
-				"low":         0,
-				"medium":      0,
-				"high":        0,
-				"critical":    0,
-			}
-		}
-
-		// Increment the appropriate criticality count
-		switch vuln.Criticality {
-		case "information", "low", "medium", "high", "critical":
-			owaspData[category][vuln.Criticality]++
-		}
-	}
-
-	return owaspData, nil
-}
-
-func CountByStatus() (map[string]int, error) {
-	var results []struct {
-		Status string
-		Count  int
-	}
-	statusCounts := make(map[string]int)
-
-	// Group the results by 'Status' and count each group
-	if err := db.Model(&JSONData{}).
-		Select("status, COUNT(*) as count").
-		Group("status").
-		Scan(&results).Error; err != nil {
-		return nil, err
-	}
-
-	// Fill the map with the status counts
-	for _, result := range results {
-		statusCounts[result.Status] = result.Count
-	}
-
-	return statusCounts, nil
-}
-
-// CountCriticalities returns a map with the count of each criticality level
-func CountCriticalities() (map[string]int, error) {
-	var jsonData []JSONData
-	result := db.Find(&jsonData)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
-	criticalityCounts := make(map[string]int)
-	for _, data := range jsonData {
-		var vuln Vulnerability
-		// Assuming the vulnerability data is nested under a 'vulnerability' key
-		err := json.Unmarshal(data.Vulnerability, &vuln)
-		if err != nil {
-			// Handle the error, perhaps continue to the next item
-			continue
-		}
-
-		criticalityCounts[vuln.Criticality]++
-	}
-
-	return criticalityCounts, nil
-}
 
 // getJSONData retrieves JSON data from the database
 func GetJSONData(id uint) (JSONData, error) {
 	var jsonData JSONData
 	result := db.First(&jsonData, id)
 	return jsonData, result.Error
-}
-
-func CountJSONData() (int64, error) {
-	var count int64
-	result := db.Model(&JSONData{}).Count(&count)
-	return count, result.Error
-}
-
-func CountProjects() (int64, error) {
-	var count int64
-	result := db.Model(&ProjectData{}).Count(&count)
-	return count, result.Error
-}
-
-func CountBugBounties() (int64, error) {
-	var count int64
-	var bugBountyProjectIDs []uint
-
-	// Fetch IDs of projects with bug bounties
-	err := db.Model(&ProjectData{}).Where("is_bug_bounty = ?", true).Pluck("id", &bugBountyProjectIDs).Error
-	if err != nil {
-		return 0, err
-	}
-
-	// Count vulnerabilities associated with those projects
-	err = db.Model(&JSONData{}).Where("project_id IN (?)", bugBountyProjectIDs).Count(&count).Error
-	if err != nil {
-		return 0, err
-	}
-
-	return count, nil
 }
 
 func GetProject(id uint) (ProjectData, error) {
