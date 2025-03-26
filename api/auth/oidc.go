@@ -238,12 +238,10 @@ func ExtractResourcePath(c *http.Request) string {
 
 func actionFromMethod(method string) string {
 	switch method {
+	case "POST", "PATCH", "PUT":
+		return "write"
 	case "GET":
 		return "read"
-	case "POST":
-		return "write"
-	case "PUT":
-		return "write"
 	case "DELETE":
 		return "delete"
 	default:

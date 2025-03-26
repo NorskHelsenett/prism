@@ -18,7 +18,7 @@ roles:
       - resource: "/slack"
         action: ["read"]
       - resource: "/profile"
-        action: ["read"]
+        action: ["read", "write", "delete"]
       - resource: "/blob"
         action: ["read", "write", "delete"]
       - resource: "/vulnerability"

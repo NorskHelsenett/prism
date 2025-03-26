@@ -14,6 +14,9 @@
   let allTeams = [];
   let filterText = '';
 
+  let dropdownPosition = { top: 0, left: 0 };
+  let addButtonElement;
+
   onMount(async () => {
     try {
       const response = await Fetch('/api/profile/all');
@@ -31,6 +34,9 @@
   }
 
   $: if (hackers) {
+    hackers = hackers.filter((hacker, index, self) => 
+      index === self.findIndex(h => h.email === hacker.email)
+    );
     updateAvailableUsers();
   }
 
@@ -92,6 +98,22 @@
   function hasAvailableMembers(team) {
     return team.members.some(email => isUserAvailable(email));
   }
+
+  function toggleHackersList() {
+    showHackersList = !showHackersList;
+    
+    if (showHackersList && addButtonElement) {
+      const rect = addButtonElement.getBoundingClientRect();
+      console.log(rect);
+      console.log(window.scrollY);
+      console.log(window.scrollX);
+      dropdownPosition = {
+        top: rect.bottom + 5,
+        left: rect.left + window.scrollX
+      };
+      console.log(dropdownPosition);
+    }
+  }
 </script>
 
 <div class="avatar-list" style="position:relative">
@@ -101,7 +123,7 @@
            on:mouseenter={() => showRemoveHacker[index] = true}
            on:mouseleave={() => showRemoveHacker[index] = false}
            transition:scale={{ duration: 300, delay: 0, opacity: 0.5, start: 0.0, easing: quintOut }}>
-        <Avatar email="{hacker.email}" option={{ showName: false, size: "sm", emptyFields: false, circle: true}}/>
+        <Avatar email="{hacker.email}" option={{ showName: false, size: "sm", emptyFields: false, circle: true, tooltipEnabled: false}}/>
         {#if showRemoveHacker[index]}
           <i class="overlay ti ti-x rounded-circle"
              transition:fade={{ delay: 50, duration: 500 }}
@@ -111,11 +133,15 @@
     {/if}
   {/each}
   <span class="avatar rounded-circle avatar-sm cursor-pointer"
-        on:click|stopPropagation="{() => showHackersList = !showHackersList}">
+        bind:this={addButtonElement}
+        on:click|stopPropagation="{toggleHackersList}">
     <i class="ti ti-plus"></i>
   </span>
   {#if showHackersList}
-    <div id="hackersDropdownList" class="card" transition:slide="{{ duration: 100, axis: 'y' }}">
+    <div id="hackersDropdownList" 
+         class="card" 
+         style="top: {dropdownPosition.top}px; left: {dropdownPosition.left}px;"
+         transition:slide="{{ duration: 100, axis: 'y' }}">
       <div class="filter-input">
         <input type="text" bind:value={filterText} placeholder="Filter users..." />
       </div>
@@ -127,7 +153,7 @@
               {#each team.members as email}
                 {#if isUserAvailable(email) && email.toLowerCase().includes(filterText.toLowerCase())}
                   <li class="option selected p-2" on:click="{() => addHacker(email)}">
-                    <Avatar email={email}/>
+                    <Avatar email={email} option={{ showName: true, emptyFields: false, circle: true, tooltipEnabled: false}}/>
                   </li>
                 {/if}
               {/each}
@@ -138,7 +164,7 @@
         <ul>
           {#each filteredUsers as user (user.email)}
             <li class="option selected p-2" on:click="{() => addHacker(user)}">
-              <Avatar email={user.email}/>
+              <Avatar email={user.email} option={{ showName: true, emptyFields: false, circle: true, tooltipEnabled: false}}/>
             </li>
           {/each}
         </ul>
@@ -163,11 +189,12 @@
   }
 
   #hackersDropdownList{
-    position:absolute;
-    margin-top: 42px;
-    z-index: 100;
+    position: fixed;
+    z-index: 10000;
     max-height: 25em;
-    overflow: scroll;
+    overflow-y: auto;
+    min-width: 250px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   }
 
   .avatar-container {

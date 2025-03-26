@@ -18,6 +18,7 @@ type Assessment struct {
 	WorkOrder   string    `json:"workorder"`
 	Status      string    `json:"status"`
 	Requester   string    `json:"requester"`
+	Color       string    `json:"color"`
 }
 
 type Hacker struct {
@@ -33,14 +34,15 @@ func (a *Assessment) Validate() error {
 	if a.Title == "" {
 		return errors.New("Title is required")
 	}
-	if len(a.Projects) == 0 {
-		return errors.New("at least one project is required")
-	}
-	for _, project := range a.Projects {
-		if project.Id == 0 {
-			return errors.New("project ID is required")
-		}
-	}
+	//@todo - uncomment this code
+	// if len(a.Projects) == 0 {
+	// 	return errors.New("at least one project is required")
+	// }
+	// for _, project := range a.Projects {
+	// 	if project.Id == 0 {
+	// 		return errors.New("project ID is required")
+	// 	}
+	// }
 
 	const layout = "2006-01-02"
 	if a.DateFrom == "" {

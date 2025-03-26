@@ -44,6 +44,98 @@ func NewAssassment(c *gin.Context) {
 	c.JSON(http.StatusOK, assessment)
 }
 
+func PatchAssessmentsHandler(c *gin.Context) {
+	idStr := c.Param("id")
+	if idStr == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "id is required"})
+			return
+	}
+
+	// Convert string ID to uint
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ID format"})
+			return
+	}
+
+	// Retrieve the existing assessment
+	assessmentJSON, err := database.RetrieveAssessment(uint(id))
+	if err != nil {
+			if strings.Contains(err.Error(), "not found") {
+					c.AbortWithStatus(http.StatusNotFound)
+					return
+			}
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error getting assessment"})
+			return
+	}
+
+	var assessment models.Assessment
+	if err := json.Unmarshal(assessmentJSON.Assessment, &assessment); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse assessment data"})
+			return
+	}
+
+	// Create a map to hold the patch data
+	var patchData map[string]interface{}
+	if err := c.ShouldBindJSON(&patchData); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+	}
+
+	// Apply patch data to the assessment
+	// This approach allows partial updates to the assessment
+	if color, ok := patchData["color"].(string); ok {
+			assessment.Color = color
+	}
+
+	// Add handling for other fields that might be patched in the future
+	// e.g., if title, ok := patchData["title"].(string); ok { assessment.Title = title }
+	if title, ok := patchData["title"].(string); ok { assessment.Title = title }
+
+	if startDate, ok := patchData["dateFrom"].(string); ok {
+		assessment.DateFrom = startDate
+	}
+	if endDate, ok := patchData["dateTo"].(string); ok {
+		assessment.DateTo = endDate
+	}
+
+	if hackers, ok := patchData["hackers"].([]interface{}); ok {
+		// Use a map to track unique emails
+		uniqueEmails := make(map[string]bool)
+		var uniqueHackers []models.Hacker
+		
+		for _, hacker := range hackers {
+			if hackerMap, ok := hacker.(map[string]interface{}); ok {
+				if email, ok := hackerMap["email"].(string); ok {
+					// Only add if this email hasn't been seen before
+					if !uniqueEmails[email] {
+						uniqueEmails[email] = true
+						uniqueHackers = append(uniqueHackers, models.Hacker{Email: email})
+					}
+				}
+			}
+		}
+		
+		assessment.Hackers = uniqueHackers
+	}
+
+	// Validate the modified assessment
+	if err := assessment.Validate(); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+	}
+
+	// Update the assessment in the database
+	err = database.UpdateAssassment(assessment, uint(id))
+	if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "unable to update assessment"})
+			return
+	}
+
+	assessment.ID = assessmentJSON.ID
+	c.JSON(http.StatusOK, assessment)
+}
+
 func DeleteAssessmentsHandler(c *gin.Context) {
 	idStr := c.Param("id") // Get ID as string
 	if idStr != "" {
@@ -203,6 +295,11 @@ func RetrieveAssessmentsHandler(c *gin.Context) {
 			}
 			assessment.Projects[j].Name = name
 		}
+
+		if assessment.Hackers == nil {
+			assessment.Hackers = []models.Hacker{}
+	}
+
 		assessment.ID = assessmentJSON.ID
 		modelAssessments = append(modelAssessments, assessment)
 	}

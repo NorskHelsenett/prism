@@ -140,6 +140,7 @@ type UserData struct {
 	Title         string         `json:"title" gorm:"default:My title"`
 	OTPSecret     string         `json:"-"`
 	Notifications datatypes.JSON `json:"-"`
+	Settings      datatypes.JSON `json:"-"`
 }
 
 type Vulnerability struct {
@@ -677,8 +678,11 @@ func RetrieveAssessments(startDate, endDate string, page, pageSize int) ([]Asses
 	// Calculate offset for pagination
 	offset := (page - 1) * pageSize
 
-	// Build a query using json_extract to filter by dates within the JSON blob
-	query := fmt.Sprintf("json_extract(assessment, '$.dateFrom') >= ? AND json_extract(assessment, '$.dateTo') <= ?")
+	// Build a query to find assessments that overlap with the date range
+	// An assessment overlaps if:
+	// - Its end date is on or after the start of the range, AND
+	// - Its start date is on or before the end of the range
+	query := "json_extract(assessment, '$.dateTo') >= ? AND json_extract(assessment, '$.dateFrom') <= ?"
 
 	// Execute the query with pagination
 	result := db.Model(&AssessmentJSON{}).
@@ -719,10 +723,10 @@ func GetFilteredVulnerabilities(isGlobal bool, email string, year string, status
 		subQuery := db.Table("project_data").
 			Select("id").
 			Where("client_email LIKE ? OR hacker_name LIKE ?", emailPattern, emailPattern)
-		
+
 		query = query.Where(
 			db.Where("project_id IN (?) AND deleted_at IS NULL", subQuery).
-			Or("found_by LIKE ? AND deleted_at IS NULL", email))
+				Or("found_by LIKE ? AND deleted_at IS NULL", email))
 	}
 
 	if year != "" {
@@ -1148,8 +1152,54 @@ func UpdateSettings(updatedSettings *Settings) error {
 	return db.Model(settingsDb).Update("SlackData", settingsDb.SlackData).Update("AuditLogData", settingsDb.AuditLogData).Update("mfa_enabled", updatedSettings.MFAEnabled).Error
 }
 
-func UpdateUser(user *UserData) error {
+func UpdateUserRole(user *UserData) error {
 	return db.Model(&UserData{}).Where("email = ?", user.Email).Update("role", user.Role).Error
+}
+
+// GetPreferencesForUser retrieves user preferences by email
+func GetPreferencesForUser(email string) (models.UserSettings, error) {
+	var user UserData
+	var preferences models.UserSettings
+
+	result := db.Where("email = ?", email).First(&user)
+	if result.Error != nil {
+		return preferences, result.Error
+	}
+
+	// If user has no settings yet, return empty preferences
+	if user.Settings == nil || len(user.Settings) == 0 {
+		return preferences, nil
+	}
+
+	// Unmarshal the stored JSON settings
+	if err := json.Unmarshal(user.Settings, &preferences); err != nil {
+		return preferences, err
+	}
+
+	return preferences, nil
+}
+
+// PatchSettingsForUser updates user preferences
+func PatchSettingsForUser(email string, preferences models.UserSettings) error {
+	var user UserData
+
+	// First find the user
+	result := db.Where("email = ?", email).First(&user)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	// Marshal the preferences to JSON
+	settingsJSON, err := json.Marshal(preferences)
+	if err != nil {
+		return err
+	}
+
+	// Update the user's settings
+	user.Settings = settingsJSON
+	result = db.Save(&user)
+
+	return result.Error
 }
 
 func UpdateEvent(id uint, processed bool) error {
@@ -1487,14 +1537,10 @@ func minifiedVulnerabilityJSON(jsonData []JSONData) []MinimalJSONData {
 	return minifiedList
 }
 
-
-
 type VulnerabilityData struct {
 	Category    string `json:"category"`
 	Criticality string `json:"criticality"`
 }
-
-
 
 // getJSONData retrieves JSON data from the database
 func GetJSONData(id uint) (JSONData, error) {
