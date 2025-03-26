@@ -48,8 +48,14 @@ func contains(slice []string, item string) bool {
 	return false
 }
 
-func UpdateUser(c *gin.Context, s *session.SessionStore) {
+func UpdateUserRole(c *gin.Context, s *session.SessionStore) {
 	var user database.UserData
+
+	isAdmin, _ := c.Get("isAdmin")
+	if !isAdmin.(bool) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
 
 	// Parse the incoming JSON to newSettings
 	if err := c.BindJSON(&user); err != nil {
@@ -62,14 +68,14 @@ func UpdateUser(c *gin.Context, s *session.SessionStore) {
 		return
 	}
 
-	err := database.UpdateUser(&user)
+	err := database.UpdateUserRole(&user)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update settings"})
 		return
 	}
 
-	err = s.UpdateUser(&user)
+	_ = s.UpdateUserRole(&user)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Settings updated successfully"})
 }

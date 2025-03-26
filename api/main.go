@@ -76,6 +76,8 @@ func main() {
 
 		apiRoutes.POST("/profile/apikey", routes.CreateAPIKey)
 		apiRoutes.GET("/profile/apikey", routes.GetAPIKey)
+		apiRoutes.PATCH("/profile/preferences", routes.UpdateUserPreferences)
+		apiRoutes.GET("/profile/preferences", routes.GetUserPreferences)
 		apiRoutes.DELETE("/profile/apikey/:id", routes.DeleteAPIKey)
 
 		apiRoutes.GET("/session/otp/generate", session.HandleOTPGenerate)
@@ -89,6 +91,7 @@ func main() {
 		apiRoutes.POST("/planning/new", routes.NewAssassment)
 		apiRoutes.GET("/planning", routes.RetrieveAssessmentsHandler)
 		apiRoutes.GET("/planning/:id", routes.RetrieveAssessmentsHandler)
+		apiRoutes.PATCH("/planning/:id", routes.PatchAssessmentsHandler)
 		apiRoutes.GET("/planning/:id/assignedHackers", routes.FindNonAvailablePersons)
 		apiRoutes.PUT("/planning/:id", routes.PutAssessmentsHandler)
 		apiRoutes.DELETE("/planning/:id", routes.DeleteAssessmentsHandler)
@@ -147,7 +150,7 @@ func main() {
 
 		apiRoutes.GET("/settings/users/all", func(c *gin.Context) { routes.GetAllUsers(c, sessionStore) })
 		apiRoutes.DELETE("/settings/user/:id", func(c *gin.Context) { routes.DeleteUser(c, sessionStore) })
-		apiRoutes.PUT("/settings/profile", func(c *gin.Context) { routes.UpdateUser(c, sessionStore) })
+		apiRoutes.PUT("/settings/profile", func(c *gin.Context) { routes.UpdateUserRole(c, sessionStore) })
 		apiRoutes.GET("/settings/events", event.EventQueues)
 		apiRoutes.GET("/settings", routes.GetSettings)
 		apiRoutes.POST("/settings", routes.PostSettings)

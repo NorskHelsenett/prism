@@ -1,5 +1,4 @@
 <script>
-  import { Fetch } from '$lib/fetchUtil';
   import { onMount } from 'svelte';
   import { userStore } from '$lib/stores/userStore';
 
@@ -60,7 +59,7 @@
 
 {#if email}
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<span on:mouseleave={hideTooltip}>
+<span on:mouseleave={hideTooltip} class="flex items-center">
   {#if user}
     {#if user.picture}
       <img src={user.picture} alt={user.name} class:rounded-circle="{option.circle}" class="avatar {getSize()} me-2 rounded" on:mousemove={showTooltip} />
@@ -103,6 +102,15 @@
 {/if}
 
 <style>
+
+  .flex {
+    display: flex;
+    gap:12px
+  }
+  .items-center {
+    align-items: center;
+  }
+
   img {
     margin: 0 !important;
   }

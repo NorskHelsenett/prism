@@ -189,7 +189,7 @@ func GetAllUsers(s *SessionStore) (*[]database.UserData, error) {
 	return &userData, nil
 }
 
-func (s *SessionStore) UpdateUser(user *database.UserData) error {
+func (s *SessionStore) UpdateUserRole(user *database.UserData) error {
 	return s.DB.Model(&database.UserData{}).Where("email = ?", user.Email).Update("role", user.Role).Error
 }
 

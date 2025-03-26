@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.13] - 2025-03-26
+
+### Added
+- **⚙️ User Preferences:**  
+  - New API endpoints to get and update user preferences via `/profile/preferences`  
+  - Database schema extended with a `Settings` field and a new model (`UserSettings`) to persist user preferences
+- **✏️ Assessment PATCH Endpoint:**  
+  - Added PATCH functionality for assessments, allowing partial updates (e.g. color, title) via new calendar routes
+- **📊 Swimlane View:**  
+  - Brand new Swimlane board view for calendar planning with enhanced drag & drop and resizing capabilities
+- **🔄 Role Updates:**  
+  - Updated user update flow by renaming to `UpdateUserRole` with proper admin checks  
+  - Enhanced OIDC support by returning the `"write"` action for POST, PATCH, and PUT methods
+- **🛠️ UI/UX Improvements:**  
+  - Refined Svelte components (Avatar, Icon, TaskModal, Calendar views) for better responsiveness and styling  
+  - Improved drag & drop behavior, selection handling, and modal positioning in calendar components
+
+### Changed
+- **🔒 Access Control:**  
+  - Updated `roles.yaml` to include full CRUD actions (`read`, `write`, `delete`) for certain endpoints, improving permission checks
+- **💅 Frontend Adjustments:**  
+  - Various UI tweaks including enhanced styling of avatars, sticky columns, and interactive elements in the calendar view
+
 ## [0.1.12] - 2024-11-26
 
 ### Fixed

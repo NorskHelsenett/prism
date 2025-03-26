@@ -5,6 +5,7 @@
 	import NewAssessment from '$lib/components/calendar/newAssessment.svelte';
 	import List from '$lib/components/calendar/views/List.svelte';
 	import Calendar from '$lib/components/calendar/views/Calendar.svelte';
+	import Swimlane from '$lib/components/calendar/views/Swimlane.svelte';
 	import { fly } from 'svelte/transition';
 	import { quintOut } from 'svelte/easing';
   let activeComponent = List;
@@ -53,7 +54,7 @@ $: componentsToShow = [{ id: 1, component: activeComponent }];
             </div>
         </div>
         <!-- Page body -->
-        <div class="page-body" style="margin-top: 41px;">
+        <div class="page-body" style="margin-top: 37px;">
             <ul class="nav nav-bordered mb-4">
               <li class="nav-item">
                 <a class="nav-link" class:active="{activeComponent === Calendar}" on:click|preventDefault={() => show(Calendar)} aria-current="page" href="#">Calendar</a>
@@ -62,7 +63,7 @@ $: componentsToShow = [{ id: 1, component: activeComponent }];
                 <a class="nav-link" class:active="{activeComponent === List}" on:click|preventDefault={() => show(List)} href="#">List</a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="#">Board</a>
+                <a class="nav-link" class:active="{activeComponent === Swimlane}" on:click|preventDefault={() => show(Swimlane)} href="#">Board</a>
               </li>
             </ul>
 
