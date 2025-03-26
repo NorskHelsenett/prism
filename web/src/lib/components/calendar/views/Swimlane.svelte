@@ -1170,7 +1170,7 @@
 
     /* Only show first avatar when space is limited */
   @container (min-width: 151px) and (max-width: 200px) {
-    .task-avatar-list:nth-child(n+2) {
+    .task-avatar-list:nth-child(n+1) {
       display: none !important;
     }
   }
@@ -1198,7 +1198,7 @@
 		-webkit-user-select: none;
 		-moz-user-select: none;
 		-ms-user-select: none;
-		/*transition: all 0.2s ease;  Changed to 'all' to animate selection highlighting */
+		transition: all 0.2s ease; /* Changed to 'all' to animate selection highlighting */
 		cursor: move; /* Show move cursor for draggable tasks */
 	}
 
