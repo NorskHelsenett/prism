@@ -310,6 +310,34 @@
     
     dispatch('updateHackers', task.hackers);
   }
+
+  function dateToString(date) {
+    if (!date) return 'N/A';
+    
+    const d = new Date(date);
+    
+    // Get day of the week (short form)
+    const dayOfWeek = d.toLocaleDateString('en-US', { weekday: 'short' });
+    
+    // Get the day of the month
+    const day = d.getDate();
+    
+    // Add ordinal suffix (1st, 2nd, 3rd, etc.)
+    let suffix = 'th';
+    if (day % 10 === 1 && day !== 11) {
+      suffix = 'st';
+    } else if (day % 10 === 2 && day !== 12) {
+      suffix = 'nd';
+    } else if (day % 10 === 3 && day !== 13) {
+      suffix = 'rd';
+    }
+    
+    // Get month name
+    const month = d.toLocaleDateString('en-US', { month: 'long' });
+    
+    // Return formatted date: "Fri, 3rd May"
+    return `${dayOfWeek}, ${day}${suffix} ${month}`;
+  }
 </script>
 
 <svelte:window on:click={(e) => { closeColorPicker(e); closeProjectDropdown(e); }} />
@@ -379,14 +407,15 @@
       <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-clock-hour-4"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M12 12l3 2" /><path d="M12 7v5" /></svg>
     </div>
     <div class="text-column">
-      <p><strong>Date:</strong> {task.dateFrom} to {task.dateTo}</p>
-      <p><strong>Work Order:</strong> {task.workorder || 'N/A'}</p>
+      <p class="two-column"><strong>Start date:</strong> {dateToString(task.dateFrom)}</p>
+      <p class="two-column"><strong>End date:</strong> {dateToString(task.dateTo)}</p>
+      <p class="two-column"><strong>Work Order:</strong> {task.workorder || 'N/A'}</p>
     </div>
     <div class="icon-column">
       <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-mailbox"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 21v-6.5a3.5 3.5 0 0 0 -7 0v6.5h18v-6a4 4 0 0 0 -4 -4h-10.5" /><path d="M12 11v-8h4l2 2l-2 2h-4" /><path d="M6 15h1" /></svg>
     </div>
     <div class="text-column">
-      <p><strong>Estimate:</strong> {task.estimate || 0} hours</p>
+      <p class="two-column"><strong>Estimate:</strong> {task.estimate || 0} hours</p>
       
       <div class="mb-2 project-container">
         <strong>Project:</strong>
@@ -443,6 +472,12 @@
 </div>
 
 <style>
+  .two-column {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 8px;
+  }
+
   .task-modal {
     background: var(--tblr-body-bg, #fff);
     border: 1px solid var(--tblr-border-color, #e6e7e9);
