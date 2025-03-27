@@ -30,6 +30,12 @@
 	let weekendCellWidth = 20; // Width of weekend cells
 	let originalTaskElement = null; // Add a reference to track the original element being dragged
 
+	// Add state variables to track visible dates
+	let visibleStartDate = null;
+	let visibleEndDate = null;
+	let visibleDays = [];
+	let visibleStats = { count: 0, hours: 0 };
+
 	onMount(async () => {
 		try {
 			// Load all users and teams first
@@ -72,11 +78,17 @@
 		document.addEventListener('mousemove', handleDragMove);
 		// Add scroll event listener
 		window.addEventListener('scroll', handleScroll, true);
+		// Add resize listener to update visible days when window is resized
+		window.addEventListener('resize', updateVisibleDays);
+
+		// Initial calculation of visible days after a small delay
+		setTimeout(updateVisibleDays, 100);
 
 		return () => {
 			document.removeEventListener('mouseup', handleMouseUp);
 			document.removeEventListener('mousemove', handleDragMove);
 			window.removeEventListener('scroll', handleScroll, true);
+			window.removeEventListener('resize', updateVisibleDays);
 		};
 	});
 
@@ -386,7 +398,10 @@
 	}
 
 	$: if (!reload) {
-		fetchCalendarEvents();
+		fetchCalendarEvents().then(() => {
+			// Update visible days after calendar events are loaded
+			setTimeout(updateVisibleDays, 100);
+		});
 	}
 
 	function calculateTaskWidth(startDate, endDate) {
@@ -405,6 +420,36 @@
 
 		return totalWidth + 'px';
 	}
+
+	// Create a reactive declaration for visible stats that updates whenever
+	// visibleStartDate, visibleEndDate, or calendarEvents change
+	$: {
+    if (visibleStartDate && visibleEndDate && calendarEvents.length) {
+      const start = new Date(visibleStartDate);
+      const end = new Date(visibleEndDate);
+      
+      // Filter events that overlap with visible date range AND have at least one hacker assigned
+      const visibleEvents = calendarEvents.filter(event => {
+        const eventStart = new Date(event.dateFrom);
+        const eventEnd = new Date(event.dateTo);
+        // Check if event overlaps with visible range and has at least one hacker
+        return eventStart <= end && eventEnd >= start && event.hackers && event.hackers.length > 0;
+      });
+      
+      // Calculate total hours for visible events
+      const totalHours = visibleEvents.reduce((total, event) => {
+        return total + (event.durationHours || 0);
+      }, 0);
+      
+      visibleStats = {
+        count: visibleEvents.length,
+        hours: totalHours
+      };
+    } else {
+      visibleStats = { count: 0, hours: 0 };
+    }
+	}
+
 
 	// Modal properties
 	let showModal = false;
@@ -531,6 +576,37 @@
 				}
 			}
 		});
+	}
+
+
+	// Function to update which days are visible in the viewport - improved
+	function updateVisibleDays() {
+		const tableContainer = document.querySelector('.table-responsive');
+		if (!tableContainer) return;
+		
+		const tableRect = tableContainer.getBoundingClientRect();
+		const headerCells = document.querySelectorAll('thead th:not(.first-col)');
+		
+		// Find first and last visible date cells
+		let firstVisibleIndex = -1;
+		let lastVisibleIndex = -1;
+		
+		headerCells.forEach((cell, index) => {
+			const cellRect = cell.getBoundingClientRect();
+			// Check if cell is at least partially visible
+			if (cellRect.left < tableRect.right && cellRect.right > tableRect.left) {
+				if (firstVisibleIndex === -1) firstVisibleIndex = index;
+				lastVisibleIndex = index;
+			}
+		});
+		
+		// Update visible dates with new arrays to trigger reactivity
+		if (firstVisibleIndex !== -1 && lastVisibleIndex !== -1) {
+			// Use a new Date string to ensure reactivity
+			visibleStartDate = days[firstVisibleIndex]?.date ? days[firstVisibleIndex].date : null;
+			visibleEndDate = days[lastVisibleIndex]?.date ? days[lastVisibleIndex].date : null;
+			visibleDays = [...days.slice(firstVisibleIndex, lastVisibleIndex + 1)];
+		}
 	}
 
 	// Start dragging a task
@@ -969,17 +1045,26 @@
 		return matchingEvent || null;
 	}
 
-	// Add this function to handle scrolling during drag operations
+	// Improved scroll handler with debounce for better performance
+	let scrollTimeout;
 	function handleScroll() {
-		if (!isDragging && !isResizing) return;
-		if (!dragPreviewElement || !draggedTask) return;
+		if (isDragging || isResizing) {
+			// Handle drag preview positioning during drag/resize operations
+			if (!dragPreviewElement || !draggedTask) return;
 
-		// Update preview position based on the current target
-		if (isDragging && dragTargetMember) {
-			positionDragPreviewAtCell(draggedTask.dateFrom, dragTargetMember);
-		} else if (isResizing) {
-			// For resizing, always use the original member
-			positionDragPreviewAtCell(draggedTask.dateFrom, originalTaskPosition.member);
+			// Update preview position based on the current target
+			if (isDragging && dragTargetMember) {
+				positionDragPreviewAtCell(draggedTask.dateFrom, dragTargetMember);
+			} else if (isResizing) {
+				// For resizing, always use the original member
+				positionDragPreviewAtCell(draggedTask.dateFrom, originalTaskPosition.member);
+			}
+		} else {
+			// Debounce the visible days calculation for better performance
+			clearTimeout(scrollTimeout);
+			scrollTimeout = setTimeout(() => {
+				updateVisibleDays();
+			}, 100);
 		}
 	}
 </script>
@@ -1188,10 +1273,13 @@
 		</div>
 		<div class="card-footer d-flex align-items-center">
 			<p class="m-0 text-secondary">
-				Showing <span>{calendarEvents?.length || 0}</span> assessments with a total of {calendarEvents?.reduce(
+				{#if visibleDays.length > 0}
+					Showing <span>{visibleStats.count}</span> tasks with <span>{Math.ceil(visibleStats.hours)}</span> hours
+				{/if}
+				<!-- | Total: <span>{calendarEvents?.length || 0}</span> assessments with <span>{calendarEvents?.reduce(
 					(total, event) => total + (event.durationHours || 0),
 					0
-				)} hours
+				).toFixed(1)}</span> hours -->
 			</p>
 		</div>
 	</div>
