@@ -29,6 +29,7 @@
 	let cellWidth = 50; // Default cell width (will be measured on drag start)
 	let weekendCellWidth = 20; // Width of weekend cells
 	let originalTaskElement = null; // Add a reference to track the original element being dragged
+	let isShiftPressed = false; // Track if shift key is pressed during drag
 
 	// Add state variables to track visible dates
 	let visibleStartDate = null;
@@ -76,6 +77,9 @@
 
 		document.addEventListener('mouseup', handleMouseUp);
 		document.addEventListener('mousemove', handleDragMove);
+		// Add keyboard event listeners for shift key
+		document.addEventListener('keydown', handleKeyDown);
+		document.addEventListener('keyup', handleKeyUp);
 		// Add scroll event listener
 		window.addEventListener('scroll', handleScroll, true);
 		// Add resize listener to update visible days when window is resized
@@ -87,6 +91,8 @@
 		return () => {
 			document.removeEventListener('mouseup', handleMouseUp);
 			document.removeEventListener('mousemove', handleDragMove);
+			document.removeEventListener('keydown', handleKeyDown);
+			document.removeEventListener('keyup', handleKeyUp);
 			window.removeEventListener('scroll', handleScroll, true);
 			window.removeEventListener('resize', updateVisibleDays);
 		};
@@ -642,6 +648,13 @@
 		// Store reference to original element and hide it
 		originalTaskElement = event.currentTarget;
 		originalTaskElement.style.visibility = 'hidden';
+		
+		// If shift is already pressed, show the original task with FULL opacity
+		if (event.shiftKey) {
+			originalTaskElement.style.visibility = 'visible';
+			originalTaskElement.style.opacity = '1'; // Full opacity instead of dimmed
+			isShiftPressed = true;
+		}
 
 		// Create and position the preview element
 		createDragPreview(originalTaskElement, task);
@@ -687,6 +700,20 @@
 	// Handle mouse move during drag - Fixed visibility issues
   function handleDragMove(event) {
     if (!isDragging && !isResizing) return;
+
+    // Check if shift key is pressed directly from the event
+    const wasShiftPressed = isShiftPressed;
+    isShiftPressed = event.shiftKey;
+    
+    // Toggle original task visibility if shift state changed
+    if (originalTaskElement && wasShiftPressed !== isShiftPressed) {
+      if (isShiftPressed) {
+        originalTaskElement.style.visibility = 'visible';
+        originalTaskElement.style.opacity = '1'; // Full opacity
+      } else {
+        originalTaskElement.style.visibility = 'hidden';
+      }
+    }
 
     if (isResizing) {
         handleResizeMove(event);
@@ -882,12 +909,20 @@
           let updatedHackers = [...draggedTask.hackers];
 
           if (memberChanged) {
-            // Remove the original member
-            updatedHackers = updatedHackers.filter((h) => h.email !== dragStartMember);
-            
-            // Check if target member is already in the list to avoid duplicates
-            if (!updatedHackers.some(h => h.email === dragTargetMember)) {
-              updatedHackers.push({ email: dragTargetMember });
+            if (isShiftPressed) {
+              // When shift is pressed, add the target member without removing the original
+              // Check if target member is already in the list to avoid duplicates
+              if (!updatedHackers.some(h => h.email === dragTargetMember)) {
+                updatedHackers.push({ email: dragTargetMember });
+              }
+            } else {
+              // Default behavior (replace): Remove the original member
+              updatedHackers = updatedHackers.filter((h) => h.email !== dragStartMember);
+              
+              // Check if target member is already in the list to avoid duplicates
+              if (!updatedHackers.some(h => h.email === dragTargetMember)) {
+                updatedHackers.push({ email: dragTargetMember });
+              }
             }
           }
 
@@ -1065,6 +1100,28 @@
 			scrollTimeout = setTimeout(() => {
 				updateVisibleDays();
 			}, 100);
+		}
+	}
+
+	// Track shift key state
+	function handleKeyDown(event) {
+		if (event.key === 'Shift') {
+			isShiftPressed = true;
+			// Show original task when shift is pressed (with FULL opacity)
+			if (originalTaskElement) {
+				originalTaskElement.style.visibility = 'visible';
+				originalTaskElement.style.opacity = '1'; // Full opacity instead of dimmed
+			}
+		}
+	}
+
+	function handleKeyUp(event) {
+		if (event.key === 'Shift') {
+			isShiftPressed = false;
+			// Hide original task when shift is released
+			if (originalTaskElement && isDragging) {
+				originalTaskElement.style.visibility = 'hidden';
+			}
 		}
 	}
 </script>
