@@ -6,8 +6,6 @@
 	import List from '$lib/components/calendar/views/List.svelte';
 	import Calendar from '$lib/components/calendar/views/Calendar.svelte';
 	import Swimlane from '$lib/components/calendar/views/Swimlane.svelte';
-	import { fly } from 'svelte/transition';
-	import { quintOut } from 'svelte/easing';
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   
@@ -93,7 +91,7 @@ $: componentsToShow = [{ id: 1, component: activeComponent }];
     <!-- Only the component content is animated now -->
     <div class="component-container">
       {#each componentsToShow as { component } (component)}
-          <div transition:fly={{ delay: 0, duration: 90, x: 3000, y: 0, opacity: 0.5, easing: quintOut }}>
+          <div>
             <svelte:component this={component} reload={showModal} />
           </div>
       {/each}
