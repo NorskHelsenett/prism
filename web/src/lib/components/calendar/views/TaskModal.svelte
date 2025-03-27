@@ -472,6 +472,7 @@
 </div>
 
 <style>
+
   .two-column {
     display: grid;
     grid-template-columns: 1fr 2fr;
@@ -736,7 +737,9 @@
     display: flex;
     border-radius: 4px;
     overflow: hidden;
+    padding-bottom: 16px;
     margin-bottom: 16px;
+    border-bottom: 1px solid var(--tblr-border-color, #e6e7e9);
   }
   
   .btn-group .btn {
