@@ -74,6 +74,18 @@ go list -m -u all
 go get -u ./... #upgrade all packages
 
 bun update
+npm audit fix
+```
+
+#### Trivy scan
+```bash
+docker run --rm -v $(pwd):/project aquasec/trivy fs /project
+```
+
+#### OSV-scanner
+
+```bash
+docker run -it -v ${PWD}:/src ghcr.io/google/osv-scanner -r /src
 ```
 
 ### Weaving the Web Interface
