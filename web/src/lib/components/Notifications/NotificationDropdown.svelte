@@ -201,6 +201,8 @@
   .dropdown-menu {
     max-height: 35em;
     overflow: auto;
+    z-index: 1000000 !important;
+    padding-bottom: 20px;
   }
   .mw-400{
     min-width: 400px;
