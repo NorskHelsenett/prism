@@ -164,13 +164,6 @@
     window.removeEventListener('beforeunload', handleBeforeUnload);
   });
 
-  function updateHackers(event) {
-    if (!event) return;
-    task.hackers = event.detail
-    console.log('task.hackers', task.hackers);
-    dispatch('updateHackers', task.hackers);
-  }
-
   // Project selection state
   let projects = [];
   let showProjectDropdown = false;
@@ -240,6 +233,64 @@
       fetchProjects();
     }
   });
+
+  // Calculate workdays between two dates (excluding weekends)
+  function getWorkdayCount(startDate, endDate) {
+    // Convert string dates to Date objects
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // Initialize counter
+    let count = 0;
+    
+    // Clone start date to avoid modifying it
+    const currentDate = new Date(start);
+    
+    // Loop through all days
+    while (currentDate <= end) {
+      // Check if current day is not a weekend (0 = Sunday, 6 = Saturday)
+      const dayOfWeek = currentDate.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        count++;
+      }
+      
+      // Move to next day
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return count;
+  }
+
+  // Calculate estimate based on hackers and workdays
+  function calculateEstimate(hackers, dateFrom, dateTo) {
+    const hackerCount = hackers?.length || 0;
+    
+    // If no hackers or no date range, return 0
+    if (hackerCount === 0 || !dateFrom || !dateTo) {
+      return 0;
+    }
+    
+    const workdayCount = getWorkdayCount(dateFrom, dateTo);
+    const hoursPerDay = 7.5;
+    
+    return Math.floor(workdayCount * hoursPerDay * hackerCount);
+  }
+
+  // Reactive statement to update estimate when relevant data changes
+  $: if (task && task.dateFrom && task.dateTo && task.hackers) {
+    task.estimate = calculateEstimate(task.hackers, task.dateFrom, task.dateTo);
+  }
+
+  function updateHackers(event) {
+    if (!event) return;
+    task.hackers = event.detail
+    console.log('task.hackers', task.hackers);
+    
+    // Update estimate when hackers change
+    task.estimate = calculateEstimate(task.hackers, task.dateFrom, task.dateTo);
+    
+    dispatch('updateHackers', task.hackers);
+  }
 </script>
 
 <svelte:window on:click={(e) => { closeColorPicker(e); closeProjectDropdown(e); }} />
