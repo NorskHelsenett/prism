@@ -192,6 +192,37 @@
     });
   }
 
+  async function updateProjects(task, event){
+    if (!event || !event.detail.projects) return;
+    
+    // Ensure projects list has unique IDs
+    const uniqueProjects = [];
+    const idSet = new Set();
+    
+    for (const project of event.detail.projects) {
+      if (!idSet.has(project.id)) {
+        idSet.add(project.id);
+        uniqueProjects.push(project);
+      }
+    }
+    
+    // Update local state first for immediate UI update
+    const taskIndex = calendarEvents.findIndex((e) => e.id === task.id);
+    if (taskIndex !== -1) {
+      calendarEvents[taskIndex].projects = uniqueProjects;
+      calendarEvents = [...calendarEvents]; // Trigger reactivity
+    }
+    
+    // Then update on the server
+    await Fetch(`/api/planning/${task.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ projects: uniqueProjects })
+    });
+  }
+
 	async function updateTitle(task, event) {
 		if (!event) return;
 		const title = event.detail.title;
@@ -1152,6 +1183,7 @@
 		on:updateHackers={(e) => updateHackers(selectedTask, e)}
 		on:colorchange={(e) => updateColor(selectedTask, e)}
 		on:titlechange={(e) => updateTitle(selectedTask, e)}
+    on:projectchange={(e) => updateProjects(selectedTask, e)}
 	/>
 {/if}
 

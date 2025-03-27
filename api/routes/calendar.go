@@ -83,13 +83,10 @@ func PatchAssessmentsHandler(c *gin.Context) {
 	}
 
 	// Apply patch data to the assessment
-	// This approach allows partial updates to the assessment
 	if color, ok := patchData["color"].(string); ok {
 			assessment.Color = color
 	}
 
-	// Add handling for other fields that might be patched in the future
-	// e.g., if title, ok := patchData["title"].(string); ok { assessment.Title = title }
 	if title, ok := patchData["title"].(string); ok { assessment.Title = title }
 
 	if startDate, ok := patchData["dateFrom"].(string); ok {
@@ -117,6 +114,19 @@ func PatchAssessmentsHandler(c *gin.Context) {
 		}
 		
 		assessment.Hackers = uniqueHackers
+	}
+
+	// Handle projects update - only store IDs
+	if projectsData, ok := patchData["projects"].([]interface{}); ok {
+		var projects []models.Project
+		for _, projectData := range projectsData {
+			if projectMap, ok := projectData.(map[string]interface{}); ok {
+				if id, ok := projectMap["id"].(float64); ok { // JSON numbers come as float64
+					projects = append(projects, models.Project{Id: uint(id)})
+				}
+			}
+		}
+		assessment.Projects = projects
 	}
 
 	// Validate the modified assessment
