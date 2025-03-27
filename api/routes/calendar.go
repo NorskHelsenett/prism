@@ -96,6 +96,10 @@ func PatchAssessmentsHandler(c *gin.Context) {
 		assessment.DateTo = endDate
 	}
 
+	if status, ok := patchData["status"].(string); ok {
+		assessment.Status = status
+	}
+
 	if hackers, ok := patchData["hackers"].([]interface{}); ok {
 		// Use a map to track unique emails
 		uniqueEmails := make(map[string]bool)

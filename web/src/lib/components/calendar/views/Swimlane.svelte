@@ -192,6 +192,28 @@
     });
   }
 
+  async function updateStatus(task, event) {
+    if (!event) return;
+
+    const status = event.detail.status
+    
+    // Update local state first for immediate UI update
+    const taskIndex = calendarEvents.findIndex((e) => e.id === task.id);
+    if (taskIndex !== -1) {
+      calendarEvents[taskIndex].status = status;
+      calendarEvents = [...calendarEvents]; // Trigger reactivity
+    }
+    
+    // Then update on the server
+    await Fetch(`/api/planning/${task.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ status: status })
+    });
+  }
+
   async function updateProjects(task, event){
     if (!event || !event.detail.projects) return;
     
@@ -1115,6 +1137,7 @@
 												<!-- svelte-ignore a11y-click-events-have-key-events -->
 												<!-- svelte-ignore a11y-no-static-element-interactions -->
 												<div
+                          class:task-done={calendar.status === 'done'}
 													class="task planningid-{calendar.id}"
 													on:click={(e) => handleTaskClick(e, calendar)}
 													on:mousedown={(e) => handleTaskDragStart(e, calendar, member)}
@@ -1184,6 +1207,7 @@
 		on:colorchange={(e) => updateColor(selectedTask, e)}
 		on:titlechange={(e) => updateTitle(selectedTask, e)}
     on:projectchange={(e) => updateProjects(selectedTask, e)}
+    on:statuschange={(e) => updateStatus(selectedTask, e)}
 	/>
 {/if}
 
@@ -1281,6 +1305,12 @@
 		filter: brightness(0.7) opacity(0.8);
 		z-index: 5; /* Lower than normal tasks */
 	}
+
+  .task-done {
+    opacity: 0.5;
+    z-index: 1;
+    /* border:none; */
+  }
 
 	/* Selection styling */
 	.cell-selecting {

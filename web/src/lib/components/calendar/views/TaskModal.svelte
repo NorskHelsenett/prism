@@ -281,6 +281,25 @@
     task.estimate = calculateEstimate(task.hackers, task.dateFrom, task.dateTo);
   }
 
+  // Define Kanban statuses
+  const kanbanStatuses = [
+    { id: 'todo', label: 'To Do', color: 'bg-secondary' },
+    { id: 'inprogress', label: 'In Progress', color: 'bg-primary' },
+    { id: 'done', label: 'Done', color: 'bg-success' },
+    { id: 'blocked', label: 'Blocked', color: 'bg-danger' }
+  ];
+
+  // Initialize status if not set
+  task.status = task.status || 'todo';
+
+  // Handle status change
+  function changeStatus(newStatus) {
+    if (task.status !== newStatus) {
+      task.status = newStatus;
+      dispatch('statuschange', { status: newStatus, task });
+    }
+  }
+
   function updateHackers(event) {
     if (!event) return;
     task.hackers = event.detail
@@ -324,6 +343,7 @@
         <h3 on:click={() => { isEditingTitle = true; setTimeout(() => titleInputRef?.focus(), 0); }}>{task.title}</h3>
       {/if}
     </div>
+    
   </div>
   
   {#if showColorPicker}
@@ -337,6 +357,22 @@
       </div>
     </div>
   {/if}
+
+  <div class="btn-group w-100" role="group">
+    {#each kanbanStatuses as status}
+      <input type="radio" 
+             class="btn-check" 
+             name="task-status" 
+             id="status-{status.id}" 
+             autocomplete="off"
+             checked={task.status === status.id}
+             on:change={() => changeStatus(status.id)}>
+      <label for="status-{status.id}" 
+             class="btn {status.color} {task.status !== status.id ? 'text-muted' : ''}">
+        {status.label}
+      </label>
+    {/each}
+  </div>
   
   <div class="modal-content">
     <div class="icon-column">
@@ -345,7 +381,6 @@
     <div class="text-column">
       <p><strong>Date:</strong> {task.dateFrom} to {task.dateTo}</p>
       <p><strong>Work Order:</strong> {task.workorder || 'N/A'}</p>
-      <p><strong>Status:</strong> {task.status || 'N/A'}</p>
     </div>
     <div class="icon-column">
       <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-mailbox"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 21v-6.5a3.5 3.5 0 0 0 -7 0v6.5h18v-6a4 4 0 0 0 -4 -4h-10.5" /><path d="M12 11v-8h4l2 2l-2 2h-4" /><path d="M6 15h1" /></svg>
@@ -422,8 +457,8 @@
   }
   
   .modal-header {
-    margin-bottom: 16px;
-    border-bottom: 1px solid var(--tblr-border-color, #e6e7e9);
+    /* margin-bottom: 16px; */
+    /* border-bottom: 1px solid var(--tblr-border-color, #e6e7e9); */
     padding-bottom: 16px;
     padding-right: 32px;
     padding-left: 0;
@@ -660,5 +695,57 @@
   
   .project-error {
     color: var(--tblr-danger, #d63939);
+  }
+
+  .btn-group {
+    display: flex;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  
+  .btn-group .btn {
+    flex: 1;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0;
+    border: 1px solid var(--tblr-border-color, #e6e7e9);
+    transition: all 0.2s ease;
+  }
+  
+  .btn-group .btn:first-child {
+    border-top-left-radius: 4px;
+    border-bottom-left-radius: 4px;
+  }
+  
+  .btn-group .btn:last-child {
+    border-top-right-radius: 4px;
+    border-bottom-right-radius: 4px;
+  }
+  
+  .btn-check {
+    position: absolute;
+    clip: rect(0, 0, 0, 0);
+    pointer-events: none;
+  }
+  
+  .btn-check:checked + .btn {
+    font-weight: 500;
+    opacity: 1;
+    color: #fff;
+  }
+  
+  .btn-check:not(:checked) + .btn {
+    background-color: var(--tblr-bg-surface, #fff) !important;
+    color: var(--tblr-muted, #6c757d) !important;
+  }
+  
+  .btn-check:not(:checked) + .btn:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+  }
+  
+  /* Remove previous styling that's no longer needed */
+  .status-buttons {
+    display: none;
   }
 </style>
