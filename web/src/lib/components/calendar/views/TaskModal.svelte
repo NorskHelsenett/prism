@@ -22,6 +22,10 @@
   let showColorPicker = false;
   let selectedColor = task.color || '#206bc4'; // Default color or from task
   
+  // Drag state
+  let isDragging = false;
+  let dragOffset = { x: 0, y: 0 };
+  
   const colors = [
     '#206bc4', // blue
     '#4299e1', // light blue
@@ -34,6 +38,41 @@
     '#0ca678', // teal
     '#6366f1'  // indigo
   ];
+  
+  // Drag functionality
+  function startDrag(event) {
+    if (event.button !== 0) return; // Only left mouse button
+    
+    isDragging = true;
+    
+    // Calculate offset from mouse position to modal corner
+    const modalRect = modalRef.getBoundingClientRect();
+    dragOffset = {
+      x: event.clientX - modalRect.left,
+      y: event.clientY - modalRect.top
+    };
+    
+    event.preventDefault();
+  }
+  
+  function drag(event) {
+    if (!isDragging) return;
+    
+    // Update modal position based on mouse position and offset
+    const left = event.clientX - dragOffset.x;
+    const top = event.clientY - dragOffset.y;
+    
+    modalPosition = {
+      top: `${top}px`,
+      left: `${left}px`
+    };
+    
+    event.preventDefault();
+  }
+  
+  function endDrag() {
+    isDragging = false;
+  }
   
   function selectColor(color) {
     selectedColor = color;
@@ -153,6 +192,8 @@
   
   onMount(() => {
     window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('mousemove', drag);
+    window.addEventListener('mouseup', endDrag);
   });
   
   onDestroy(() => {
@@ -162,6 +203,8 @@
       saveTitle();
     }
     window.removeEventListener('beforeunload', handleBeforeUnload);
+    window.removeEventListener('mousemove', drag);
+    window.removeEventListener('mouseup', endDrag);
   });
 
   // Project selection state
@@ -342,7 +385,7 @@
 
 <svelte:window on:click={(e) => { closeColorPicker(e); closeProjectDropdown(e); }} />
 
-<div class="task-modal" 
+<div class="task-modal {isDragging ? 'dragging' : ''}" 
      bind:this={modalRef}
      style="top: {modalPosition.top}; left: {modalPosition.left};"
      use:clickOutside on:outclick={onClose}>
@@ -372,6 +415,9 @@
       {/if}
     </div>
     
+    <div class="drag-handle" on:mousedown={startDrag}>
+      <Icon icon="arrows-move" />
+    </div>
   </div>
   
   {#if showColorPicker}
@@ -485,6 +531,7 @@
     border-radius: 12px;
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
     padding: 24px;
+    padding-top: 0px !important;
     width: 360px;
     z-index: 1000;
     max-width: 90vw;
@@ -498,6 +545,11 @@
     padding-bottom: 16px;
     padding-right: 32px;
     padding-left: 0;
+    padding-top: 16px;
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
   
   .title-container {
@@ -785,5 +837,36 @@
   /* Remove previous styling that's no longer needed */
   .status-buttons {
     display: none;
+  }
+
+  .drag-handle {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    cursor: move;
+    padding: 2px 10px;
+    border-radius: 0 0 4px 4px;
+    background-color: var(--tblr-bg-surface, #f8fafc);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--tblr-muted, #64748b);
+    border: 1px solid var(--tblr-border-color, #e6e7e9);
+    border-top: none;
+    font-size: 14px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+  
+  .drag-handle:hover {
+    color: var(--tblr-primary, #206bc4);
+    background-color: var(--tblr-bg-surface-secondary, #f1f5f9);
+  }
+  
+  .dragging {
+    cursor: move;
+    user-select: none;
+    opacity: 0.95;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
   }
 </style>
