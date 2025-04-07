@@ -27,7 +27,7 @@
 	let dragPreviewElement = null;
 	let originalTaskPosition = { dateFrom: null, dateTo: null, member: null };
 	let cellWidth = 50; // Default cell width (will be measured on drag start)
-	let weekendCellWidth = 20; // Width of weekend cells
+	let weekendCellWidth = 22; // Width of weekend cells
 	let originalTaskElement = null; // Add a reference to track the original element being dragged
 	let isShiftPressed = false; // Track if shift key is pressed during drag
 
@@ -417,7 +417,7 @@
 
 		let totalWidth = 0;
 		const regularDayWidth = 49; // Adjust based on your regular day width
-		const weekendDayWidth = 19; // From your CSS for weekend cells
+		const weekendDayWidth = 22; // From your CSS for weekend cells
 
 		for (let day = new Date(start); day <= end; day.setDate(day.getDate() + 1)) {
 			const isWeekend = day.getDay() === 0 || day.getDay() === 6;
@@ -1232,7 +1232,7 @@
 		{/if}
 
 		<div class="table-responsive small">
-			<table class="table table-vcenter card-table">
+			<table class="table card-table">
 				<thead>
 					<tr>
 						<th class="sticky-col first-col"></th>
@@ -1262,6 +1262,7 @@
 							</td>
 							{#each days as day}
 								<td
+									class="cell"
 									class:weekend={day.isWeekend}
 									on:mousedown={(e) => handleMouseDown(e, day, member)}
 									on:mousemove={(e) => handleMouseMove(e, day, member)}
@@ -1357,6 +1358,10 @@
 {/if}
 
 <style>
+
+	.cell{
+		padding:0;
+	}
 
   /* Show avatars by default */
   .task {
