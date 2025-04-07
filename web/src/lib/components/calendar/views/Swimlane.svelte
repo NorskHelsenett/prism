@@ -416,8 +416,8 @@
 		const end = new Date(endDate);
 
 		let totalWidth = 0;
-		const regularDayWidth = 49; // Adjust based on your regular day width
-		const weekendDayWidth = 22; // From your CSS for weekend cells
+		const regularDayWidth = 48; // Adjust based on your regular day width
+		const weekendDayWidth = 24; // From your CSS for weekend cells
 
 		for (let day = new Date(start); day <= end; day.setDate(day.getDate() + 1)) {
 			const isWeekend = day.getDay() === 0 || day.getDay() === 6;
