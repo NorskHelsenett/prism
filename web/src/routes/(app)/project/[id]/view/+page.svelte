@@ -149,9 +149,6 @@ let severityData = {
 
   </div>
 {/if}
-      <div class="page-body">
-    <div class="container-xl">
-    </div>
   </div>
 </div>
 
