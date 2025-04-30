@@ -149,7 +149,6 @@ let severityData = {
 
   </div>
 {/if}
-  </div>
 </div>
 
 <div class="row-deck row-cards" >
