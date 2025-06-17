@@ -355,6 +355,7 @@ func AuthMiddleware(store *session.SessionStore) gin.HandlerFunc {
 		c.Set("isGlobalProject", globalAccess(permissions, "/project"))
 		c.Set("isGlobalVulnerability", globalAccess(permissions, "/vulnerability"))
 		c.Set("role", role)
+		c.Set("isAdmin", role == "admin")
 
 		c.Next()
 	}
