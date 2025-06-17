@@ -7,7 +7,7 @@ metadata:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
-  ingressClassName: avi-ingress-class-internett
+  ingressClassName: {{ default "avi-ingress-class-helsenett" $value.ingress.classname }}
   tls:
   - hosts:
     - {{ $value.host }}
