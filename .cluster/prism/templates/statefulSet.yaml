@@ -24,7 +24,8 @@ spec:
         supplementalGroups:
           - 100
         runAsNonRoot: true
-        runAsUser: 1000
+        runAsUser: 101
+        fsGroup: 101
       containers:
       - name: {{ $key }}
         image: {{ $value.repository }}:{{ $value.tag | default "latest" }}
@@ -65,7 +66,7 @@ spec:
           privileged: false
           allowPrivilegeEscalation: false
           runAsNonRoot: true
-          runAsUser: 1000
+          runAsUser: 101
           runAsGroup: 101
           readOnlyRootFilesystem: true
       volumes:
