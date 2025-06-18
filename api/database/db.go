@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 
 	"runtime"
 	"time"
@@ -173,8 +174,16 @@ type AuditLog struct {
 var db *gorm.DB
 
 func InitDB() {
+	dbPath := config.AppConfig.Database.Path
+	fullPath := filepath.Join(dbPath, "prism.db")
+
+	// Ensure the directory exists
+	if err := os.MkdirAll(dbPath, os.ModePerm); err != nil {
+		log.Fatalf("Failed to create database directory '%s': %v", dbPath, err)
+	}
+
 	var err error
-	db, err = gorm.Open(sqlite.Open(config.AppConfig.Database.Path+"/prism.db?cache=shared&_synchronous=FULL"), &gorm.Config{})
+	db, err = gorm.Open(sqlite.Open(fullPath+"?cache=shared&_synchronous=FULL"), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to database at '%s': %v", config.AppConfig.Database.Path, err)
 		panic("failed to connect to the database")
