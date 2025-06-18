@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 
 	"runtime"
@@ -175,6 +176,7 @@ func InitDB() {
 	var err error
 	db, err = gorm.Open(sqlite.Open(config.AppConfig.Database.Path+"/prism.db?cache=shared&_synchronous=FULL"), &gorm.Config{})
 	if err != nil {
+		log.Fatalf("Failed to connect to database at '%s': %v", config.AppConfig.Database.Path, err)
 		panic("failed to connect to the database")
 	}
 
