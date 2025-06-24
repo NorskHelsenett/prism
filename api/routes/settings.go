@@ -33,8 +33,8 @@ func ImportData(c *gin.Context) {
 		return
 	}
 
-	// File size limitation (100 MB)
-	if file.Size > 100*1024*1024 {
+	// File size limitation (300 MB)
+	if file.Size > 300*1024*1024 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "File too large"})
 		return
 	}
