@@ -52,7 +52,7 @@
   </span>
   <div class="text-secondary">This task will execute the following</div>
   <ul class="text-secondary">
-    <li>Permanently delete all <strong class="text-azure">soft-deleted</strong> resources
+    <li>Permanently <strong class="text-orange">DELETE</strong> all <span class="text-azure">soft-deleted</span> resources
       <ul>
         <li>Vulnerabilities</li>
         <li>Projects</li>
@@ -61,7 +61,7 @@
       </ul>
     </li>
     <li>
-      <span class="text-azure">Dangling</span>  images will be marked as <span class="text-orange">deleted.</span>
+      <strong class="text-azure">DANGLING</strong>  images will be marked as <strong class="text-orange">DELETED.</strong>
     </li>
     <li><strong class="text-azure">VACUUM</strong> the database</li>
     <li><strong class="text-azure">REINDEX</strong> the database</li>

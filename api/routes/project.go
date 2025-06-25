@@ -3,6 +3,7 @@ package routes
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -13,23 +14,42 @@ import (
 func GetProjects(c *gin.Context) {
 	isGlobal, _ := c.Get("isGlobalProject")
 
-	if isGlobal.(bool) == true {
-		projects, err := database.GetProjects()
+	var dbProjects []database.ProjectData
+	var err error
+
+	if isGlobal == true {
+		dbProjects, err = database.GetProjects()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusOK, projects)
-		return
 	} else {
 		email, _ := c.Get("email")
-		projects, err := database.GetProjectsFor(email.(string))
+		dbProjects, err = database.GetProjectsFor(email.(string))
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusOK, projects)
 	}
+
+	// Map database projects to simplified Project struct
+	projects := make([]struct {
+		ID          uint      `json:"ID"`
+		Name        string    `json:"ProjectName"`
+		CreatedAt   time.Time `json:"CreatedAt"`
+		IsBugBounty bool      `json:"IsBugBounty"`
+		ClientEmail string    `json:"ClientEmail"`
+	}, len(dbProjects))
+
+	for i, p := range dbProjects {
+		projects[i].ID = p.ID
+		projects[i].Name = p.ProjectName
+		projects[i].CreatedAt = p.CreatedAt
+		projects[i].IsBugBounty = p.IsBugBounty
+		projects[i].ClientEmail = p.ClientEmail
+	}
+
+	c.JSON(http.StatusOK, projects)
 }
 
 func HandleProjectPut(c *gin.Context) {
@@ -96,7 +116,21 @@ func GetProject(c *gin.Context) {
 
 	id := uint(projectID)
 
-	project, _ := database.GetProject(id)
+	dbProject, err := database.GetProject(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Map database project to simplified Project struct
+	project := struct {
+		ID   uint   `json:"ID"`
+		Name string `json:"ProjectName"`
+	}{
+		ID:   dbProject.ID,
+		Name: dbProject.ProjectName,
+	}
+
 	c.JSON(http.StatusOK, project)
 }
 

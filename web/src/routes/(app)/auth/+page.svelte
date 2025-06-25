@@ -67,9 +67,7 @@
           </div>
           <div class="col-12">
             <div class="btn-list justify-content-end">
-
                 <button disabled={!warningAccepted} class="btn btn-teal btn-ghost-teal d-none d-sm-inline-block" on:click={() => alreadyActivated = true}>Continue</button>
-
             </div>
           </div>
         </div>
