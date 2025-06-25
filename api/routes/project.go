@@ -102,6 +102,7 @@ func HandleProjectPost(c *gin.Context) {
 }
 
 func GetProject(c *gin.Context) {
+
 	projectIDStr := c.Param("projectID")
 	if projectIDStr == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Project ID is required"})
@@ -119,6 +120,15 @@ func GetProject(c *gin.Context) {
 	dbProject, err := database.GetProject(id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Check if full data is requested
+	full := c.Query("full") == "true"
+	
+	if full {
+		// Return full project data
+		c.JSON(http.StatusOK, dbProject)
 		return
 	}
 

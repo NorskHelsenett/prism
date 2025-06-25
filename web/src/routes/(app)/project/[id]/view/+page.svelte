@@ -45,7 +45,7 @@
   }
   async function fetchProjectData() {
     try {
-      const response = await Fetch(`/api/project/${data.id}`);
+      const response = await Fetch(`/api/project/${data.id}?full=true`);
       project = response;
 
       const totalResponse = await Fetch(`/api/project/${project.ID}/vulnerabilities/total`);
