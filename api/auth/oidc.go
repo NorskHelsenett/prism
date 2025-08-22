@@ -131,6 +131,32 @@ func globalAccess(permissions []config.Permission, path string) bool {
 	return globalAccessProject && globalAccessVulnerability
 }
 
+func ShareMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		role, exists := c.Get("role")
+		if !exists {
+			c.AbortWithStatus(http.StatusForbidden)
+			return
+		}
+
+		isGlobal, _ := c.Get("isGlobalVulnerability")
+
+		if isGlobal.(bool) {
+			c.Next()
+			return
+		}
+
+		roles := config.AppConfig.Roles[role.(string)]
+
+		if hasPermission(roles, "write", "/vulnerability") {
+			c.Next()
+			return
+		}
+
+		c.AbortWithStatus(http.StatusForbidden)
+	}
+}
+
 func ACLMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		projectID := c.Param("projectID")

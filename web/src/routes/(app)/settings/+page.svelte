@@ -35,7 +35,9 @@
           <div class="list-group list-group-transparent">
             <a href="#" class:active="{activeComponent === Profile}" class="list-group-item list-group-item-action d-flex align-items-center" on:click|preventDefault={() => show(Profile)}>My Account</a>
             <a href="#" class:active="{activeComponent === APIKeys}" class="list-group-item list-group-item-action d-flex align-items-center" on:click|preventDefault={() => show(APIKeys)}>API keys</a>
+            {#if $accessLevels["/vulnerability"].write}
             <a href="#" class:active="{activeComponent === ShareDocs}" class="list-group-item list-group-item-action" on:click|preventDefault={() => show(ShareDocs)}>Public Links</a>
+            {/if}
             <a href="#" class:active="{activeComponent === About}" class="list-group-item list-group-item-action d-flex align-items-center" on:click|preventDefault={() => show(About)}>About</a>
           </div>
           {#if $accessLevels["/settings"]}

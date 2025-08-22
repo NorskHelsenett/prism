@@ -195,6 +195,7 @@ func GetAll(c *gin.Context) {
 	var filteredShares []models.SharedDocument
 	for _, share := range *allShares {
 		if contains(intersectedIds, share.DocumentID) {
+			share.Passphrase = ""
 			filteredShares = append(filteredShares, share)
 		}
 	}

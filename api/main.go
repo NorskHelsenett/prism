@@ -96,8 +96,6 @@ func main() {
 		apiRoutes.PUT("/planning/:id", routes.PutAssessmentsHandler)
 		apiRoutes.DELETE("/planning/:id", routes.DeleteAssessmentsHandler)
 
-		apiRoutes.GET("/vulnerability/share/all", share.GetAll)
-
 		// Group with ACL middleware
 		protectedRoutes := apiRoutes.Group("/")
 		{
@@ -119,10 +117,17 @@ func main() {
 			protectedRoutes.DELETE("/vulnerability/:findingsID/comment/:cid", routes.DeleteComment)
 			protectedRoutes.PUT("/vulnerability/:findingsID/status/:status", routes.ChangeStatusVulnerability)
 
-			protectedRoutes.GET("/vulnerability/share/:findingsID", share.GetShareVulnerability)
-			protectedRoutes.POST("/vulnerability/share/:findingsID", share.ShareVulnerability)
-			protectedRoutes.DELETE("/vulnerability/share/:findingsID", share.DeleteShareVulnerability)
-			protectedRoutes.PUT("/vulnerability/share/:findingsID", share.ShareVulnerability)
+			shareRoutes := apiRoutes.Group("/")
+			{
+
+				shareRoutes.Use(auth.ShareMiddleware())
+
+				shareRoutes.GET("/vulnerability/share/all", share.GetAll)
+				shareRoutes.GET("/vulnerability/share/:findingsID", share.GetShareVulnerability)
+				shareRoutes.POST("/vulnerability/share/:findingsID", share.ShareVulnerability)
+				shareRoutes.DELETE("/vulnerability/share/:findingsID", share.DeleteShareVulnerability)
+				shareRoutes.PUT("/vulnerability/share/:findingsID", share.ShareVulnerability)
+			}
 		}
 
 		apiRoutes.POST("/project", routes.HandleProjectPost)
