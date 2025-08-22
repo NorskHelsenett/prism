@@ -64,6 +64,7 @@ func WSHandler(c *gin.Context) {
 }
 
 func sendWebsocketMessageFor(cookie auth.UserInfo, conn *websocket.Conn) bool {
+	return false //@todo fix notification implementation
 	notifications, err := database.GetNotifications(cookie.Email)
 	if err != nil {
 		fmt.Printf("Error getting notifications: %v\n", err)
