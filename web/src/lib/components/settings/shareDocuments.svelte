@@ -80,7 +80,7 @@
       {#each publiclinks as link}
       <tr>
         <td>{formatDate(link.createdAt)}</td>
-        <td> <a href="vulnerability/{link.documentId}/view">{link.documentId}</a></td>
+        <td> <a href="/vulnerability/{link.documentId}/view">{link.documentId}</a></td>
         <td>{link.sharedByEmail}</td>
         <td class="text-azure">{link.accessType}
         </td>
