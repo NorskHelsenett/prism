@@ -111,6 +111,8 @@ func GetNotificationsHandler(c *gin.Context) {
 		return
 	}
 
+	notifications = []models.Notification{}
+
 	c.JSON(http.StatusOK, notifications)
 }
 
