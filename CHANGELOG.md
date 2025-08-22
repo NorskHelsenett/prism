@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.14] - 2025-08-22
+
+### Added
+- **� Security & Access Control:**
+  - ShareMiddleware implementation for vulnerability sharing access control
+
+### Changed
+- **⚡ Performance:**
+  - Increased rate limit from 12 to 60 requests per minute
+
+### Fixed
+- **🔗 Links:**
+  - Updated link path for document view in public links table
+
+## [0.1.13] - 2025-03-27
+
+### Added
+- **📋 Task Management:**
+  - Drag-and-drop functionality for task modal with shift key support for task visibility
+  - Task status management with Kanban integration in TaskModal and Swimlane
+  - Workday calculation and estimate update functionality in task modal
+  - Project selection and update handling in task modal
+  - Dynamic routing and component transitions for planning page
+
+### Fixed
+
+- **🔒 Access Control:**  
+  - Fixes access control for the document sharing, making it more align with an RBAC model. Ref #524
+
 ## [0.1.13] - 2025-03-26
 
 ### Added
