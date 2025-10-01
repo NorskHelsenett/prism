@@ -278,7 +278,7 @@ func RetrieveAssessmentsHandler(c *gin.Context) {
 	if page < 1 {
 		page = DefaultPage
 	}
-	if pageSize <= 0 || pageSize > 100 { // Assuming a max of 100 items per page for sanity
+	if pageSize <= 1 { // Assuming a max of 100 items per page for sanity
 		pageSize = DefaultPageSize
 	}
 
