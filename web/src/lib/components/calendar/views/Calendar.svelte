@@ -8,7 +8,7 @@
 onMount(async () => {fetchCalendarEvents})
 
 async function fetchCalendarEvents() {
-  calendarEvents = await Fetch("/api/planning")
+  calendarEvents = await Fetch("/api/planning?pageSize=${1000}")
 }
 
 $: if (!reload) {

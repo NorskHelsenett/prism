@@ -344,7 +344,7 @@
 	async function fetchCalendarEvents() {
 		try {
 			const events = await Fetch(
-				`/api/planning?startDate=${formatDateToISO(startDate)}&endDate=${formatDateToISO(endDate)}`
+				`/api/planning?startDate=${formatDateToISO(startDate)}&endDate=${formatDateToISO(endDate)}&pageSize=${1000}`
 			);
 
 			// Process all events to add calculated properties

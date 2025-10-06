@@ -28,7 +28,7 @@ async function fetchCalendarEvents() {
   const today = new Date().getFullYear()
   const startDate = `${today}-01-01`
   const endDate = `${today}-12-31`
-  calendarEvents = await Fetch(`/api/planning?startDate=${startDate}&endDate=${endDate}`)
+  calendarEvents = await Fetch(`/api/planning?startDate=${startDate}&endDate=${endDate}&pageSize=${1000}`);
 }
 
 $: if (!reload) {
