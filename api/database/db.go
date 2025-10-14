@@ -482,8 +482,8 @@ func CreateNotification(email string, notification models.Notification) error {
 
 	// Unmarshal the JSON notifications into a slice
 	var notifications []models.Notification
-	// Check if the JSON field is not nil before unmarshalling
-	if userData.Notifications != nil && len(userData.Notifications) > 0 {
+	// Check if the JSON field has content before unmarshalling
+	if len(userData.Notifications) > 0 {
 		if err := json.Unmarshal(userData.Notifications, &notifications); err != nil {
 			return err
 		}
@@ -555,8 +555,8 @@ func GetNotifications(email string) ([]models.Notification, error) {
 
 	var notifications []models.Notification
 
-	// Check if the JSON field is not nil before unmarshalling
-	if userData.Notifications != nil && len(userData.Notifications) > 0 {
+	// Check if the JSON field has content before unmarshalling
+	if len(userData.Notifications) > 0 {
 		if err := json.Unmarshal(userData.Notifications, &notifications); err != nil {
 			return nil, err
 		}
@@ -1178,7 +1178,7 @@ func GetPreferencesForUser(email string) (models.UserSettings, error) {
 	}
 
 	// If user has no settings yet, return empty preferences
-	if user.Settings == nil || len(user.Settings) == 0 {
+	if len(user.Settings) == 0 {
 		return preferences, nil
 	}
 
@@ -1476,6 +1476,71 @@ type MinifiedVulnerability struct {
 	IsPublicFacing bool   `json:"isPublicFacing"`
 	Criticality    string `json:"criticality"`
 	Date           string `json:"date"`
+	Visibility     string `json:"visibility"`
+}
+
+type vulnerabilityAccessEnvelope struct {
+	Visibility string `json:"visibility"`
+	AssignedTo string `json:"assignedTo"`
+}
+
+func isRestrictedVisibility(visibility string) bool {
+	vis := strings.ToLower(strings.TrimSpace(visibility))
+	switch vis {
+	case "", "published", "public":
+		return false
+	case "undisclosed", "hidden", "private":
+		return true
+	default:
+		return vis != ""
+	}
+}
+
+// CanViewVulnerability determines whether a user has access to the provided vulnerability entry.
+// Administrators (isGlobal == true) always have access. For restricted visibilities, only the reporter
+// (FoundBy) and explicitly assigned user(s) may view the record.
+func CanViewVulnerability(vulnerability JSONData, email string, isGlobal bool) bool {
+	if isGlobal {
+		return true
+	}
+
+	if strings.EqualFold(strings.TrimSpace(vulnerability.FoundBy), strings.TrimSpace(email)) {
+		return true
+	}
+
+	var envelope vulnerabilityAccessEnvelope
+	if err := json.Unmarshal(vulnerability.Vulnerability, &envelope); err != nil {
+		// If we cannot parse the payload, preserve existing behaviour by allowing access.
+		return true
+	}
+
+	if !isRestrictedVisibility(envelope.Visibility) {
+		return true
+	}
+
+	for _, assigned := range strings.Split(envelope.AssignedTo, ",") {
+		if strings.EqualFold(strings.TrimSpace(assigned), strings.TrimSpace(email)) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// FilterJSONDataForUser returns only the vulnerabilities the user is allowed to view.
+func FilterJSONDataForUser(jsonData []JSONData, email string, isGlobal bool) []JSONData {
+	if isGlobal || len(jsonData) == 0 {
+		return jsonData
+	}
+
+	filtered := make([]JSONData, 0, len(jsonData))
+	for _, item := range jsonData {
+		if CanViewVulnerability(item, email, isGlobal) {
+			filtered = append(filtered, item)
+		}
+	}
+
+	return filtered
 }
 
 func GetVulnerabilityIds(isGlobal bool, email string, ids []uint) ([]uint, error) {
@@ -1500,6 +1565,21 @@ func GetVulnerabilityIds(isGlobal bool, email string, ids []uint) ([]uint, error
 		return nil, err
 	}
 
+	if !isGlobal && len(accessibleIds) > 0 {
+		var records []JSONData
+		if err := db.Where("id IN ?", accessibleIds).Find(&records).Error; err != nil {
+			return nil, err
+		}
+
+		filtered := make([]uint, 0, len(records))
+		for _, record := range records {
+			if CanViewVulnerability(record, email, false) {
+				filtered = append(filtered, record.ID)
+			}
+		}
+		accessibleIds = filtered
+	}
+
 	return accessibleIds, nil
 }
 
@@ -1512,7 +1592,8 @@ func AllVulnerabilities(all bool, email string) ([]MinimalJSONData, error) {
 			Select("json_data.*, json_extract(json_data.vulnerability, '$.title') as vulnerability_title, json_extract(json_data.vulnerability, '$.isPublicFacing') as vulnerability_isPublicFacing, json_extract(json_data.vulnerability, '$.criticality') as vulnerability_criticality, json_extract(json_data.vulnerability, '$.date') as vulnerability_date, json_extract(json_data.vulnerability, '$.visibility') as vulnerability_visibility").
 			Order("json_data.created_at desc").
 			Find(&jsonData)
-		return minifiedVulnerabilityJSON(jsonData), result.Error
+		filtered := FilterJSONDataForUser(jsonData, email, all)
+		return minifiedVulnerabilityJSON(filtered), result.Error
 
 	} else {
 		// Non-admin: Find all project IDs where the email is in "client_email"
@@ -1533,7 +1614,8 @@ func AllVulnerabilities(all bool, email string) ([]MinimalJSONData, error) {
 			Order("json_data.created_at desc").
 			Find(&jsonData)
 
-		return minifiedVulnerabilityJSON(jsonData), result.Error
+		filtered := FilterJSONDataForUser(jsonData, email, all)
+		return minifiedVulnerabilityJSON(filtered), result.Error
 	}
 }
 
