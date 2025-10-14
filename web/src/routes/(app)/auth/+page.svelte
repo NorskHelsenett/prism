@@ -3,8 +3,9 @@
   import SvgQR from '@svelte-put/qr/svg/QR.svelte';
 	import { Fetch } from '$lib/fetchUtil';
 	import OtpField from '$lib/components/otp-field.svelte';
-  let data;
-  let alreadyActivated = false
+  let otpData;
+  let showOtpEntry = false;
+  let canGoBackToQr = false;
 
   onMount(async () => {
 
@@ -13,9 +14,10 @@
       window.location.href = redirectShare
     }
 
-    data = await Fetch('/api/session/otp/generate');
-    if (data?.otp_activated){
-      alreadyActivated = data.otp_activated
+    otpData = await Fetch('/api/session/otp/generate');
+    if (otpData?.otp_activated){
+      showOtpEntry = true
+      canGoBackToQr = false
     }
   });
 
@@ -36,7 +38,7 @@
             <img src="/logo.png" width="110" height="32" alt="PRIME" class="navbar-brand-image">
           </a>
         </div>
-        {#if !alreadyActivated && data?.url}
+        {#if !showOtpEntry && otpData?.url}
         <div class="card card-md" style="max-height: 80vh;">
           <div class="card-body text-center py-4 p-sm-5">
             <h1 class="mt-5 text-teal">Almost there!</h1>
@@ -45,13 +47,13 @@
           <div class="hr-text hr-text-center hr-text-spaceless">QR Code</div>
           <div class="card-body mb-3">
             <div class="mb-3 d-flex justify-content-center mh-20 cursor-pointer" on:click={() => showSecret =!showSecret}>
-                <SvgQR class="text-teal bg-transparent blur" data={data.url} {logo} shape="circle"/>
+                <SvgQR class="text-teal bg-transparent blur" data={otpData.url} {logo} shape="circle"/>
                 {#if showSecret}
                 <div id="secret-box" class="card card-body text-teal">
                   <p class="text-secondary">
                     <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-info-circle"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M12 9h.01" /><path d="M11 12h1v4h1" /></svg>
                     Enter this code without the spaces</p>
-                  <p class="d-flex justify-content-center code-text">{addSpacesToText(data.secret)}</p>
+                  <p class="d-flex justify-content-center code-text">{addSpacesToText(otpData.secret)}</p>
                 </div>
               {/if}
             </div>
@@ -67,7 +69,10 @@
           </div>
           <div class="col-12">
             <div class="btn-list justify-content-end">
-                <button disabled={!warningAccepted} class="btn btn-teal btn-ghost-teal d-none d-sm-inline-block" on:click={() => alreadyActivated = true}>Continue</button>
+                <button disabled={!warningAccepted} class="btn btn-teal btn-ghost-teal d-none d-sm-inline-block" on:click={() => {
+                  showOtpEntry = true;
+                  canGoBackToQr = true;
+                }}>Continue</button>
             </div>
           </div>
         </div>
@@ -80,8 +85,16 @@
           </div>
           <div class="hr-text hr-text-center hr-text-spaceless">TOTP</div>
           <div class="card-body mb-3">
-            <OtpField />
+            <OtpField requiresActivation={!otpData?.otp_activated} />
           </div>
+          {#if canGoBackToQr}
+            <div class="card-footer d-flex justify-content-start">
+              <button class="btn btn-outline-secondary" on:click={() => {
+                showSecret = false;
+                showOtpEntry = false;
+              }}>Back to QR</button>
+            </div>
+          {/if}
           </div>
           {/if}
       </div>
