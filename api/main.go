@@ -81,8 +81,8 @@ func main() {
 		apiRoutes.DELETE("/profile/apikey/:id", routes.DeleteAPIKey)
 
 		apiRoutes.GET("/session/otp/generate", session.HandleOTPGenerate)
-		apiRoutes.PATCH("/session/otp/generate", session.HandleOTPGenerateConfirm)
-		apiRoutes.POST("/session/otp/validate", func(c *gin.Context) { session.HandleOTPValidate(c, sessionStore) })
+		apiRoutes.PATCH("/session/otp/generate", middleware.RateLimiter(), session.HandleOTPGenerateConfirm)
+		apiRoutes.POST("/session/otp/validate", middleware.RateLimiter(), func(c *gin.Context) { session.HandleOTPValidate(c, sessionStore) })
 		apiRoutes.GET("/session/otp/reset", func(c *gin.Context) { session.HandleOTPReset(c, sessionStore) })
 		apiRoutes.GET("/session/all", func(c *gin.Context) { session.GetUserSessions(c, sessionStore) })
 		apiRoutes.DELETE("/session/:uuid", func(c *gin.Context) { session.DeleteUserSession(c, sessionStore) })

@@ -27,18 +27,41 @@ var (
 	pendingSecretTTL = 10 * time.Minute
 )
 
+func init() {
+	// Start background cleanup goroutine for expired pending secrets
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			cleanupExpiredSecrets()
+		}
+	}()
+}
+
+func cleanupExpiredSecrets() {
+	pendingSecretsMu.Lock()
+	defer pendingSecretsMu.Unlock()
+
+	now := time.Now()
+	for email, entry := range pendingSecrets {
+		if now.Sub(entry.createdAt) > pendingSecretTTL {
+			delete(pendingSecrets, email)
+		}
+	}
+}
+
 func getPendingSecret(email string) (*otp, bool) {
-	pendingSecretsMu.RLock()
+	pendingSecretsMu.Lock()
+	defer pendingSecretsMu.Unlock()
+
 	entry, ok := pendingSecrets[email]
-	pendingSecretsMu.RUnlock()
 	if !ok {
 		return nil, false
 	}
 
 	if time.Since(entry.createdAt) > pendingSecretTTL {
-		pendingSecretsMu.Lock()
 		delete(pendingSecrets, email)
-		pendingSecretsMu.Unlock()
 		return nil, false
 	}
 
