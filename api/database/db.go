@@ -730,14 +730,14 @@ func GetFilteredVulnerabilities(isGlobal bool, email string, year string, status
 
 	if !isGlobal {
 		// Non-admin: Find all project IDs where the email is in "client_email" or "hacker_name"
-		emailPattern := "%" + email + "%"
+		// Use exact match with comma separators to avoid substring attacks
 		subQuery := db.Table("project_data").
 			Select("id").
-			Where("client_email LIKE ? OR hacker_name LIKE ?", emailPattern, emailPattern)
+			Where("(',' || client_email || ',') LIKE ? OR (',' || hacker_name || ',') LIKE ?", "%,"+email+",%", "%,"+email+",%")
 
 		query = query.Where(
 			db.Where("project_id IN (?) AND deleted_at IS NULL", subQuery).
-				Or("found_by LIKE ? AND deleted_at IS NULL", email))
+				Or("found_by = ? AND deleted_at IS NULL", email))
 	}
 
 	if year != "" {
@@ -1510,8 +1510,8 @@ func CanViewVulnerability(vulnerability JSONData, email string, isGlobal bool) b
 
 	var envelope vulnerabilityAccessEnvelope
 	if err := json.Unmarshal(vulnerability.Vulnerability, &envelope); err != nil {
-		// If we cannot parse the payload, preserve existing behaviour by allowing access.
-		return true
+		// Fail-secure: deny access if we cannot parse the payload
+		return false
 	}
 
 	if !isRestrictedVisibility(envelope.Visibility) {
@@ -1555,8 +1555,8 @@ func GetVulnerabilityIds(isGlobal bool, email string, ids []uint) ([]uint, error
 			db.Where("json_data.project_id IN (?) AND deleted_at IS NULL",
 				db.Table("project_data").
 					Select("id").
-					Where("client_email LIKE ? OR hacker_name LIKE ?", "%"+email+"%", "%"+email+"%"),
-			).Or("json_data.found_by LIKE ? AND deleted_at IS NULL", "%"+email+"%"),
+					Where("client_email = ? OR hacker_name = ?", email, email),
+			).Or("json_data.found_by = ? AND deleted_at IS NULL", email),
 		)
 	}
 
@@ -1598,8 +1598,11 @@ func AllVulnerabilities(all bool, email string) ([]MinimalJSONData, error) {
 	} else {
 		// Non-admin: Find all project IDs where the email is in "client_email"
 		var projectIDs []uint
-		emailPattern := "%" + email + "%"
-		db.Model(&ProjectData{}).Where("client_email LIKE ?", emailPattern).Or("hacker_name LIKE ?", emailPattern).Pluck("id", &projectIDs)
+		// Use exact match with comma separators to avoid substring attacks
+		db.Model(&ProjectData{}).
+			Where("(',' || client_email || ',') LIKE ?", "%,"+email+",%").
+			Or("(',' || hacker_name || ',') LIKE ?", "%,"+email+",%").
+			Pluck("id", &projectIDs)
 
 		if len(projectIDs) == 0 {
 			// No projects found for this email, return empty jsonData
@@ -1652,8 +1655,9 @@ func GetProjectsFor(email string) ([]ProjectData, error) {
 	var projects []ProjectData
 
 	// Prepare the database query to find projects where the email is in the ClientEmail list
-	emailPattern := "%" + email + "%"
-	db := db.Where("client_email LIKE ?", emailPattern).Or("hacker_name LIKE ?", emailPattern)
+	// Use exact match with comma separators to avoid substring attacks
+	db := db.Where("(',' || client_email || ',') LIKE ?", "%,"+email+",%").
+		Or("(',' || hacker_name || ',') LIKE ?", "%,"+email+",%")
 
 	// Execute the query and sort the results by ProjectName in ascending order
 	db = db.Order("project_name ASC").Find(&projects)
