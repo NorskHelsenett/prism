@@ -1,0 +1,73 @@
+vulnerability_id,user_email,should_access,reason,test_category
+
+1,charlie@test.com,false,Hidden visibility - client of project,hidden_restricted
+2,charlie@test.com,true,Undisclosed vulnerabilty - is assigned to vulnerability,hidden_restricted
+6,charlie@test.com,false,Undisclosed vulnerabilty - even though client of project,hidden_restricted
+7,charlie@test.com,false,Undisclosed vulnerabilty - even though client of project,hidden_restricted
+3,charlie@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
+4,charlie@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
+5,charlie@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
+8,charlie@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
+9,charlie@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
+10,charlie@test.com,false,Undisclosed vulnerabilty - Not access to vulnerabilty,hidden_restricted
+11,charlie@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
+
+1,alice@test.com,true,Admin has global access,admin_access
+2,alice@test.com,true,Admin has global access,admin_access
+3,alice@test.com,true,Admin has global access,admin_access
+4,alice@test.com,true,Admin has global access,admin_access
+5,alice@test.com,true,Admin has global access,admin_access
+6,alice@test.com,true,Admin has global access,admin_access
+7,alice@test.com,true,Admin has global access,admin_access
+8,alice@test.com,true,Admin has global access,admin_access
+9,alice@test.com,true,Admin has global access,admin_access
+10,alice@test.com,true,Admin has global access,admin_access
+11,alice@test.com,true,Admin has global access,admin_access
+
+1,bob@test.com,true,Pentester has global read and write,public_access
+2,bob@test.com,true,Pentester has global read and write,public_access
+3,bob@test.com,true,Pentester has global read and write,public_access
+4,bob@test.com,true,Pentester has global read and write,public_access
+5,bob@test.com,true,Pentester has global read and write,public_access
+6,bob@test.com,true,Pentester has global read and write,public_access
+7,bob@test.com,true,Pentester has global read and write,public_access
+8,bob@test.com,true,Pentester has global read and write,public_access
+9,bob@test.com,true,Pentester has global read and write,public_access
+10,bob@test.com,true,Pentester has global read and write,public_access
+11,bob@test.com,true,Pentester has global read and write,public_access
+
+1,frank@test.com,true,Global viewer role has access,public_access
+2,frank@test.com,true,Global viewer role has access,public_access
+3,frank@test.com,true,Global viewer role has access,public_access
+4,frank@test.com,true,Global viewer role has access,public_access
+5,frank@test.com,true,Global viewer role has access,public_access
+6,frank@test.com,true,Global viewer role has access,public_access
+7,frank@test.com,true,Global viewer role has access,public_access
+8,frank@test.com,true,Global viewer role has access,public_access
+9,frank@test.com,true,Global viewer role has access,public_access
+10,frank@test.com,true,Global viewer role has access,public_access
+11,frank@test.com,true,Global viewer role has access,public_access
+
+1,eve@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
+2,eve@test.com,false,Undisclosed vulnerabilty - Visitor,hidden_restricted
+3,eve@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
+4,eve@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
+5,eve@test.com,true,Found vulnerability,hidden_restricted
+6,eve@test.com,false,Undisclosed vulnerabilty - Visitor,hidden_restricted
+7,eve@test.com,false,Undisclosed vulnerabilty - Visitor,hidden_restricted
+8,eve@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
+9,eve@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
+10,eve@test.com,false,Undisclosed vulnerabilty - Visitor,hidden_restricted
+11,eve@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
+
+1,diana@test.com,false,PET not access to Project 1,hidden_restricted
+2,diana@test.com,false,Undisclosed vulnerabilty - PET not access to Project 1,hidden_restricted
+3,diana@test.com,true,PET - access to vulnerability by project 2,hidden_restricted
+4,diana@test.com,true,PET - access to vulnerability by project 2,hidden_restricted
+5,diana@test.com,false,PET not access to Project 1,hidden_restricted
+6,diana@test.com,false,Undisclosed vulnerabilty - PET not access to Project 1,hidden_restricted
+7,diana@test.com,false,Undisclosed vulnerabilty - PET not access to Project 1,hidden_restricted
+8,diana@test.com,true,PET - access to vulnerability by project,hidden_restricted
+9,diana@test.com,false,PET - vulnerability in no project,hidden_restricted
+10,diana@test.com,false,Undisclosed vulnerabilty - PET access to project 2,hidden_restricted
+11,diana@test.com,true,Reporter of vulnerability - no project,hidden_restricted

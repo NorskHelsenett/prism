@@ -1,0 +1,36 @@
+# Test data and temporary files
+test-data/
+*.db
+*.db-shm
+*.db-wal
+
+# Generated reports (keep structure, ignore content)
+reports/*.json
+reports/*.html
+!reports/README.md
+
+# Benchmark results
+benchmark/*.out
+benchmark/*.prof
+*.test
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Logs
+*.log
+
+# Docker volumes
+.docker-volumes/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

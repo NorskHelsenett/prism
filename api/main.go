@@ -111,6 +111,7 @@ func main() {
 			protectedRoutes.DELETE("/project/:projectID", routes.DeleteProject)
 
 			protectedRoutes.PUT("/vulnerability/:findingsID", routes.PutVulnerability)
+			protectedRoutes.PATCH("/vulnerability/:findingsID", routes.PatchVulnerability)
 			protectedRoutes.DELETE("/vulnerability/:findingsID", routes.DeleteVulnerability)
 
 			protectedRoutes.POST("/vulnerability/:findingsID/comment", routes.NewComment)

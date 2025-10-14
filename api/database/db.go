@@ -135,7 +135,7 @@ type Metrics struct {
 
 type UserData struct {
 	gorm.Model
-	Email         string         `json:"email"`
+	Email         string         `json:"email" gorm:"uniqueIndex"`
 	Name          string         `json:"name"`
 	Picture       string         `json:"picture"`
 	Role          string         `json:"role" gorm:"default:visitor"`
@@ -1457,6 +1457,40 @@ func UpdateVulnerability(jsonData *JSONData) error {
 	}
 
 	return nil // Return nil if no error occurred
+}
+
+// UpdateVulnerabilityJSON updates only the vulnerability JSON column for a given record ID.
+// This is useful for PATCH-style partial updates where only parts of the JSON blob are changed.
+func UpdateVulnerabilityJSON(id uint, vuln datatypes.JSON) error {
+	result := db.Model(&JSONData{}).Where("id = ?", id).Update("vulnerability", vuln)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return errors.New("no records updated, record may not exist")
+	}
+
+	return nil
+}
+
+// UpdateJSONDataFields updates only provided top-level fields of JSONData (metadata), leaving other fields untouched.
+// fields is a map of column names to values to update.
+func UpdateJSONDataFields(id uint, fields map[string]interface{}) error {
+	if len(fields) == 0 {
+		return nil
+	}
+
+	result := db.Model(&JSONData{}).Where("id = ?", id).Updates(fields)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return errors.New("no records updated, record may not exist")
+	}
+
+	return nil
 }
 
 type MinimalJSONData struct {
