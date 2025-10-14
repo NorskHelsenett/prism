@@ -8,23 +8,30 @@ import (
 )
 
 func HandleDashboard(c *gin.Context) {
-	year := c.Query("year") // Get year from query parameter
+	year := c.Query("year")
 
-	total, _ := database.CountJSONData(year)
-	criticalities, _ := database.CountCriticalities(year)
-	owasp, _ := database.CountOWASPCategories(year)
-	owaspCriticalities, _ := database.FetchOWASPCriticalities(year)
-	projects, _ := database.CountProjects()
-	bugBounties, _ := database.CountBugBounties(year)
-	statuses, _ := database.CountByStatus(year)
+	emailValue, _ := c.Get("email")
+	email, _ := emailValue.(string)
+
+	globalProjectValue, _ := c.Get("isGlobalProject")
+	isGlobalProject, _ := globalProjectValue.(bool)
+
+	globalVulnerabilityValue, _ := c.Get("isGlobalVulnerability")
+	isGlobalVulnerability, _ := globalVulnerabilityValue.(bool)
+
+	metrics, err := database.GetDashboardMetrics(year, email, isGlobalVulnerability, isGlobalProject)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"total":              total,
-		"projects":           projects,
-		"bugBounties":        bugBounties,
-		"statuses":           statuses,
-		"criticalities":      criticalities,
-		"owasp":              owasp,
-		"owaspCriticalities": owaspCriticalities,
+		"total":              metrics.Total,
+		"projects":           metrics.Projects,
+		"bugBounties":        metrics.BugBounties,
+		"statuses":           metrics.Statuses,
+		"criticalities":      metrics.Criticalities,
+		"owasp":              metrics.OWASP,
+		"owaspCriticalities": metrics.OWASPCriticalities,
 	})
 }
