@@ -1,0 +1,25 @@
+oidc:
+  mock:
+    clientID: "prism-test-client"
+    clientSecret: "test-secret"
+    redirectUri: "http://localhost:8080/api/callback"
+    providerUri: "http://oidc-mock:9999"
+
+cors:
+  origin: "http://localhost:5173"
+
+admins:
+  - alice@test.com
+
+database:
+  path: "/data/"
+
+events:
+  interval: 10
+
+slack:
+  token: ""
+  webhookUrl: ""
+
+secrets:
+  HMAC_SECRET_KEY: "test-hmac-secret-key-for-integration-tests"

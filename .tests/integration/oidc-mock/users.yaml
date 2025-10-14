@@ -1,0 +1,31 @@
+users:
+  - email: alice@test.com
+    role: admin
+    password: password123
+    skip_otp: true
+    display_name: Alice Admin
+  - email: bob@test.com
+    role: pentester
+    password: password123
+    skip_otp: true
+    display_name: Bob Pentester
+  - email: charlie@test.com
+    role: visitor
+    password: password123
+    skip_otp: true
+    display_name: Charlie Visitor
+  - email: diana@test.com
+    role: pentester
+    password: password123
+    skip_otp: true
+    display_name: Diana Pentester
+  - email: eve@test.com
+    role: visitor
+    password: password123
+    skip_otp: true
+    display_name: Eve Visitor
+  - email: frank@test.com
+    role: global_viewer
+    password: password123
+    skip_otp: true
+    display_name: Frank Viewer
