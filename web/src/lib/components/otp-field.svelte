@@ -1,6 +1,7 @@
 <script>
-  import { Fetch } from '$lib/fetchUtil';
-  import { onMount } from 'svelte';
+    import { Fetch } from '$lib/fetchUtil';
+    import { onMount } from 'svelte';
+    import { slide } from 'svelte/transition';
 
     export let requiresActivation = false;
 
@@ -140,7 +141,7 @@
 </div>
 
 {#if errorMessage}
-    <div class="alert alert-danger d-flex align-items-center mt-3" role="alert">
+    <div class="alert alert-danger d-flex align-items-center mt-3" role="alert" transition:slide={{ duration: 200, y: -8 }}>
         <div class="me-3">
             <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-alert-triangle" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
                 <path stroke="none" d="M0 0h24v24H0z" fill="none" />
