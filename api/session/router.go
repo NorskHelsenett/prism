@@ -1,17 +1,83 @@
 package session
 
 import (
+	"net/http"
+	"sync"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/pquerna/otp/totp"
 
 	"prism/database"
-
-	"net/http"
 )
 
 type otp struct {
 	secret string
 	url    string
+}
+
+type pendingSecret struct {
+	otp       *otp
+	createdAt time.Time
+}
+
+var (
+	pendingSecrets   = make(map[string]pendingSecret)
+	pendingSecretsMu sync.RWMutex
+	pendingSecretTTL = 10 * time.Minute
+)
+
+func init() {
+	// Start background cleanup goroutine for expired pending secrets
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			cleanupExpiredSecrets()
+		}
+	}()
+}
+
+func cleanupExpiredSecrets() {
+	pendingSecretsMu.Lock()
+	defer pendingSecretsMu.Unlock()
+
+	now := time.Now()
+	for email, entry := range pendingSecrets {
+		if now.Sub(entry.createdAt) > pendingSecretTTL {
+			delete(pendingSecrets, email)
+		}
+	}
+}
+
+func getPendingSecret(email string) (*otp, bool) {
+	pendingSecretsMu.Lock()
+	defer pendingSecretsMu.Unlock()
+
+	entry, ok := pendingSecrets[email]
+	if !ok {
+		return nil, false
+	}
+
+	if time.Since(entry.createdAt) > pendingSecretTTL {
+		delete(pendingSecrets, email)
+		return nil, false
+	}
+
+	return entry.otp, true
+}
+
+func setPendingSecret(email string, secret *otp) {
+	pendingSecretsMu.Lock()
+	pendingSecrets[email] = pendingSecret{otp: secret, createdAt: time.Now()}
+	pendingSecretsMu.Unlock()
+}
+
+func clearPendingSecret(email string) {
+	pendingSecretsMu.Lock()
+	delete(pendingSecrets, email)
+	pendingSecretsMu.Unlock()
 }
 
 func DeleteUserSession(c *gin.Context, session *SessionStore) {
@@ -173,7 +239,9 @@ func HandleOTPGenerate(c *gin.Context) {
 		return
 	}
 
-	exists, err := database.CheckForOtpEnabled(email.(string))
+	userEmail := email.(string)
+
+	exists, err := database.CheckForOtpEnabled(userEmail)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate OTP"})
 		return
@@ -184,7 +252,17 @@ func HandleOTPGenerate(c *gin.Context) {
 		return
 	}
 
-	secret, err := generateOTP(email.(string))
+	if pending, ok := getPendingSecret(userEmail); ok {
+		c.JSON(http.StatusOK, gin.H{
+			"secret":        pending.secret,
+			"url":           pending.url,
+			"otp_activated": false,
+			"pending":       true,
+		})
+		return
+	}
+
+	secret, err := generateOTP(userEmail)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate OTP"})
 		return
@@ -196,17 +274,63 @@ func HandleOTPGenerate(c *gin.Context) {
 		return
 	}
 
-	err = database.PersistOTPSecret(email.(string), secret.secret)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "OTP persistence resulted in nil"})
-		return
-	}
+	setPendingSecret(userEmail, secret)
 
 	// Dereference secret to access its fields
 	c.JSON(http.StatusOK, gin.H{
-		"secret": secret.secret,
-		"url":    secret.url,
+		"secret":        secret.secret,
+		"url":           secret.url,
+		"otp_activated": false,
+		"pending":       true,
 	})
+}
+
+func HandleOTPGenerateConfirm(c *gin.Context) {
+	emailInterface, exists := c.Get("email")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	email, ok := emailInterface.(string)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid email format"})
+		return
+	}
+
+	var payload struct {
+		Code string `json:"otp_code"`
+	}
+
+	if err := c.BindJSON(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid data format"})
+		return
+	}
+
+	if payload.Code == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "OTP code is required"})
+		return
+	}
+
+	pending, found := getPendingSecret(email)
+	if !found {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No pending OTP setup"})
+		return
+	}
+
+	if !totp.Validate(payload.Code, pending.secret) {
+		c.JSON(http.StatusNotAcceptable, gin.H{"error": "Invalid OTP code"})
+		return
+	}
+
+	if err := database.PersistOTPSecret(email, pending.secret); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to persist OTP"})
+		return
+	}
+
+	clearPendingSecret(email)
+
+	c.JSON(http.StatusOK, gin.H{"message": "OTP activated successfully"})
 }
 
 func generateOTP(email string) (*otp, error) {

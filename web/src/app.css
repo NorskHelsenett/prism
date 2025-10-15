@@ -15,6 +15,16 @@
     margin: 0;
   }
 
+  hr {
+    margin-top: 3rem !important;
+    margin-bottom: 3rem !important;
+  }
+
+  .form-check{
+    cursor: pointer;
+    display: inline-block !important;
+  }
+
   .link::after {
     content: '';
     position: absolute;

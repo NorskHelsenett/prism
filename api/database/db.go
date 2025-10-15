@@ -135,7 +135,7 @@ type Metrics struct {
 
 type UserData struct {
 	gorm.Model
-	Email         string         `json:"email"`
+	Email         string         `json:"email" gorm:"uniqueIndex"`
 	Name          string         `json:"name"`
 	Picture       string         `json:"picture"`
 	Role          string         `json:"role" gorm:"default:visitor"`
@@ -482,8 +482,8 @@ func CreateNotification(email string, notification models.Notification) error {
 
 	// Unmarshal the JSON notifications into a slice
 	var notifications []models.Notification
-	// Check if the JSON field is not nil before unmarshalling
-	if userData.Notifications != nil && len(userData.Notifications) > 0 {
+	// Check if the JSON field has content before unmarshalling
+	if len(userData.Notifications) > 0 {
 		if err := json.Unmarshal(userData.Notifications, &notifications); err != nil {
 			return err
 		}
@@ -555,8 +555,8 @@ func GetNotifications(email string) ([]models.Notification, error) {
 
 	var notifications []models.Notification
 
-	// Check if the JSON field is not nil before unmarshalling
-	if userData.Notifications != nil && len(userData.Notifications) > 0 {
+	// Check if the JSON field has content before unmarshalling
+	if len(userData.Notifications) > 0 {
 		if err := json.Unmarshal(userData.Notifications, &notifications); err != nil {
 			return nil, err
 		}
@@ -730,14 +730,14 @@ func GetFilteredVulnerabilities(isGlobal bool, email string, year string, status
 
 	if !isGlobal {
 		// Non-admin: Find all project IDs where the email is in "client_email" or "hacker_name"
-		emailPattern := "%" + email + "%"
+		// Use exact match with comma separators to avoid substring attacks
 		subQuery := db.Table("project_data").
 			Select("id").
-			Where("client_email LIKE ? OR hacker_name LIKE ?", emailPattern, emailPattern)
+			Where("(',' || client_email || ',') LIKE ? OR (',' || hacker_name || ',') LIKE ?", "%,"+email+",%", "%,"+email+",%")
 
 		query = query.Where(
 			db.Where("project_id IN (?) AND deleted_at IS NULL", subQuery).
-				Or("found_by LIKE ? AND deleted_at IS NULL", email))
+				Or("found_by = ? AND deleted_at IS NULL", email))
 	}
 
 	if year != "" {
@@ -1178,7 +1178,7 @@ func GetPreferencesForUser(email string) (models.UserSettings, error) {
 	}
 
 	// If user has no settings yet, return empty preferences
-	if user.Settings == nil || len(user.Settings) == 0 {
+	if len(user.Settings) == 0 {
 		return preferences, nil
 	}
 
@@ -1459,6 +1459,40 @@ func UpdateVulnerability(jsonData *JSONData) error {
 	return nil // Return nil if no error occurred
 }
 
+// UpdateVulnerabilityJSON updates only the vulnerability JSON column for a given record ID.
+// This is useful for PATCH-style partial updates where only parts of the JSON blob are changed.
+func UpdateVulnerabilityJSON(id uint, vuln datatypes.JSON) error {
+	result := db.Model(&JSONData{}).Where("id = ?", id).Update("vulnerability", vuln)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return errors.New("no records updated, record may not exist")
+	}
+
+	return nil
+}
+
+// UpdateJSONDataFields updates only provided top-level fields of JSONData (metadata), leaving other fields untouched.
+// fields is a map of column names to values to update.
+func UpdateJSONDataFields(id uint, fields map[string]interface{}) error {
+	if len(fields) == 0 {
+		return nil
+	}
+
+	result := db.Model(&JSONData{}).Where("id = ?", id).Updates(fields)
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return errors.New("no records updated, record may not exist")
+	}
+
+	return nil
+}
+
 type MinimalJSONData struct {
 	ID            uint                  `json:"ID"`
 	Vulnerability MinifiedVulnerability `json:"Vulnerability"`
@@ -1476,6 +1510,71 @@ type MinifiedVulnerability struct {
 	IsPublicFacing bool   `json:"isPublicFacing"`
 	Criticality    string `json:"criticality"`
 	Date           string `json:"date"`
+	Visibility     string `json:"visibility"`
+}
+
+type vulnerabilityAccessEnvelope struct {
+	Visibility string `json:"visibility"`
+	AssignedTo string `json:"assignedTo"`
+}
+
+func isRestrictedVisibility(visibility string) bool {
+	vis := strings.ToLower(strings.TrimSpace(visibility))
+	switch vis {
+	case "", "published", "public":
+		return false
+	case "undisclosed", "hidden", "private":
+		return true
+	default:
+		return vis != ""
+	}
+}
+
+// CanViewVulnerability determines whether a user has access to the provided vulnerability entry.
+// Administrators (isGlobal == true) always have access. For restricted visibilities, only the reporter
+// (FoundBy) and explicitly assigned user(s) may view the record.
+func CanViewVulnerability(vulnerability JSONData, email string, isGlobal bool) bool {
+	if isGlobal {
+		return true
+	}
+
+	if strings.EqualFold(strings.TrimSpace(vulnerability.FoundBy), strings.TrimSpace(email)) {
+		return true
+	}
+
+	var envelope vulnerabilityAccessEnvelope
+	if err := json.Unmarshal(vulnerability.Vulnerability, &envelope); err != nil {
+		// Fail-secure: deny access if we cannot parse the payload
+		return false
+	}
+
+	if !isRestrictedVisibility(envelope.Visibility) {
+		return true
+	}
+
+	for _, assigned := range strings.Split(envelope.AssignedTo, ",") {
+		if strings.EqualFold(strings.TrimSpace(assigned), strings.TrimSpace(email)) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// FilterJSONDataForUser returns only the vulnerabilities the user is allowed to view.
+func FilterJSONDataForUser(jsonData []JSONData, email string, isGlobal bool) []JSONData {
+	if isGlobal || len(jsonData) == 0 {
+		return jsonData
+	}
+
+	filtered := make([]JSONData, 0, len(jsonData))
+	for _, item := range jsonData {
+		if CanViewVulnerability(item, email, isGlobal) {
+			filtered = append(filtered, item)
+		}
+	}
+
+	return filtered
 }
 
 func GetVulnerabilityIds(isGlobal bool, email string, ids []uint) ([]uint, error) {
@@ -1490,14 +1589,29 @@ func GetVulnerabilityIds(isGlobal bool, email string, ids []uint) ([]uint, error
 			db.Where("json_data.project_id IN (?) AND deleted_at IS NULL",
 				db.Table("project_data").
 					Select("id").
-					Where("client_email LIKE ? OR hacker_name LIKE ?", "%"+email+"%", "%"+email+"%"),
-			).Or("json_data.found_by LIKE ? AND deleted_at IS NULL", "%"+email+"%"),
+					Where("client_email = ? OR hacker_name = ?", email, email),
+			).Or("json_data.found_by = ? AND deleted_at IS NULL", email),
 		)
 	}
 
 	err := query.Pluck("json_data.id", &accessibleIds).Error
 	if err != nil {
 		return nil, err
+	}
+
+	if !isGlobal && len(accessibleIds) > 0 {
+		var records []JSONData
+		if err := db.Where("id IN ?", accessibleIds).Find(&records).Error; err != nil {
+			return nil, err
+		}
+
+		filtered := make([]uint, 0, len(records))
+		for _, record := range records {
+			if CanViewVulnerability(record, email, false) {
+				filtered = append(filtered, record.ID)
+			}
+		}
+		accessibleIds = filtered
 	}
 
 	return accessibleIds, nil
@@ -1512,13 +1626,17 @@ func AllVulnerabilities(all bool, email string) ([]MinimalJSONData, error) {
 			Select("json_data.*, json_extract(json_data.vulnerability, '$.title') as vulnerability_title, json_extract(json_data.vulnerability, '$.isPublicFacing') as vulnerability_isPublicFacing, json_extract(json_data.vulnerability, '$.criticality') as vulnerability_criticality, json_extract(json_data.vulnerability, '$.date') as vulnerability_date, json_extract(json_data.vulnerability, '$.visibility') as vulnerability_visibility").
 			Order("json_data.created_at desc").
 			Find(&jsonData)
-		return minifiedVulnerabilityJSON(jsonData), result.Error
+		filtered := FilterJSONDataForUser(jsonData, email, all)
+		return minifiedVulnerabilityJSON(filtered), result.Error
 
 	} else {
 		// Non-admin: Find all project IDs where the email is in "client_email"
 		var projectIDs []uint
-		emailPattern := "%" + email + "%"
-		db.Model(&ProjectData{}).Where("client_email LIKE ?", emailPattern).Or("hacker_name LIKE ?", emailPattern).Pluck("id", &projectIDs)
+		// Use exact match with comma separators to avoid substring attacks
+		db.Model(&ProjectData{}).
+			Where("(',' || client_email || ',') LIKE ?", "%,"+email+",%").
+			Or("(',' || hacker_name || ',') LIKE ?", "%,"+email+",%").
+			Pluck("id", &projectIDs)
 
 		if len(projectIDs) == 0 {
 			// No projects found for this email, return empty jsonData
@@ -1533,7 +1651,8 @@ func AllVulnerabilities(all bool, email string) ([]MinimalJSONData, error) {
 			Order("json_data.created_at desc").
 			Find(&jsonData)
 
-		return minifiedVulnerabilityJSON(jsonData), result.Error
+		filtered := FilterJSONDataForUser(jsonData, email, all)
+		return minifiedVulnerabilityJSON(filtered), result.Error
 	}
 }
 
@@ -1570,8 +1689,9 @@ func GetProjectsFor(email string) ([]ProjectData, error) {
 	var projects []ProjectData
 
 	// Prepare the database query to find projects where the email is in the ClientEmail list
-	emailPattern := "%" + email + "%"
-	db := db.Where("client_email LIKE ?", emailPattern).Or("hacker_name LIKE ?", emailPattern)
+	// Use exact match with comma separators to avoid substring attacks
+	db := db.Where("(',' || client_email || ',') LIKE ?", "%,"+email+",%").
+		Or("(',' || hacker_name || ',') LIKE ?", "%,"+email+",%")
 
 	// Execute the query and sort the results by ProjectName in ascending order
 	db = db.Order("project_name ASC").Find(&projects)

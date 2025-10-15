@@ -1,11 +1,15 @@
 <script>
-  import { Fetch } from '$lib/fetchUtil';
-  import { onMount } from 'svelte';
+    import { Fetch } from '$lib/fetchUtil';
+    import { onMount } from 'svelte';
+    import { slide } from 'svelte/transition';
+
+    export let requiresActivation = false;
 
   let otpInputs = [];
   const otpLength = 6;
   let otpCode = Array(otpLength).fill('');
   let submitting = false;
+  let errorMessage = '';
 
   const focusNextInput = (index, event) => {
       if (event.key === 'Backspace' && !otpCode[index]) {
@@ -28,22 +32,55 @@
       if (otp.length === otpLength && !submitting) {
           // Add fetch API call here
           submitting = true
+          errorMessage = ''
+          let validationSucceeded = false
           try {
-              const response = await Fetch("/api/session/otp/validate", {
+              if (requiresActivation) {
+                  const activationResponse = await Fetch("/api/session/otp/generate", {
+                      method: "PATCH",
+                      headers: {
+                        "Content-Type": "application/json"
+                      },
+                      body: JSON.stringify({ "otp_code": otp })
+                  });
+
+                  if (activationResponse?.error) {
+                      errorMessage = activationResponse.error;
+                      if (typeof errorMessage === 'string' && errorMessage.toLowerCase().includes('invalid otp')) {
+                          otpCode = Array(otpLength).fill('');
+                      }
+                      return;
+                  }
+              }
+
+              const validationResponse = await Fetch("/api/session/otp/validate", {
                   method: "POST",
+                  headers: {
+                    "Content-Type": "application/json"
+                  },
                   body: JSON.stringify({ "otp_code": otp })
               });
-              if (!response.error) {
-                  window.location.href = '/';
-              }
-          } catch {
-              // Handle error
 
+              if (validationResponse?.error) {
+                  errorMessage = validationResponse.error;
+                  if (typeof errorMessage === 'string' && errorMessage.toLowerCase().includes('invalid otp')) {
+                      otpCode = Array(otpLength).fill('');
+                  }
+                  return;
+              }
+
+              validationSucceeded = true;
+              window.location.href = '/';
+          } catch (err) {
+              console.error(err);
+              errorMessage = 'Failed to verify OTP. Please try again.';
           } finally {
               submitting = false
-              otpCode = Array(otpLength).fill('');
+              if (validationSucceeded) {
+                  otpCode = Array(otpLength).fill('');
+              }
               setTimeout(() => {
-                otpInputs[0].focus();
+                otpInputs[0]?.focus();
               }, 10);
           }
       }
@@ -71,6 +108,7 @@
 
   const handleInput = (index, event) => {
       otpCode[index] = event.target.value.slice(0, 1);
+      errorMessage = '';
 
       // Focus next input and submit only if all fields are filled
       if (index < otpLength - 1) {
@@ -101,6 +139,22 @@
       />
   {/each}
 </div>
+
+{#if errorMessage}
+    <div class="alert alert-danger d-flex align-items-center mt-3" role="alert" transition:slide={{ duration: 200, y: -8 }}>
+        <div class="me-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-alert-triangle" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path d="M12 9v4" />
+                <path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" />
+                <path d="M12 16h.01" />
+            </svg>
+        </div>
+        <div>
+            <p class="mb-0">{errorMessage}</p>
+        </div>
+    </div>
+{/if}
 
 <style>
   .qr-code {

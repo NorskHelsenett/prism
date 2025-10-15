@@ -81,7 +81,8 @@ func main() {
 		apiRoutes.DELETE("/profile/apikey/:id", routes.DeleteAPIKey)
 
 		apiRoutes.GET("/session/otp/generate", session.HandleOTPGenerate)
-		apiRoutes.POST("/session/otp/validate", func(c *gin.Context) { session.HandleOTPValidate(c, sessionStore) })
+		apiRoutes.PATCH("/session/otp/generate", middleware.RateLimiter(), session.HandleOTPGenerateConfirm)
+		apiRoutes.POST("/session/otp/validate", middleware.RateLimiter(), func(c *gin.Context) { session.HandleOTPValidate(c, sessionStore) })
 		apiRoutes.GET("/session/otp/reset", func(c *gin.Context) { session.HandleOTPReset(c, sessionStore) })
 		apiRoutes.GET("/session/all", func(c *gin.Context) { session.GetUserSessions(c, sessionStore) })
 		apiRoutes.DELETE("/session/:uuid", func(c *gin.Context) { session.DeleteUserSession(c, sessionStore) })
@@ -110,6 +111,7 @@ func main() {
 			protectedRoutes.DELETE("/project/:projectID", routes.DeleteProject)
 
 			protectedRoutes.PUT("/vulnerability/:findingsID", routes.PutVulnerability)
+			protectedRoutes.PATCH("/vulnerability/:findingsID", routes.PatchVulnerability)
 			protectedRoutes.DELETE("/vulnerability/:findingsID", routes.DeleteVulnerability)
 
 			protectedRoutes.POST("/vulnerability/:findingsID/comment", routes.NewComment)

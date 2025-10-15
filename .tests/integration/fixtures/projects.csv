@@ -1,0 +1,4 @@
+id,name,description,slack_channel,client_email,hacker_name,is_bug_bounty
+1,ProjectAlpha,Test project for access control testing,#project-alpha,charlie@test.com,bob@test.com,false
+2,ProjectBeta,Another test project,#project-beta,,diana@test.com,true
+3,ProjectGamma,Public project for testing,#project-gamma,,,false

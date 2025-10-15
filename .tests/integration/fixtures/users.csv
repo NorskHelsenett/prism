@@ -1,0 +1,7 @@
+email,role,password,skip_otp,display_name
+alice@test.com,admin,password123,true,Alice Admin
+bob@test.com,pentester,password123,true,Bob Pentester
+charlie@test.com,visitor,password123,true,Charlie Visitor
+diana@test.com,PET01,password123,true,Diana External Pentester
+eve@test.com,visitor,password123,true,Eve Visitor
+frank@test.com,global_viewer,password123,true,Frank Viewer

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.15] - 2025-10-14
+
+### Added
+- **🔐 OTP Activation Flow:** Introduced pending-secret handling with a confirmation endpoint and UI updates, letting users activate TOTP only after validating their code.
+- **🦺 Undisclosed Visibility Banner:** Added an in-app banner and publish workflow to highlight private vulnerabilities and guide maintainers to share them when ready.
+
+### Changed
+- **💅 Modal & List UX:** Delete modal now supports theme accents, vulnerability lists flag restricted items with badges, and related form controls stretch consistently across layouts.
+
+### Security
+- **🔒 Access Control:** Hardened vulnerability APIs by filtering project data per viewer and denying access to JSON payloads when the requester lacks visibility.
+
 ## [0.1.14] - 2025-08-22
 
 ### Added

@@ -47,47 +47,49 @@ func NewAssassment(c *gin.Context) {
 func PatchAssessmentsHandler(c *gin.Context) {
 	idStr := c.Param("id")
 	if idStr == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "id is required"})
-			return
+		c.JSON(http.StatusBadRequest, gin.H{"error": "id is required"})
+		return
 	}
 
 	// Convert string ID to uint
 	id, err := strconv.ParseUint(idStr, 10, 32)
 	if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ID format"})
-			return
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid ID format"})
+		return
 	}
 
 	// Retrieve the existing assessment
 	assessmentJSON, err := database.RetrieveAssessment(uint(id))
 	if err != nil {
-			if strings.Contains(err.Error(), "not found") {
-					c.AbortWithStatus(http.StatusNotFound)
-					return
-			}
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "error getting assessment"})
+		if strings.Contains(err.Error(), "not found") {
+			c.AbortWithStatus(http.StatusNotFound)
 			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "error getting assessment"})
+		return
 	}
 
 	var assessment models.Assessment
 	if err := json.Unmarshal(assessmentJSON.Assessment, &assessment); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse assessment data"})
-			return
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to parse assessment data"})
+		return
 	}
 
 	// Create a map to hold the patch data
 	var patchData map[string]interface{}
 	if err := c.ShouldBindJSON(&patchData); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 
 	// Apply patch data to the assessment
 	if color, ok := patchData["color"].(string); ok {
-			assessment.Color = color
+		assessment.Color = color
 	}
 
-	if title, ok := patchData["title"].(string); ok { assessment.Title = title }
+	if title, ok := patchData["title"].(string); ok {
+		assessment.Title = title
+	}
 
 	if startDate, ok := patchData["dateFrom"].(string); ok {
 		assessment.DateFrom = startDate
@@ -104,7 +106,7 @@ func PatchAssessmentsHandler(c *gin.Context) {
 		// Use a map to track unique emails
 		uniqueEmails := make(map[string]bool)
 		var uniqueHackers []models.Hacker
-		
+
 		for _, hacker := range hackers {
 			if hackerMap, ok := hacker.(map[string]interface{}); ok {
 				if email, ok := hackerMap["email"].(string); ok {
@@ -116,7 +118,7 @@ func PatchAssessmentsHandler(c *gin.Context) {
 				}
 			}
 		}
-		
+
 		assessment.Hackers = uniqueHackers
 	}
 
@@ -135,15 +137,15 @@ func PatchAssessmentsHandler(c *gin.Context) {
 
 	// Validate the modified assessment
 	if err := assessment.Validate(); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 
 	// Update the assessment in the database
 	err = database.UpdateAssassment(assessment, uint(id))
 	if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "unable to update assessment"})
-			return
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "unable to update assessment"})
+		return
 	}
 
 	assessment.ID = assessmentJSON.ID
@@ -254,8 +256,8 @@ func RetrieveAssessmentsHandler(c *gin.Context) {
 	// Read the startDate and endDate from query parameters, use default values if not provided
 	startDateStr := c.DefaultQuery("startDate", startDate.Format("2006-01-02"))
 	endDateStr := c.DefaultQuery("endDate", endDate.Format("2006-01-02"))
-	pageStr := c.DefaultQuery("page", string(DefaultPage))
-	pageSizeStr := c.DefaultQuery("pageSize", string(DefaultPageSize))
+	pageStr := c.DefaultQuery("page", strconv.Itoa(DefaultPage))
+	pageSizeStr := c.DefaultQuery("pageSize", strconv.Itoa(DefaultPageSize))
 
 	// Parse dates
 	// startDate, err := time.Parse("2006-01-02", startDateStr)
@@ -312,7 +314,7 @@ func RetrieveAssessmentsHandler(c *gin.Context) {
 
 		if assessment.Hackers == nil {
 			assessment.Hackers = []models.Hacker{}
-	}
+		}
 
 		assessment.ID = assessmentJSON.ID
 		modelAssessments = append(modelAssessments, assessment)

@@ -125,7 +125,7 @@ func GetProject(c *gin.Context) {
 
 	// Check if full data is requested
 	full := c.Query("full") == "true"
-	
+
 	if full {
 		// Return full project data
 		c.JSON(http.StatusOK, dbProject)
@@ -145,6 +145,11 @@ func GetProject(c *gin.Context) {
 }
 
 func GetProjectVulnerabilitiesForProject(c *gin.Context) {
+	isGlobalVal, _ := c.Get("isGlobalVulnerability")
+	isGlobal, _ := isGlobalVal.(bool)
+	emailVal, _ := c.Get("email")
+	email, _ := emailVal.(string)
+
 	projectIDStr := c.Param("projectID")
 	if projectIDStr == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Project ID is required"})
@@ -166,6 +171,8 @@ func GetProjectVulnerabilitiesForProject(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	vulnerabilites = database.FilterJSONDataForUser(vulnerabilites, email, isGlobal)
 
 	c.JSON(http.StatusOK, vulnerabilites)
 }

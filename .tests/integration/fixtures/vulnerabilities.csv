@@ -1,0 +1,15 @@
+id,title,description,severity,cvss_score,project_id,visibility,found_by,assigned_to,status,impact,likelihood,remediation
+1,SQL Injection in Login Form,Critical SQL injection vulnerability allowing authentication bypass,critical,9.8,1,hidden,bob@test.com,,Reported,High impact on authentication system,High,Update prepared statements and input validation
+2,XSS in User Profile,Reflected XSS vulnerability in user profile page,medium,6.1,1,undisclosed,bob@test.com,charlie@test.com,Reported,Could steal session tokens,Medium,Implement proper output encoding
+6,Private Finding - Under Investigation,Sensitive finding still being analyzed,high,7.5,1,undisclosed,bob@test.com,bob@test.com,Reported,Under analysis,High,Investigation in progress
+7,Race Condition in Payment,Race condition in payment processing,high,7.0,1,undisclosed,bob@test.com,diana@test.com,Reported,Potential double-spend,High,Add proper locking mechanism
+
+3,CSRF Token Missing,CSRF protection missing on password change endpoint,low,4.3,2,hidden,diana@test.com,,Reported,Allows unauthorized password changes,Low,Add CSRF token validation
+4,Authentication Bypass via JWT,JWT signature validation not properly implemented,critical,9.1,2,published,diana@test.com,,Fixed,Complete authentication bypass,Critical,Fixed JWT validation logic
+8,Insecure Direct Object Reference,IDOR in document download endpoint,medium,6.5,2,published,diana@test.com,,Open,Access to other users' documents,Medium,Implement proper authorization checks
+10,Unvalidated Redirects,Unvalidated redirects allow phishing attacks,medium,6.0,2,undisclosed,bob@test.com,,Reported,Users redirected to malicious sites,Medium,Validate redirect URLs
+
+5,Information Disclosure in API,API leaks sensitive user information without auth,low,5.3,3,published,eve@test.com,,Reported,Exposes email addresses,Low,Add authentication to endpoint
+
+9,Privilege Escalation via Misconfigured Roles,Users can escalate privileges due to misconfigured roles,high,8.2,,published,bob@test.com,,Reported,Users gain admin access,High,Review and fix role assignments
+11,Sensitive Data Exposure in Logs,Application logs sensitive data in plaintext,low,4.8,,published,diana@test.com,,Reported,Potential data leak via logs,Low,Sanitize sensitive data before logging
