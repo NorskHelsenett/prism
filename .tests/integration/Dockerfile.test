@@ -1,0 +1,30 @@
+# Use an Alpine-based Go image (matches apk usage and Go envs in history)
+FROM golang:1.23-alpine
+
+# Mirror envs seen in history
+ENV GOTOOLCHAIN=local \
+    GOPATH=/go \
+    PATH=/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Prepare GOPATH like in history
+RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 1777 "$GOPATH"
+WORKDIR /go
+
+# Packages added later in history (for CGO and fetching deps)
+RUN apk add --no-cache ca-certificates git wget gcc musl-dev
+
+# Move to project workspace
+WORKDIR /workspace
+
+# Copy only what the history shows
+COPY api/ ./api/
+COPY .tests/integration/ ./tests/integration/
+
+# Build the test binary in the integration tests directory
+WORKDIR /workspace/tests/integration
+RUN go mod download
+ENV CGO_ENABLED=1
+RUN go test -c -o integration.test access_test.go benchmark_test.go helpers.go
+
+# Final command from history
+CMD ["./integration.test", "-test.v"]
