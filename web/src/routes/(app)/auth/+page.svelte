@@ -47,7 +47,7 @@
           <div class="hr-text hr-text-center hr-text-spaceless">QR Code</div>
           <div class="card-body mb-3">
             <div class="mb-3 d-flex justify-content-center mh-20 cursor-pointer" on:click={() => showSecret =!showSecret}>
-                <SvgQR class="text-teal bg-transparent blur" data={otpData.url} {logo} shape="circle"/>
+                <SvgQR class="text-teal bg-transparent" data={otpData.url} {logo} shape="circle"/>
                 {#if showSecret}
                 <div id="secret-box" class="card card-body text-teal">
                   <p class="text-secondary">
@@ -114,9 +114,5 @@
 
   .code-text{
     letter-spacing: 5px;
-  }
-
-  .blur {
-    filter: blur(3px);
   }
 </style>
