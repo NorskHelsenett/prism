@@ -11,13 +11,14 @@ import (
 	"os"
 	"path/filepath"
 	"prism/config"
+	"prism/database"
 	"testing"
 	"time"
 )
 
 var (
 	baseURL     = getEnvOrDefault("PRISM_API_URL", "http://localhost:8080")
-	oidcURL     = getEnvOrDefault("OIDC_URL", "http://oidc-mock:9999")
+	oidcURL     = getEnvOrDefault("OIDC_URL", "http://host.containers.internal:9999")
 	fixturesDir = getEnvOrDefault("FIXTURES_DIR", "./fixtures")
 	// seeded API keys for tests: email -> apikey
 	seededAPIKeys map[string]string
@@ -266,6 +267,24 @@ func testVulnerabilityAccess(vulnID uint, userEmail, password string) (bool, int
 
 // TestAccessMatrix runs the comprehensive access control test suite
 func TestAccessMatrix(t *testing.T) {
+	// Set default config path if not already set
+	if os.Getenv("CONFIG_PATH") == "" {
+		cwd, _ := os.Getwd()
+		os.Setenv("CONFIG_PATH", filepath.Join(cwd, "config.test.yaml"))
+	}
+	
+	// Set default database path if not already set
+	if os.Getenv("DATABASE_PATH") == "" {
+		cwd, _ := os.Getwd()
+		os.Setenv("DATABASE_PATH", filepath.Join(cwd, "test-data")+"/")
+	}
+	
+	// Set default roles path if not already set
+	if os.Getenv("ROLES_PATH") == "" {
+		cwd, _ := os.Getwd()
+		os.Setenv("ROLES_PATH", filepath.Join(cwd, "../../api/roles.yaml"))
+	}
+	
 	// Wait for services to be ready
 	if err := waitForServices(); err != nil {
 		t.Fatalf("Services not ready: %v", err)
@@ -284,6 +303,19 @@ func TestAccessMatrix(t *testing.T) {
 			if err := config.LoadConfig(); err != nil {
 				return fmt.Errorf("Failed to load config: %w", err)
 			}
+		}
+
+		// Clean existing test database to ensure fresh state
+		dbPath := filepath.Join(os.Getenv("DATABASE_PATH"), "prism.db")
+		os.Remove(dbPath)
+
+		// Initialize database
+		database.InitDB()
+
+		// Seed users first
+		usersFile := filepath.Join(fixturesDir, "users.csv")
+		if err := SeedUsers(usersFile); err != nil {
+			return fmt.Errorf("Failed to seed users: %w", err)
 		}
 
 		// Always seed the database with fixture data before running tests
@@ -478,7 +510,7 @@ func waitForServices() error {
 
 	// Wait for OIDC mock
 	for i := 0; i < maxRetries; i++ {
-		resp, err := http.Get(fmt.Sprintf("%s/health", oidcURL))
+		resp, err := http.Get(fmt.Sprintf("%s/", oidcURL))
 		if err == nil && resp.StatusCode == http.StatusOK {
 			resp.Body.Close()
 			return nil

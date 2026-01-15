@@ -1,0 +1,218 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - '**'
+  pull_request:
+
+env:
+  REGISTRY: git.torden.tech
+  REGISTRY_PATH: jonasbg/prism
+
+jobs:
+  build-api:
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN || secrets.REGISTRY_ACCESS_TOKEN }}
+
+      - name: Prepare build metadata
+        id: metadata
+        run: |
+          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          totalLines=$(find . -type f \( -name '*.go' -o -name '*.svelte' -o -name '*.js' \) | xargs wc -l | tail -1 | awk '{print $1}')
+          
+          mkdir -p web/static/.well-known
+          cat << EOF > web/static/.well-known/buildinfo.json
+          {
+            "user": "${{ github.actor }}",
+            "branch": "${{ github.ref_name }}",
+            "date": "$BUILD_DATE",
+            "digest": "${{ github.sha }}",
+            "totalLines": "$totalLines"
+          }
+          EOF
+          cp CHANGELOG.md web/static/.well-known/CHANGELOG.md
+
+      - name: Determine image tags
+        id: tags
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.REGISTRY_PATH }}/api"
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            TAGS="${IMAGE}:latest,${IMAGE}:$(date '+%Y%m%d')"
+          else
+            TAGS="${IMAGE}:dev"
+          fi
+          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
+
+      - name: Build and push API image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: api/
+          file: api/Dockerfile
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          labels: |
+            build.buildnumber=${{ github.run_id }}
+            build.builduri=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            build.project.uri=${{ github.server_url }}/${{ github.repository }}
+            build.project.name=${{ github.repository }}
+            build.repository.name=${{ github.event.repository.name }}
+            build.repository.branch=${{ github.ref_name }}
+            build.repository.commithash=${{ github.sha }}
+            maintainer=Jonas Bo Grimsgaard @ NHN <sikkerhet@nhn.no>
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.REGISTRY_PATH }}/api:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.REGISTRY_PATH }}/api:buildcache,mode=max
+
+  build-web:
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN || secrets.REGISTRY_ACCESS_TOKEN }}
+
+      - name: Prepare build metadata
+        id: metadata
+        run: |
+          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          totalLines=$(find . -type f \( -name '*.go' -o -name '*.svelte' -o -name '*.js' \) | xargs wc -l | tail -1 | awk '{print $1}')
+          
+          mkdir -p web/static/.well-known
+          cat << EOF > web/static/.well-known/buildinfo.json
+          {
+            "user": "${{ github.actor }}",
+            "branch": "${{ github.ref_name }}",
+            "date": "$BUILD_DATE",
+            "digest": "${{ github.sha }}",
+            "totalLines": "$totalLines"
+          }
+          EOF
+          cp CHANGELOG.md web/static/.well-known/CHANGELOG.md
+
+      - name: Determine image tags
+        id: tags
+        run: |
+          IMAGE="${{ env.REGISTRY }}/${{ env.REGISTRY_PATH }}/web"
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            TAGS="${IMAGE}:latest,${IMAGE}:$(date '+%Y%m%d')"
+          else
+            TAGS="${IMAGE}:dev"
+          fi
+          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
+
+      - name: Build and push Web image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: web/
+          file: web/Dockerfile
+          push: true
+          tags: ${{ steps.tags.outputs.tags }}
+          labels: |
+            build.buildnumber=${{ github.run_id }}
+            build.builduri=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            build.project.uri=${{ github.server_url }}/${{ github.repository }}
+            build.project.name=${{ github.repository }}
+            build.repository.name=${{ github.event.repository.name }}
+            build.repository.branch=${{ github.ref_name }}
+            build.repository.commithash=${{ github.sha }}
+            maintainer=Jonas Bo Grimsgaard @ NHN <sikkerhet@nhn.no>
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.REGISTRY_PATH }}/web:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.REGISTRY_PATH }}/web:buildcache,mode=max
+
+  helm-push:
+    runs-on: ubuntu-latest
+    needs: [build-api, build-web]
+    if: github.ref == 'refs/heads/main' || github.event_name == 'push'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install Helm
+        uses: azure/setup-helm@v3
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Log in to Helm Registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN || secrets.REGISTRY_ACCESS_TOKEN }}" | helm registry login ${{ env.REGISTRY }} -u "${{ github.actor }}" --password-stdin
+
+      - name: Determine Helm repository
+        id: helm-repo
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "repo=jonasbg/prism/helm" >> $GITHUB_OUTPUT
+            echo "tag_suffix=$(date '+%Y%m%d')" >> $GITHUB_OUTPUT
+          else
+            echo "repo=jonasbg/prism/dev" >> $GITHUB_OUTPUT
+            echo "tag_suffix=dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update Helm chart
+        env:
+          API_DIGEST: ${{ needs.build-api.outputs.digest }}
+          WEB_DIGEST: ${{ needs.build-web.outputs.digest }}
+          TAG_SUFFIX: ${{ steps.helm-repo.outputs.tag_suffix }}
+          HELM_REPO: ${{ steps.helm-repo.outputs.repo }}
+        run: |
+          CHART_DIR=".cluster/prism"
+          
+          # Pull current chart to get version
+          helm pull oci://${{ env.REGISTRY }}/${HELM_REPO}/prism || echo "No existing chart found"
+          
+          if [ -f prism-*.tgz ]; then
+            file=$(ls prism-*.tgz)
+            CURRENT_VERSION=$(echo $file | sed 's/prism-\([0-9]\+\.[0-9]\+\.[0-9]\+\).tgz/\1/')
+            NEW_VERSION=$(echo $CURRENT_VERSION | awk -F. '{print $1"."$2"."$3+1}')
+          else
+            NEW_VERSION="0.1.0"
+          fi
+          
+          echo "NEW CHART VERSION: $NEW_VERSION"
+          
+          # Get app version from CHANGELOG
+          APP_VERSION=$(awk '/## \[.+\]/{i++} i==2{print; exit}' CHANGELOG.md | sed 's/## \[\(.*\)\].*/\1/')
+          echo "APP VERSION: $APP_VERSION"
+          
+          # Update Chart.yaml
+          yq e -i ".version = \"$NEW_VERSION\" | .appVersion = \"$APP_VERSION\"" ${CHART_DIR}/Chart.yaml
+          
+          # Update values.yaml with image tags and digests
+          API_TAG="${TAG_SUFFIX}@${API_DIGEST}"
+          yq e -i ".api.tag = \"$API_TAG\"" ${CHART_DIR}/values.yaml
+          
+          WEB_TAG="${TAG_SUFFIX}@${WEB_DIGEST}"
+          yq e -i ".web.tag = \"$WEB_TAG\"" ${CHART_DIR}/values.yaml
+          
+          # Package and push
+          helm package ${CHART_DIR}
+          helm push "prism-${NEW_VERSION}.tgz" oci://${{ env.REGISTRY }}/${HELM_REPO}

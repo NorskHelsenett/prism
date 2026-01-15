@@ -1,8 +1,6 @@
 module prism/tests/integration
 
-go 1.23.0
-
-toolchain go1.23.11
+go 1.25.0
 
 require (
 	gorm.io/datatypes v1.2.5

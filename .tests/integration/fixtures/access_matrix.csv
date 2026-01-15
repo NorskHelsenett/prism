@@ -1,73 +1,90 @@
 vulnerability_id,user_email,should_access,reason,test_category
+1,charlie.visitor@test.local,true,Client of ProjectAlpha,hidden_restricted
+2,charlie.visitor@test.local,true,Assigned to vulnerability,hidden_restricted
+6,charlie.visitor@test.local,true,Client of ProjectAlpha,hidden_restricted
+7,charlie.visitor@test.local,true,Client of ProjectAlpha,hidden_restricted
+3,charlie.visitor@test.local,false,Not in ProjectBeta,hidden_restricted
+4,charlie.visitor@test.local,false,Not in ProjectBeta,hidden_restricted
+5,charlie.visitor@test.local,false,Not in ProjectGamma,hidden_restricted
+8,charlie.visitor@test.local,false,Not in ProjectBeta,hidden_restricted
+9,charlie.visitor@test.local,false,No project - not found_by or assigned_to,hidden_restricted
+10,charlie.visitor@test.local,false,Not in ProjectBeta,hidden_restricted
+11,charlie.visitor@test.local,false,No project - not found_by or assigned_to,hidden_restricted
+12,charlie.visitor@test.local,false,Not in SIGMA project,hidden_restricted
+13,charlie.visitor@test.local,false,Not in SIGMA project,hidden_restricted
+14,charlie.visitor@test.local,false,Not in SIGMA project,hidden_restricted
 
-1,charlie@test.com,false,Hidden visibility - client of project,hidden_restricted
-2,charlie@test.com,true,Undisclosed vulnerabilty - is assigned to vulnerability,hidden_restricted
-6,charlie@test.com,false,Undisclosed vulnerabilty - even though client of project,hidden_restricted
-7,charlie@test.com,false,Undisclosed vulnerabilty - even though client of project,hidden_restricted
-3,charlie@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
-4,charlie@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
-5,charlie@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
-8,charlie@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
-9,charlie@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
-10,charlie@test.com,false,Undisclosed vulnerabilty - Not access to vulnerabilty,hidden_restricted
-11,charlie@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
+1,alice.admin@test.local,true,Admin has global access,admin_access
+2,alice.admin@test.local,true,Admin has global access,admin_access
+3,alice.admin@test.local,true,Admin has global access,admin_access
+4,alice.admin@test.local,true,Admin has global access,admin_access
+5,alice.admin@test.local,true,Admin has global access,admin_access
+6,alice.admin@test.local,true,Admin has global access,admin_access
+7,alice.admin@test.local,true,Admin has global access,admin_access
+8,alice.admin@test.local,true,Admin has global access,admin_access
+9,alice.admin@test.local,true,Admin has global access,admin_access
+10,alice.admin@test.local,true,Admin has global access,admin_access
+11,alice.admin@test.local,true,Admin has global access,admin_access
+12,alice.admin@test.local,true,Admin has global access,admin_access
+13,alice.admin@test.local,true,Admin has global access,admin_access
+14,alice.admin@test.local,true,Admin has global access,admin_access
 
-1,alice@test.com,true,Admin has global access,admin_access
-2,alice@test.com,true,Admin has global access,admin_access
-3,alice@test.com,true,Admin has global access,admin_access
-4,alice@test.com,true,Admin has global access,admin_access
-5,alice@test.com,true,Admin has global access,admin_access
-6,alice@test.com,true,Admin has global access,admin_access
-7,alice@test.com,true,Admin has global access,admin_access
-8,alice@test.com,true,Admin has global access,admin_access
-9,alice@test.com,true,Admin has global access,admin_access
-10,alice@test.com,true,Admin has global access,admin_access
-11,alice@test.com,true,Admin has global access,admin_access
+1,bob.viewer@test.local,true,Found_by and hacker_name in ProjectAlpha,public_access
+2,bob.viewer@test.local,true,Found_by and hacker_name in ProjectAlpha,public_access
+3,bob.viewer@test.local,false,Not in ProjectBeta,public_access
+4,bob.viewer@test.local,true,Published vulnerability,public_access
+5,bob.viewer@test.local,true,Published vulnerability,public_access
+6,bob.viewer@test.local,true,Found_by - assigned_to - and hacker_name in ProjectAlpha,public_access
+7,bob.viewer@test.local,true,Found_by and hacker_name in ProjectAlpha,public_access
+8,bob.viewer@test.local,true,Published vulnerability,public_access
+9,bob.viewer@test.local,true,Found_by - no project,public_access
+10,bob.viewer@test.local,true,Found_by in ProjectBeta,public_access
+11,bob.viewer@test.local,true,Published vulnerability - no project,public_access
+12,bob.viewer@test.local,true,Assigned_to and client_email in SIGMA,public_access
+13,bob.viewer@test.local,true,Found_by and client_email in SIGMA,public_access
+14,bob.viewer@test.local,true,Client_email in SIGMA,public_access
 
-1,bob@test.com,true,Pentester has global read and write,public_access
-2,bob@test.com,true,Pentester has global read and write,public_access
-3,bob@test.com,true,Pentester has global read and write,public_access
-4,bob@test.com,true,Pentester has global read and write,public_access
-5,bob@test.com,true,Pentester has global read and write,public_access
-6,bob@test.com,true,Pentester has global read and write,public_access
-7,bob@test.com,true,Pentester has global read and write,public_access
-8,bob@test.com,true,Pentester has global read and write,public_access
-9,bob@test.com,true,Pentester has global read and write,public_access
-10,bob@test.com,true,Pentester has global read and write,public_access
-11,bob@test.com,true,Pentester has global read and write,public_access
+1,frank.viewer@test.local,false,Hidden vulnerability - not in ProjectAlpha,public_access
+2,frank.viewer@test.local,false,Undisclosed vulnerability - not in ProjectAlpha,public_access
+3,frank.viewer@test.local,false,Hidden vulnerability - not in ProjectBeta,public_access
+4,frank.viewer@test.local,true,Published vulnerability,public_access
+5,frank.viewer@test.local,true,Published vulnerability,public_access
+6,frank.viewer@test.local,true,Published vulnerability,public_access
+7,frank.viewer@test.local,false,Undisclosed vulnerability - not in ProjectAlpha,public_access
+8,frank.viewer@test.local,true,Published vulnerability,public_access
+9,frank.viewer@test.local,true,Published vulnerability - no project,public_access
+10,frank.viewer@test.local,false,Undisclosed vulnerability - not in ProjectBeta,public_access
+11,frank.viewer@test.local,true,Published vulnerability - no project,public_access
+12,frank.viewer@test.local,true,Assigned_to and client_email in SIGMA,public_access
+13,frank.viewer@test.local,true,Published vulnerability,public_access
+14,frank.viewer@test.local,true,Assigned_to and client_email in SIGMA,public_access
 
-1,frank@test.com,true,Global viewer role has access,public_access
-2,frank@test.com,true,Global viewer role has access,public_access
-3,frank@test.com,true,Global viewer role has access,public_access
-4,frank@test.com,true,Global viewer role has access,public_access
-5,frank@test.com,true,Global viewer role has access,public_access
-6,frank@test.com,true,Global viewer role has access,public_access
-7,frank@test.com,true,Global viewer role has access,public_access
-8,frank@test.com,true,Global viewer role has access,public_access
-9,frank@test.com,true,Global viewer role has access,public_access
-10,frank@test.com,true,Global viewer role has access,public_access
-11,frank@test.com,true,Global viewer role has access,public_access
+1,eve.visitor@test.local,false,Not in ProjectAlpha,hidden_restricted
+2,eve.visitor@test.local,false,Not in ProjectAlpha,hidden_restricted
+3,eve.visitor@test.local,false,Not in ProjectBeta,hidden_restricted
+4,eve.visitor@test.local,false,Not in ProjectBeta,hidden_restricted
+5,eve.visitor@test.local,true,Client of ProjectGamma,hidden_restricted
+6,eve.visitor@test.local,false,Not in ProjectAlpha,hidden_restricted
+7,eve.visitor@test.local,false,Not in ProjectAlpha,hidden_restricted
+8,eve.visitor@test.local,false,Not in ProjectBeta,hidden_restricted
+9,eve.visitor@test.local,false,No project - not found_by or assigned_to,hidden_restricted
+10,eve.visitor@test.local,false,Not in ProjectBeta,hidden_restricted
+11,eve.visitor@test.local,false,No project - not found_by or assigned_to,hidden_restricted
+12,eve.visitor@test.local,true,Client_email in SIGMA,hidden_restricted
+13,eve.visitor@test.local,true,Client_email in SIGMA,hidden_restricted
+14,eve.visitor@test.local,true,Assigned_to and client_email in SIGMA,hidden_restricted
 
-1,eve@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
-2,eve@test.com,false,Undisclosed vulnerabilty - Visitor,hidden_restricted
-3,eve@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
-4,eve@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
-5,eve@test.com,true,Found vulnerability,hidden_restricted
-6,eve@test.com,false,Undisclosed vulnerabilty - Visitor,hidden_restricted
-7,eve@test.com,false,Undisclosed vulnerabilty - Visitor,hidden_restricted
-8,eve@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
-9,eve@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
-10,eve@test.com,false,Undisclosed vulnerabilty - Visitor,hidden_restricted
-11,eve@test.com,false,Not access to vulnerabilty - visitor access,hidden_restricted
-
-1,diana@test.com,false,PET not access to Project 1,hidden_restricted
-2,diana@test.com,false,Undisclosed vulnerabilty - PET not access to Project 1,hidden_restricted
-3,diana@test.com,true,PET - access to vulnerability by project 2,hidden_restricted
-4,diana@test.com,true,PET - access to vulnerability by project 2,hidden_restricted
-5,diana@test.com,false,PET not access to Project 1,hidden_restricted
-6,diana@test.com,false,Undisclosed vulnerabilty - PET not access to Project 1,hidden_restricted
-7,diana@test.com,false,Undisclosed vulnerabilty - PET not access to Project 1,hidden_restricted
-8,diana@test.com,true,PET - access to vulnerability by project,hidden_restricted
-9,diana@test.com,false,PET - vulnerability in no project,hidden_restricted
-10,diana@test.com,false,Undisclosed vulnerabilty - PET access to project 2,hidden_restricted
-11,diana@test.com,true,Reporter of vulnerability - no project,hidden_restricted
+1,diana.external@test.local,false,Not in ProjectAlpha,hidden_restricted
+2,diana.external@test.local,false,Not in ProjectAlpha,hidden_restricted
+3,diana.external@test.local,true,Found_by and hacker_name in ProjectBeta,hidden_restricted
+4,diana.external@test.local,true,Found_by and hacker_name in ProjectBeta,hidden_restricted
+5,diana.external@test.local,false,Not in ProjectGamma,hidden_restricted
+6,diana.external@test.local,false,Not in ProjectAlpha,hidden_restricted
+7,diana.external@test.local,true,Assigned_to in ProjectAlpha,hidden_restricted
+8,diana.external@test.local,true,Found_by and hacker_name in ProjectBeta,hidden_restricted
+9,diana.external@test.local,false,No project - not found_by or assigned_to,hidden_restricted
+10,diana.external@test.local,true,Found_by and hacker_name in ProjectBeta,hidden_restricted
+11,diana.external@test.local,true,Found_by - no project,hidden_restricted
+12,diana.external@test.local,true,Found_by and hacker_name in SIGMA,hidden_restricted
+13,diana.external@test.local,true,Hacker_name in SIGMA,hidden_restricted
+14,diana.external@test.local,true,Found_by and hacker_name in SIGMA,hidden_restricted

@@ -166,6 +166,27 @@ func LoadProjects(filePath string) ([]TestProject, error) {
 		return nil, fmt.Errorf("failed to read header: %w", err)
 	}
 
+	// Helper to normalize fields that are intended to be comma-separated lists
+	normalizeList := func(field string) string {
+		// csv.Reader already handles quoted commas, but callers may expect
+		// a clean comma-separated list without extra spaces. Split on comma
+		// and re-join trimmed elements. If the field is empty, return empty.
+		field = strings.TrimSpace(field)
+		if field == "" {
+			return ""
+		}
+		parts := strings.Split(field, ",")
+		var out []string
+		for _, p := range parts {
+			p = strings.TrimSpace(p)
+			if p == "" {
+				continue
+			}
+			out = append(out, p)
+		}
+		return strings.Join(out, ",")
+	}
+
 	var projects []TestProject
 	for {
 		record, err := reader.Read()
@@ -184,8 +205,8 @@ func LoadProjects(filePath string) ([]TestProject, error) {
 			Name:         strings.TrimSpace(record[1]),
 			Description:  strings.TrimSpace(record[2]),
 			SlackChannel: strings.TrimSpace(record[3]),
-			ClientEmail:  strings.TrimSpace(record[4]),
-			HackerName:   strings.TrimSpace(record[5]),
+			ClientEmail:  normalizeList(record[4]),
+			HackerName:   normalizeList(record[5]),
 			IsBugBounty:  isBugBounty,
 		})
 	}

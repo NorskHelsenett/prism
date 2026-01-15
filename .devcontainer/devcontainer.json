@@ -2,7 +2,7 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/go
 {
 	"name": "Go",
-	"image": "mcr.microsoft.com/devcontainers/go:1-1.23-bookworm",
+	"image": "mcr.microsoft.com/devcontainers/go:1.25",
 	"features": {
 		"ghcr.io/devcontainers/features/node:1": {}
 	},
@@ -11,6 +11,9 @@
 	},
 	"forwardPorts": [
 		1473
+	],
+	"runArgs": [
+		"--add-host=host.containers.internal:host-gateway"
 	],
 	"postStartCommand": "git config --global user.signingkey $HOME/.ssh/yubikey.pub && ssh-add -L > $HOME/.ssh/yubikey.pub",
 	"postAttachCommand": "mkdir -p api/.tmp/ && touch .tmp/config.yaml && cd web && npm install && npm run dev -- -",

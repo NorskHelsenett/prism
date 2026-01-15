@@ -3,16 +3,16 @@ oidc:
     clientID: "prism-test-client"
     clientSecret: "test-secret"
     redirectUri: "http://localhost:8080/api/callback"
-    providerUri: "http://oidc-mock:9999"
+    providerUri: "http://localhost:9999"
 
 cors:
   origin: "http://localhost:5173"
 
 admins:
-  - alice@test.com
+  - alice.admin@test.local
 
 database:
-  path: "/data/"
+  path: "./test-data/"
 
 events:
   interval: 10

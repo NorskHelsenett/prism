@@ -1,5 +1,8 @@
 .PHONY: help test test-access bench report clean seed build up down logs
 
+# Container runtime (use podman-compose or docker-compose)
+COMPOSE ?= podman-compose
+
 # Default target
 help:
 	@echo "Prism Integration Test Suite"
@@ -20,13 +23,13 @@ help:
 
 # Build all containers
 build:
-	@echo "Building Docker containers..."
-	docker-compose -f docker-compose.test.yml build
+	@echo "Building containers with $(COMPOSE)..."
+	$(COMPOSE) -f docker-compose.test.yml build
 
 # Start services in background
 up:
 	@echo "Starting services..."
-	docker-compose -f docker-compose.test.yml up -d oidc-mock prism-api
+	$(COMPOSE) -f docker-compose.test.yml up -d oidc-mock prism-api
 	@echo "Waiting for services to be healthy..."
 	@sleep 10
 	@echo "Services are ready!"
@@ -34,22 +37,22 @@ up:
 # Stop all services
 down:
 	@echo "Stopping services..."
-	docker-compose -f docker-compose.test.yml down
+	$(COMPOSE) -f docker-compose.test.yml down
 
 # View logs
 logs:
-	docker-compose -f docker-compose.test.yml logs -f
+	$(COMPOSE) -f docker-compose.test.yml logs -f
 
 # Run full test suite
 test: clean build
 	@echo "Starting services..."
-	docker-compose -f docker-compose.test.yml up -d oidc-mock prism-api
+	$(COMPOSE) -f docker-compose.test.yml up -d oidc-mock prism-api
 	@echo "Waiting for services to be ready..."
 	@sleep 10
 	@echo "Seeding database with test fixtures..."
-	docker-compose -f docker-compose.test.yml run --rm test-runner go run cmd/seed/main.go
+	$(COMPOSE) -f docker-compose.test.yml run --rm test-runner go run cmd/seed/main.go
 	@echo "Running full integration test suite..."
-	docker-compose -f docker-compose.test.yml up --abort-on-container-exit test-runner
+	$(COMPOSE) -f docker-compose.test.yml up --abort-on-container-exit test-runner
 	@echo ""
 	@echo "Test completed! Check reports/ for detailed results."
 	@make report
@@ -57,7 +60,7 @@ test: clean build
 # Run only access control tests
 test-access: clean build
 	@echo "Running access control tests..."
-	docker-compose -f docker-compose.test.yml run --rm test-runner \
+	$(COMPOSE) -f docker-compose.test.yml run --rm test-runner \
 		go test -v -run TestAccessMatrix -timeout 15m
 	@echo ""
 	@echo "Access tests completed! Check reports/ for detailed results."
@@ -66,7 +69,7 @@ test-access: clean build
 # Run benchmark tests
 bench: clean build
 	@echo "Running benchmark tests..."
-	docker-compose -f docker-compose.test.yml --profile benchmark up --abort-on-container-exit benchmark-runner
+	$(COMPOSE) -f docker-compose.test.yml --profile benchmark up --abort-on-container-exit benchmark-runner
 	@echo ""
 	@echo "Benchmarks completed! Check reports/ for detailed results."
 	@make report
@@ -111,7 +114,7 @@ seed: up
 	rm -rf test-data/prism.db
 
 	@echo "Seeding test database..."
-	docker-compose -f docker-compose.test.yml run --rm test-runner \
+	$(COMPOSE) -f docker-compose.test.yml run --rm test-runner \
 		go run ./cmd/seed
 	@echo "Database seeded successfully!"
 
@@ -121,17 +124,17 @@ clean:
 # 	rm -rf test-data/*.db
 	sqlite3 test-data/prism.db "VACUUM;drop table if exists project_data; drop table if exists json_data; drop table if exists api_keys;"
 	rm -rf reports/*.json
-	docker-compose -f docker-compose.test.yml down -v
+	$(COMPOSE) -f docker-compose.test.yml down -v
 	@echo "Cleanup completed!"
 
 # Quick test (doesn't rebuild containers)
 quick-test:
 	@echo "Running quick test (no rebuild)..."
-	docker-compose -f docker-compose.test.yml up --abort-on-container-exit test-runner
+	$(COMPOSE) -f docker-compose.test.yml up --abort-on-container-exit test-runner
 
 # Interactive shell in test container
 shell:
-	docker-compose -f docker-compose.test.yml run --rm test-runner /bin/sh
+	$(COMPOSE) -f docker-compose.test.yml run --rm test-runner /bin/sh
 
 # Validate fixtures (check CSV format)
 validate-fixtures:
