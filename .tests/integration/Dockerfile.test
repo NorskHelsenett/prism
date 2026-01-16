@@ -1,5 +1,5 @@
 # Use an Alpine-based Go image (matches apk usage and Go envs in history)
-FROM golang:1.23-alpine
+FROM golang:1.25-alpine
 
 # Mirror envs seen in history
 ENV GOTOOLCHAIN=local \
