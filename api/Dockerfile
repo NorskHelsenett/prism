@@ -1,5 +1,5 @@
 # Use the official Golang image to provide all the necessary build tools
-FROM --platform=$BUILDPLATFORM ncr.sky.nhn.no/dockerhub/golang:1.25.0-alpine as builder
+FROM --platform=$BUILDPLATFORM ncr.sky.nhn.no/dockerhub/golang:1.25.0-alpine AS builder
 
 # Set the current working directory inside the container to /app
 WORKDIR /app
