@@ -28,7 +28,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN || secrets.REGISTRY_ACCESS_TOKEN }}
+          password: ${{ secrets.REGISTRY_ACCESS_TOKEN }}
 
       - name: Prepare build metadata
         id: metadata
