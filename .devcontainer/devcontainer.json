@@ -28,5 +28,9 @@
 				"GitLab.gitlab-workflow"
 			]
 		}
-	}
+	},
+	"runArgs": [
+		"--network",
+		"host"
+	]
 }

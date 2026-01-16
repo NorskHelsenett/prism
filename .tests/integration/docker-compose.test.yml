@@ -5,8 +5,6 @@ services:
       context: ./oidc-mock
       dockerfile: Dockerfile
     container_name: prism-test-oidc
-    ports:
-      - "9999:9999"
     volumes:
       - ./oidc-mock/users.yaml:/config/users.yaml:ro
     environment:
@@ -27,9 +25,6 @@ services:
       context: ../../api
       dockerfile: Dockerfile
     container_name: prism-test-api
-    ports:
-      - "8080:8080"
-      - "8888:8888"
     volumes:
       - ./config.test.yaml:/config/config.yaml:ro
       - ./test-data:/data

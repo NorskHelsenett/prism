@@ -159,80 +159,91 @@ func ShareMiddleware() gin.HandlerFunc {
 
 func ACLMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		projectID := c.Param("projectID")
-		findingsIDStr := c.Param("findingsID")
+		// Get user email and role from context
 		email, exists := c.Get("email")
 		if !exists {
-			c.AbortWithStatus(http.StatusForbidden)
+			c.JSON(http.StatusForbidden, gin.H{"error": "User email not found in context"})
+			c.Abort()
 			return
 		}
 
-		role, _ := c.Get("role")
-
-		if findingsIDStr != "" {
-
-			if globalAccess(config.AppConfig.Roles[role.(string)].Permissions, "/vulnerability") {
-				c.Next()
-				return
-			}
-
-			findingsID, err := strconv.ParseUint(findingsIDStr, 10, 64)
-			if err != nil {
-				// Handle error if the findingsID is not a valid number
-				c.AbortWithStatus(http.StatusBadRequest)
-				return
-			}
-
-			vulnerability, err := database.GetVulnerabilityIds(false, email.(string), []uint{uint(findingsID)})
-			if err != nil {
-				c.AbortWithStatus(http.StatusForbidden)
-				return
-			}
-
-			hasAccessToVulnerability := len(vulnerability) > 0
-
-			if hasAccessToVulnerability {
-				c.Next()
-				return
-			}
-
-			projectIDFromVulnerability, err := database.GetProjectIdFromVulnerabilityID(uint(findingsID))
-			if err != nil {
-				// Handle error from GetProjectIdFromVulnerabilityID
-				c.AbortWithStatus(http.StatusForbidden)
-				return
-			}
-
-			// Update the projectID for subsequent checks
-			projectID = fmt.Sprintf("%d", projectIDFromVulnerability)
+		role, exists := c.Get("role")
+		if !exists {
+			c.JSON(http.StatusForbidden, gin.H{"error": "User role not found in context"})
+			c.Abort()
+			return
 		}
 
-		if projectID != "" {
+		emailStr := email.(string)
+		roleStr := role.(string)
 
-			if globalAccess(config.AppConfig.Roles[role.(string)].Permissions, "/project") {
+		// Admin bypasses all checks
+		if roleStr == "admin" {
+			c.Next()
+			return
+		}
+
+		// Get parameters
+		projectID := c.Param("projectID")
+		findingsIDStr := c.Param("findingsID")
+
+		// Vulnerability-level check
+		if findingsIDStr != "" {
+			findingsID, err := strconv.ParseUint(findingsIDStr, 10, 64)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid findings ID"})
+				c.Abort()
+				return
+			}
+
+			// Global viewer status for /vulnerability
+			globalViewer := globalAccess(config.AppConfig.Roles[roleStr].Permissions, "/vulnerability")
+
+			// Single query to accessible_vulnerabilities view
+			hasAccess, err := database.CanAccessVulnerability(uint(findingsID), emailStr, roleStr, globalViewer)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error checking vulnerability access"})
+				c.Abort()
+				return
+			}
+			if hasAccess {
 				c.Next()
 				return
 			}
 
-			// Use HasClientAccessToProject to check access
-			hasAccess, err := database.HasClientAccessToProject(email.(string), projectID)
+			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied to the vulnerability"})
+			c.Abort()
+			return
+		}
+
+		// Project-level check
+		if projectID != "" {
+			// Global project access
+			if globalAccess(config.AppConfig.Roles[roleStr].Permissions, "/project") {
+				c.Next()
+				return
+			}
+
+			// Single query to project_data (more efficient than view)
+			hasAccess, err := database.HasAccessToProject(emailStr, projectID, roleStr)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Error checking project access"})
 				c.Abort()
 				return
 			}
-
-			if !hasAccess {
-				c.JSON(http.StatusForbidden, gin.H{"error": "Access denied to the project"})
-				c.Abort()
-				return
-			} else {
+			if hasAccess {
 				c.Next()
 				return
 			}
+
+			c.JSON(http.StatusForbidden, gin.H{"error": "Access denied to the project"})
+			c.Abort()
+			return
 		}
 
-		c.AbortWithStatus(http.StatusNotFound)
+		// Neither projectID nor findingsID provided
+		c.JSON(http.StatusNotFound, gin.H{"error": "No project or vulnerability specified"})
+		c.Abort()
 	}
 }
 

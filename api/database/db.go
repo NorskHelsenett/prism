@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"runtime"
 	"time"
@@ -233,6 +234,9 @@ func InitDB() {
 	db.AutoMigrate(&models.SharedDocument{})
 	db.AutoMigrate(&models.Team{})
 
+	// Create the accessible_vulnerabilities view
+	initAccessibleVulnerabilitiesView()
+
 	db.Exec("DROP TRIGGER IF EXISTS jsondata_insert;")
 	db.Exec("DROP TRIGGER IF EXISTS jsondata_update_comments;")
 
@@ -258,6 +262,32 @@ func InitDB() {
 				);
 		END;
 	`)
+}
+
+func initAccessibleVulnerabilitiesView() {
+	// Drop the view if it exists
+	if err := db.Exec("DROP VIEW IF EXISTS accessible_vulnerabilities;").Error; err != nil {
+		log.Fatalf("Failed to drop view accessible_vulnerabilities: %v", err)
+	}
+
+	// Create the view
+	viewSQL := `
+		CREATE VIEW accessible_vulnerabilities AS
+		SELECT
+				json_data.id AS id,
+				json_extract(json_data.vulnerability, '$.visibility') AS visibility,
+				json_extract(json_data.vulnerability, '$.assignedTo') AS assigned_to,
+				json_data.found_by,
+				json_data.project_id,
+				project_data.client_email,
+				project_data.hacker_name
+		FROM json_data
+		LEFT JOIN project_data ON json_data.project_id = project_data.id;
+	`
+
+	if err := db.Exec(viewSQL).Error; err != nil {
+		log.Fatalf("Failed to create view accessible_vulnerabilities: %v", err)
+	}
 }
 
 func CloseConnection() error {
@@ -849,6 +879,56 @@ func optimizeSQLite(db *gorm.DB) error {
 	}
 
 	return nil
+}
+
+// Uses the accessible_vulnerabilities view for efficient DB-level filtering.
+// globalViewer: true if the user's role has global view rights
+func CanAccessVulnerability(vulnID uint, email string, role string, globalViewer bool) (bool, error) {
+	if role == "admin" {
+		return true, nil
+	}
+	var count int64
+	query := db.Table("accessible_vulnerabilities").Where("id = ?", vulnID)
+	if globalViewer {
+		query = query.Where(`
+            project_id IS NULL
+            OR visibility IN ('published', 'public')
+            OR assigned_to = ?
+            OR found_by = ?
+            OR ',' || COALESCE(client_email, '') || ',' LIKE ?
+            OR ',' || COALESCE(hacker_name, '') || ',' LIKE ?
+        `, email, email, "%,"+email+",%", "%,"+email+",%")
+	} else {
+		query = query.Where(`
+            assigned_to = ?
+            OR found_by = ?
+            OR ',' || COALESCE(client_email, '') || ',' LIKE ?
+            OR ',' || COALESCE(hacker_name, '') || ',' LIKE ?
+        `, email, email, "%,"+email+",%", "%,"+email+",%")
+	}
+	if err := query.Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func HasAccessToProject(email string, projectID string, role string) (bool, error) {
+	if role == "admin" {
+		return true, nil
+	}
+	projectIDInt, err := strconv.ParseUint(projectID, 10, 64)
+	if err != nil {
+		return false, fmt.Errorf("invalid project ID: %v", err)
+	}
+	var count int64
+	// Direct query to project_data for efficiency
+	query := db.Table("project_data").
+		Where("id = ? AND deleted_at IS NULL", projectIDInt).
+		Where("',' || COALESCE(client_email, '') || ',' LIKE ? OR ',' || COALESCE(hacker_name, '') || ',' LIKE ?", "%,"+email+",%", "%,"+email+",%")
+	if err := query.Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 func GetProjectIdFromVulnerabilityID(findingsID uint) (uint, error) {
@@ -1617,43 +1697,49 @@ func GetVulnerabilityIds(isGlobal bool, email string, ids []uint) ([]uint, error
 	return accessibleIds, nil
 }
 
-func AllVulnerabilities(all bool, email string) ([]MinimalJSONData, error) {
-	var jsonData []JSONData
+func AllVulnerabilities(globalViewer bool, email string, isAdmin bool) ([]MinimalJSONData, error) {
+    var jsonData []JSONData
 
-	if all {
-		// Admin: Get all vulnerabilities
-		result := db.Preload("Project").
-			Select("json_data.*, json_extract(json_data.vulnerability, '$.title') as vulnerability_title, json_extract(json_data.vulnerability, '$.isPublicFacing') as vulnerability_isPublicFacing, json_extract(json_data.vulnerability, '$.criticality') as vulnerability_criticality, json_extract(json_data.vulnerability, '$.date') as vulnerability_date, json_extract(json_data.vulnerability, '$.visibility') as vulnerability_visibility").
-			Order("json_data.created_at desc").
-			Find(&jsonData)
-		filtered := FilterJSONDataForUser(jsonData, email, all)
-		return minifiedVulnerabilityJSON(filtered), result.Error
+    query := db.Preload("Project").
+        Select(`
+            json_data.*,
+            json_extract(json_data.vulnerability, '$.title') as vulnerability_title,
+            json_extract(json_data.vulnerability, '$.isPublicFacing') as vulnerability_isPublicFacing,
+            json_extract(json_data.vulnerability, '$.criticality') as vulnerability_criticality,
+            json_extract(json_data.vulnerability, '$.date') as vulnerability_date,
+            json_extract(json_data.vulnerability, '$.visibility') as vulnerability_visibility
+        `).
+        Where("json_data.deleted_at IS NULL").
+        Order("json_data.created_at desc")
 
-	} else {
-		// Non-admin: Find all project IDs where the email is in "client_email"
-		var projectIDs []uint
-		// Use exact match with comma separators to avoid substring attacks
-		db.Model(&ProjectData{}).
-			Where("(',' || client_email || ',') LIKE ?", "%,"+email+",%").
-			Or("(',' || hacker_name || ',') LIKE ?", "%,"+email+",%").
-			Pluck("id", &projectIDs)
+    if !isAdmin {
+        // Join with accessible_vulnerabilities view to filter accessible vulnerabilities
+        query = query.Joins("INNER JOIN accessible_vulnerabilities ON accessible_vulnerabilities.id = json_data.id")
+        if globalViewer {
+            query = query.Where(`
+                accessible_vulnerabilities.visibility IN ('published', 'public') OR
+                accessible_vulnerabilities.assigned_to = ? OR
+                accessible_vulnerabilities.found_by = ? OR
+                ',' || COALESCE(accessible_vulnerabilities.client_email, '') || ',' LIKE ? OR
+                ',' || COALESCE(accessible_vulnerabilities.hacker_name, '') || ',' LIKE ?
+            `, email, email, "%,"+email+",%", "%,"+email+",%")
+        } else {
+            query = query.Where(`
+                accessible_vulnerabilities.assigned_to = ? OR
+                accessible_vulnerabilities.found_by = ? OR
+                ',' || COALESCE(accessible_vulnerabilities.client_email, '') || ',' LIKE ? OR
+                ',' || COALESCE(accessible_vulnerabilities.hacker_name, '') || ',' LIKE ?
+            `, email, email, "%,"+email+",%", "%,"+email+",%")
+        }
+    }
 
-		if len(projectIDs) == 0 {
-			// No projects found for this email, return empty jsonData
-			return minifiedVulnerabilityJSON(jsonData), nil
-		}
+    err := query.Find(&jsonData).Error
+    if err != nil {
+        return nil, err
+    }
 
-		// Get vulnerabilities for those projects
-		result := db.Preload("Project").
-			Select("json_data.*, json_extract(json_data.vulnerability, '$.title') as vulnerability_title, json_extract(json_data.vulnerability, '$.isPublicFacing') as vulnerability_isPublicFacing, json_extract(json_data.vulnerability, '$.criticality') as vulnerability_criticality, json_extract(json_data.vulnerability, '$.date') as vulnerability_date, json_extract(json_data.vulnerability, '$.visibility') as vulnerability_visibility").
-			Where("project_id IN ?", projectIDs).
-			Or("found_by LIKE ?", email).
-			Order("json_data.created_at desc").
-			Find(&jsonData)
-
-		filtered := FilterJSONDataForUser(jsonData, email, all)
-		return minifiedVulnerabilityJSON(filtered), result.Error
-	}
+    filtered := FilterJSONDataForUser(jsonData, email, globalViewer || isAdmin)
+    return minifiedVulnerabilityJSON(filtered), nil
 }
 
 func minifiedVulnerabilityJSON(jsonData []JSONData) []MinimalJSONData {
