@@ -95,7 +95,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN || secrets.REGISTRY_ACCESS_TOKEN }}
+          password: ${{ secrets.REGISTRY_ACCESS_TOKEN }}
 
       - name: Prepare build metadata
         id: metadata
@@ -164,7 +164,7 @@ jobs:
 
       - name: Log in to Helm Registry
         run: |
-          echo "${{ secrets.GITHUB_TOKEN || secrets.REGISTRY_ACCESS_TOKEN }}" | helm registry login ${{ env.REGISTRY }} -u "${{ github.actor }}" --password-stdin
+          echo "${{ secrets.REGISTRY_ACCESS_TOKEN }}" | helm registry login ${{ env.REGISTRY }} -u "${{ github.actor }}" --password-stdin
 
       - name: Determine Helm repository
         id: helm-repo
