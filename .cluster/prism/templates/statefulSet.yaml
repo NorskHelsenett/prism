@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ $.Values.app.name }}
+  name: {{ .Chart.Name }}
   labels:
-    app: {{ $.Values.app.name }}
+    app: {{ .Chart.Name }}
 spec:
-  serviceName: "{{ $.Values.app.name }}"
-  replicas: {{ .Values.app.replicaCount | default 1}}
+  serviceName: "{{ .Chart.Name }}"
+  replicas: {{ .Values.prism.replicaCount | default 1}}
   selector:
     matchLabels:
-      app: app
+      app: {{ .Chart.Name }}
   template:
     metadata:
       labels:
-        app: app
+        app: {{ .Chart.Name }}
     spec:
       automountServiceAccountToken: false
       securityContext:
@@ -25,46 +25,68 @@ spec:
         runAsUser: 101
         fsGroup: 101
       containers:
-      - name: {{ $.Values.app.name }}
-        image: {{ $.Values.image.repository }}:{{ $.Values.image.tag | default "latest" }}
+      - name: {{ .Chart.Name }}
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag | default "latest" }}
         resources:
-          {{- if .Values.app.resources }}
-          {{- toYaml .Values.app.resources | nindent 10 }}
+          {{- if .Values.prism.resources }}
+          {{- toYaml .Values.prism.resources | nindent 10 }}
           {{- else }}
           requests:
-            memory: "256Mi"  # Request 256 MiB of memory
-            cpu: "250m"      # Request 250 millicpu (0.25 CPU cores)
+            memory: "256Mi"
+            cpu: "250m"
           limits:
-            memory: "2Gi"    # Limit to 2 GiB of memory
-            cpu: "4"         # Limit to 4 CPU cores
+            memory: "2Gi"
+            cpu: "4"
           {{- end }}
-        imagePullPolicy: {{ $.Values.image.pullPolicy }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
         ports:
-        {{- range .Values.app.services }}
-        - name: {{ .name }}
-          containerPort: {{ .port }}
-        {{- end }}
+        - name: http
+          containerPort: 8080
+        - name: healthz
+          containerPort: 8888
         env:
-        {{- range .Values.app.env }}
-        - name: {{ .name }}
-          value: {{ .value }}
+        - name: CONFIG_PATH
+          value: "/config/config.yaml"
+        {{- with .Values.prism.env }}
+        {{- toYaml . | nindent 8 }}
         {{- end }}
-        {{- if .Values.app.livenessProbe }}
         livenessProbe:
-          {{- toYaml .Values.app.livenessProbe | nindent 10 }}
-        {{- end }}
-        {{- if .Values.app.readinessProbe }}
+          {{- if .Values.prism.livenessProbe }}
+          {{- toYaml .Values.prism.livenessProbe | nindent 10 }}
+          {{- else }}
+          httpGet:
+            path: /healthz
+            port: healthz
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          {{- end }}
         readinessProbe:
-          {{- toYaml .Values.app.readinessProbe | nindent 10 }}
-        {{- end }}
-        {{- if .Values.app.startupProbe }}
+          {{- if .Values.prism.readinessProbe }}
+          {{- toYaml .Values.prism.readinessProbe | nindent 10 }}
+          {{- else }}
+          httpGet:
+            path: /healthz
+            port: healthz
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          {{- end }}
         startupProbe:
-          {{- toYaml .Values.app.startupProbe | nindent 10 }}
-        {{- end }}
+          {{- if .Values.prism.startupProbe }}
+          {{- toYaml .Values.prism.startupProbe | nindent 10 }}
+          {{- else }}
+          httpGet:
+            path: /healthz
+            port: healthz
+          periodSeconds: 5
+          failureThreshold: 30
+          {{- end }}
         volumeMounts:
-        {{- range .Values.app.mounts }}
+        {{- range .Values.prism.mounts }}
         - name: {{ .name }}
           mountPath: {{ .mountPath }}
+          {{- if .subPath }}
+          subPath: {{ .subPath }}
+          {{- end }}
           readOnly: {{ .readOnly | default false }}
         {{- end }}
         securityContext:
@@ -80,7 +102,7 @@ spec:
           runAsGroup: 101
           readOnlyRootFilesystem: true
       volumes:
-      {{- range .Values.app.mounts }}
+      {{- range .Values.prism.mounts }}
       {{- if or .fromSecret .inMemory .config }}
       - name: {{ .name }}
         {{- if .fromSecret }}
@@ -97,14 +119,14 @@ spec:
       {{- end }}
       {{- end }}
   volumeClaimTemplates:
-  {{- range .Values.app.mounts }}
+  {{- range .Values.prism.mounts }}
   {{- if not (or .fromSecret .inMemory .config) }}
   - metadata:
       name: {{ .name }}
     spec:
       accessModes: [ "ReadWriteOnce" ]
-      {{- if $.Values.app.storageClassName }}
-      storageClassName: {{ $.Values.app.storageClassName }}
+      {{- if $.Values.prism.storageClassName }}
+      storageClassName: {{ $.Values.prism.storageClassName }}
       {{- end }}
       resources:
         requests:

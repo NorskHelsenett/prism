@@ -1,30 +1,31 @@
-{{- with .Values.app.host }}
+{{- if .Values.prism.ingress.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ $.Values.app.name }}-ingress
-  {{- if $.Values.app.ingressAnnotations }}
+  name: {{ .Chart.Name }}-ingress
+  {{- with .Values.prism.ingress.annotations }}
   annotations:
-    {{- toYaml $.Values.app.ingressAnnotations | nindent 4 }}
+    {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  {{- if $.Values.app.ingressClassName }}
-  ingressClassName: {{ $.Values.app.ingressClassName }}
+  {{- with .Values.prism.ingress.className }}
+  ingressClassName: {{ . }}
   {{- end }}
+  {{- if .Values.prism.ingress.tls }}
   tls:
   - hosts:
-    - {{ . }}
-    secretName: {{ $.Values.app.name }}-tls-secret
+    - {{ .Values.prism.ingress.host }}
+    secretName: {{ .Chart.Name }}-tls-secret
+  {{- end }}
   rules:
-  - host: {{ . }}
+  - host: {{ .Values.prism.ingress.host }}
     http:
       paths:
       - pathType: Prefix
         path: "/"
         backend:
           service:
-            name: {{ $.Values.app.name }}-service
+            name: {{ .Chart.Name }}-service
             port:
               number: 8080
----
 {{- end }}

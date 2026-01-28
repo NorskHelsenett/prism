@@ -1,16 +1,12 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Values.app.name }}-service
+  name: {{ .Chart.Name }}-service
 spec:
-  type: {{ .Values.app.serviceType | default "ClusterIP" }}
+  type: {{ .Values.prism.serviceType | default "ClusterIP" }}
   selector:
-    app: {{ .Values.app.name }}
+    app: {{ .Chart.Name }}
   ports:
-  {{- range .Values.app.services }}
-  {{- if not .internal }}
-  - name: {{ .name }}
-    port: {{ .port }}
-    targetPort: {{ .port }}
-  {{- end }}
-  {{- end }}
+  - name: http
+    port: 8080
+    targetPort: 8080

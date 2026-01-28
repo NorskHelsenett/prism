@@ -8,12 +8,13 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
 
-app:
-  name: prism
-  deployment: statefulSet
-  host: prism.example.com
-  ingressClassName: ""
-  ingressAnnotations: {}
+prism:
+  ingress:
+    enabled: true
+    host: prism.example.com
+    className: ""
+    annotations: {}
+    tls: true
   storageClassName: ""
   serviceType: ClusterIP
   mounts:

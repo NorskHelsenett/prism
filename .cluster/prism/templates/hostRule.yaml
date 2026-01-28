@@ -1,11 +1,11 @@
-{{- with .Values.app.hostRule }}
+{{- with .Values.prism.hostRule }}
 apiVersion: ako.vmware.com/v1alpha1
 kind: HostRule
 metadata:
-  name: {{ $.Chart.Name }}-{{ $.Values.app.name }}-hostrule
+  name: {{ $.Chart.Name }}-hostrule
 spec:
   virtualhost:
-    fqdn: {{ $.Values.app.host }}
+    fqdn: {{ $.Values.prism.ingress.host }}
     datascripts: {{ toYaml .datascripts | nindent 6 }}
 ---
 {{- end }}
