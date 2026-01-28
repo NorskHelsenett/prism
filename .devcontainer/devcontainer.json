@@ -6,16 +6,18 @@
 	"features": {
 		"ghcr.io/devcontainers/features/node:1": {},
 		"ghcr.io/jonasbg/mocc/mocc:1": {
-            "version": "latest",
-            "port": "9999",
-            "autostart": true
-        }
+			"version": "latest",
+			"port": "9999",
+			"autostart": true
+		},
+		"ghcr.io/navinkrishnan/devcontainer-features-btp/helm:1": {}
 	},
 	"containerEnv": {
 		"HOME": "/home/vscode"
 	},
 	"forwardPorts": [
-		1473, 9999
+		1473,
+		9999
 	],
 	"runArgs": [
 		"--add-host=host.containers.internal:host-gateway"
