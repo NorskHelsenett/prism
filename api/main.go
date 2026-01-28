@@ -40,9 +40,12 @@ func main() {
 	// Set up the primary Gin router for the main application
 	r := gin.Default()
 
-		// Serve static files from web/build directory
-		r.Static("/_app", "./web/build/_app")
-		r.Static("/assets", "./web/build/assets")
+	r.GET("/ws", ws.WSHandler)
+
+	// Serve static files from web/build directory
+	r.Static("/_app", "./web/build/_app")
+	r.Static("/assets", "./web/build/assets")
+	r.Static("/img", "./web/build/img")
 	r.StaticFile("/favicon.png", "./web/build/favicon.png")
 	r.StaticFile("/robots.txt", "./web/build/robots.txt")
 	r.StaticFile("/service-worker.js", "./web/build/service-worker.js")
@@ -78,7 +81,6 @@ func main() {
 	apiRoutes := r.Group("/api")
 	apiRoutes.Use(auth.AuthMiddleware(sessionStore))
 
-	r.GET("/ws", ws.WSHandler)
 	{
 		apiRoutes.GET("/notification/publicKey", routes.GetNotificationPublicKey)
 		apiRoutes.GET("/notification", routes.GetNotificationsHandler)

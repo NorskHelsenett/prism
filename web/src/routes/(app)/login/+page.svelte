@@ -10,7 +10,7 @@
 				<div class="container-tight">
 					<div class="text-center mb-4">
 						<a href="." class="navbar-brand navbar-brand-autodark"
-							><img src="./logo.png" style="height:36px" alt="" /></a
+							><img src="/img/logo.png" style="height:36px" alt="" /></a
 						>
 					</div>
 					<div class="card card-md">
@@ -101,7 +101,7 @@
 				</div>
 			</div>
 			<div class="col-lg d-none d-lg-block">
-				<img src="./login_landing_page.png" style="height:450px" class="d-block mx-auto" alt="" />
+				<img src="/img/login_landing_page.png" style="height:450px" class="d-block mx-auto" alt="" />
 			</div>
 		</div>
 	</div>

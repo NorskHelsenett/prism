@@ -21,7 +21,7 @@
     }
   });
 
-  const logo = "/favicon.png"
+  const logo = "/img/favicon.png"
   let warningAccepted = true
 
   let showSecret = false
@@ -35,7 +35,7 @@
       <div class="container container-tight py-4">
         <div class="text-center mb-4">
           <a href="." class="navbar-brand">
-            <img src="/logo.png" width="110" height="32" alt="PRIME" class="navbar-brand-image">
+            <img src="/img/logo.png" width="110" height="32" alt="PRIME" class="navbar-brand-image">
           </a>
         </div>
         {#if !showOtpEntry && otpData?.url}

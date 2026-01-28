@@ -1,7 +1,7 @@
 <div class="card page page-center">
       <div class="container-tight py-4">
         <div class="empty">
-          <img src="/403.png" alt="403 error">
+          <img src="/img/403.png" alt="403 error">
           <div class="empty-header">403</div>
           <p class="empty-title">Oooh... Not authorized!</p>
           <p class="empty-subtitle text-secondary">

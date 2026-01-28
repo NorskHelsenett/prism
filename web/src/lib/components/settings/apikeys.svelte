@@ -127,7 +127,7 @@
   </div>
   {:else}
   <div class="card-body text-center py-4 p-sm-5">
-    <img src="/images/apikey_factory.png" class="img mb-n2" alt="apikey factory pipeline"/>
+    <img src="/img/apikey_factory.png" class="img mb-n2" alt="apikey factory pipeline"/>
     <h1 class="mt-5 text-azure">Your api keys lives here!</h1>
     <p class="text-secondary m-0">You have not created any API keys, yet!</p>
   </div>
