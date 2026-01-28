@@ -1,6 +1,6 @@
-{{- range $key, $value := .Values }}
-  {{- if $value.mounts }}
-    {{- range $value.mounts }}
+{{- with .Values.app }}
+  {{- if .mounts }}
+    {{- range .mounts }}
       {{- if and .config .config.data }}
 apiVersion: v1
 kind: ConfigMap
