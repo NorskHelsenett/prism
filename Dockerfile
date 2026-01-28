@@ -35,14 +35,16 @@ COPY api/ .
 # Copy built frontend from previous stage into expected path
 COPY --from=frontend /app/web/build ./web/build
 
-# Build a static binary
-RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build \
+# Build a static binary with CGO (required for SQLite)
+# Note: Building for native platform to avoid cross-compilation complexities with CGO
+RUN CGO_ENABLED=1 go build \
     -a \
-    -ldflags '-linkmode external -extldflags "-static" -w -s' \
+    -ldflags '-w -s' \
+    -tags 'sqlite_omit_load_extension' \
     -o /go/bin/prism .
 
-# 3. Final runtime stage (scratch for minimal size)
-FROM scratch AS runtime
+# 3. Final runtime stage (alpine for CGO binary support)
+FROM ncr.sky.nhn.no/dockerhub/library/alpine:3.21 AS runtime
 LABEL org.opencontainers.image.source="https://git.torden.tech/jonasbg/prism" \
       org.opencontainers.image.title="Prism" \
       org.opencontainers.image.description="Prism - Security Platform" \
