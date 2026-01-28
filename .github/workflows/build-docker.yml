@@ -170,10 +170,10 @@ jobs:
         id: helm-repo
         run: |
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "repo=jonasbg/prism/helm" >> $GITHUB_OUTPUT
+            echo "repo=norskhelsenett/prism/helm" >> $GITHUB_OUTPUT
             echo "tag_suffix=$(date '+%Y%m%d')" >> $GITHUB_OUTPUT
           else
-            echo "repo=jonasbg/prism/dev" >> $GITHUB_OUTPUT
+            echo "repo=norskhelsenett/prism/dev" >> $GITHUB_OUTPUT
             echo "tag_suffix=dev" >> $GITHUB_OUTPUT
           fi
 
