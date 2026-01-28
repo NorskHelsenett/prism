@@ -41,6 +41,7 @@ func main() {
 	r := gin.Default()
 
 	r.GET("/ws", ws.WSHandler)
+	r.GET("/.well-known/config.json", routes.HandleClientConfig)
 
 	// Serve static files from web/build directory
 	r.Static("/_app", "./web/build/_app")
@@ -68,7 +69,6 @@ func main() {
 	r.Use(audit.AuditMiddleware())
 
 	// Public API endpoints (no auth required)
-	r.GET("/.well-known/config.json", routes.HandleClientConfig)
 	r.GET("/api/login", auth.HandleLogin)
 	r.GET("/api/callback", func(c *gin.Context) {
 		auth.HandleCallback(c, sessionStore)
