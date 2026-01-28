@@ -24,9 +24,12 @@ func HandleClientConfig(c *gin.Context) {
 	// Build the list of configured OIDC providers
 	var providers []OIDCProvider
 
-	for providerType := range config.AppConfig.OIDC {
-		// Create a human-readable name from the provider type
-		name := formatProviderName(providerType)
+	for providerType, providerConfig := range config.AppConfig.OIDC {
+		// Use the name from the config, fallback to formatted type if not set
+		name := providerConfig.Name
+		if name == "" {
+			name = formatProviderName(providerType)
+		}
 		providers = append(providers, OIDCProvider{
 			Name: name,
 			Type: providerType,
@@ -57,8 +60,6 @@ func HandleClientConfig(c *gin.Context) {
 func formatProviderName(providerType string) string {
 	// Convert to title case and handle special cases
 	switch providerType {
-	case "mocc":
-		return "Mocc IdP"
 	case "azure":
 		return "Microsoft AD"
 	case "gitlab":

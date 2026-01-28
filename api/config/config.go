@@ -13,6 +13,7 @@ var AppConfig *Config
 
 // OIDCConfig represents the OIDC specific configuration.
 type OIDCConfig struct {
+	Name         string `yaml:"name"`
 	ClientID     string `yaml:"clientID"`
 	ClientSecret string `yaml:"clientSecret"`
 	RedirectURI  string `yaml:"redirectUri"`
@@ -49,7 +50,7 @@ type Slack struct {
 }
 
 type Events struct {
-	Interval int `yaml: "interval"`
+	Interval int `yaml:"interval"`
 }
 
 // Permission struct for parsing YAML

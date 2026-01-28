@@ -1,5 +1,6 @@
 oidc:
   mocc:
+    name: "Mocc IdP"
     clientID: "prism-local-client"
     clientSecret: "prism-local-secret"
     redirectUri: "http://localhost:5173/api/callback"
