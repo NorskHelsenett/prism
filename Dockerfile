@@ -1,6 +1,6 @@
 # Multi-stage build for Prism (SvelteKit static + Go server)
 # 1. Frontend build stage
-FROM ncr.sky.nhn.no/dockerhub/library/node:22-alpine AS frontend
+FROM ncr.sky.nhn.no/dockerhub/library/node:25-alpine AS frontend
 WORKDIR /app
 
 # Only copy package manifests first for better layer caching
@@ -39,15 +39,15 @@ COPY --from=frontend /app/web/build ./web/build
 # Note: Building for native platform to avoid cross-compilation complexities with CGO
 RUN CGO_ENABLED=1 go build \
     -a \
-    -ldflags '-w -s' \
+    -ldflags '-linkmode external -extldflags "-static"  -w -s' \
     -tags 'sqlite_omit_load_extension' \
     -o /go/bin/prism .
 
 # 3. Final runtime stage (alpine for CGO binary support)
-FROM ncr.sky.nhn.no/dockerhub/library/alpine:3.21 AS runtime
-LABEL org.opencontainers.image.source="https://git.torden.tech/jonasbg/prism" \
+FROM scratch AS runtime
+LABEL org.opencontainers.image.source="https://github.com/NorskHelsenett/prism" \
       org.opencontainers.image.title="Prism" \
-      org.opencontainers.image.description="Prism - Security Platform" \
+      org.opencontainers.image.description="PRISM - Pentest Report Information Security Management" \
       maintainer="Jonas Bo Grimsgaard @ NHN <sikkerhet@nhn.no>"
 
 ENV GIN_MODE=release
