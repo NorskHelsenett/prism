@@ -4,13 +4,18 @@
 	"name": "Go",
 	"image": "mcr.microsoft.com/devcontainers/go:1.25",
 	"features": {
-		"ghcr.io/devcontainers/features/node:1": {}
+		"ghcr.io/devcontainers/features/node:1": {},
+		"ghcr.io/jonasbg/mocc/mocc:1": {
+            "version": "latest",
+            "port": "9999",
+            "autostart": true
+        }
 	},
 	"containerEnv": {
 		"HOME": "/home/vscode"
 	},
 	"forwardPorts": [
-		1473
+		1473, 9999
 	],
 	"runArgs": [
 		"--add-host=host.containers.internal:host-gateway"
@@ -28,9 +33,5 @@
 				"GitLab.gitlab-workflow"
 			]
 		}
-	},
-	"runArgs": [
-		"--network",
-		"host"
-	]
+	}
 }

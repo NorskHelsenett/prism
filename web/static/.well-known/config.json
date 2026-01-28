@@ -1,11 +1,17 @@
 {
   "apiEndpoint": "http://localhost:5173",
-  "providers": [{
-    "name": "Helsegitlab",
-    "type": "gitlab"
-    }, {
+  "providers": [
+    {
+      "name": "Helsegitlab",
+      "type": "gitlab"
+    },
+    {
       "name": "Microsoft AD",
       "type": "azure"
+    },
+    {
+      "name": "Mocc IdP",
+      "type": "mocc"
     }
   ]
 }
