@@ -50,8 +50,9 @@ func main() {
 	r.StaticFile("/robots.txt", "./web/build/robots.txt")
 	r.StaticFile("/service-worker.js", "./web/build/service-worker.js")
 
-	// Serve .well-known directory for build info
-	r.Static("/.well-known", "./web/build/.well-known")
+	// Serve specific .well-known files (config.json is served dynamically via API)
+	r.StaticFile("/.well-known/CHANGELOG.md", "./web/build/.well-known/CHANGELOG.md")
+	r.StaticFile("/.well-known/buildinfo.json", "./web/build/.well-known/buildinfo.json")
 
 	// SPA fallback - serve index.html for all non-API routes
 	r.NoRoute(func(c *gin.Context) {
@@ -66,6 +67,8 @@ func main() {
 	r.Use(CORSMiddleware())
 	r.Use(audit.AuditMiddleware())
 
+	// Public API endpoints (no auth required)
+	r.GET("/.well-known/config.json", routes.HandleClientConfig)
 	r.GET("/api/login", auth.HandleLogin)
 	r.GET("/api/callback", func(c *gin.Context) {
 		auth.HandleCallback(c, sessionStore)
