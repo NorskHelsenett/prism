@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"text/template"
 	"strings"
+	"text/template"
 
 	"github.com/slack-go/slack"
 	"prism/config"
@@ -27,13 +27,13 @@ type VulnerabilityData struct {
 }
 
 func (v *Vulnerability) truncateTitle(maxLength int) {
-    if len(v.Title) > maxLength {
-        v.Title = v.Title[:maxLength]
-    }
+	if len(v.Title) > maxLength {
+		v.Title = v.Title[:maxLength]
+	}
 }
 
 func (v *Vulnerability) replaceQuotes() {
-    v.Title = strings.ReplaceAll(v.Title, "\"", " ")
+	v.Title = strings.ReplaceAll(v.Title, "\"", " ")
 }
 
 func sendSlackMessage(data VulnerabilityData, channel string) (string, error) {
