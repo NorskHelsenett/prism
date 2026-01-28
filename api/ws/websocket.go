@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"prism/auth"
+	"prism/database"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -63,20 +64,18 @@ func WSHandler(c *gin.Context) {
 }
 
 func sendWebsocketMessageFor(cookie auth.UserInfo, conn *websocket.Conn) bool {
-	//@todo fix notification implementation
+	notifications, err := database.GetNotifications(cookie.Email)
+	if err != nil {
+		fmt.Printf("Error getting notifications: %v\n", err)
+		return true
+	}
+	msg := WebsocketMessage{
+		Type: "notifications",
+		Data: notifications,
+	}
+	if err := conn.WriteJSON(msg); err != nil {
+		fmt.Println("Write error:", err)
+		return true
+	}
 	return false
-	// notifications, err := database.GetNotifications(cookie.Email)
-	// if err != nil {
-	// 	fmt.Printf("Error getting notifications: %v\n", err)
-	// 	return true
-	// }
-	// msg := WebsocketMessage{
-	// 	Type: "notifications",
-	// 	Data: notifications,
-	// }
-	// if err := conn.WriteJSON(msg); err != nil {
-	// 	fmt.Println("Write error:", err)
-	// 	return true
-	// }
-	// return false
 }

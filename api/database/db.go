@@ -578,7 +578,7 @@ func MarkNotificationAsRead(email string, notificationTime time.Time) error {
 
 func GetNotifications(email string) ([]models.Notification, error) {
 	var userData UserData
-	result := db.First(&userData).Where("email = ?", email)
+	result := db.Where("email = ?", email).First(&userData)
 	if result.Error != nil {
 		return nil, result.Error
 	}
