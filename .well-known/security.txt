@@ -1,0 +1,5 @@
+Contact: mailto:cat[at]nhn.no
+Expires: 2026-12-31
+Preferred-Languages: no, en
+Canonical: https://github.com/NorskHelsenett/prism/.well-known/security.txt
+Policy: https://nhn.no/.well-known/vulnerability-disclosure.html
