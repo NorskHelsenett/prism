@@ -102,3 +102,19 @@ prism:
     periodSeconds: 5
     timeoutSeconds: 3
     failureThreshold: 30
+
+# Extra Kubernetes resources to create alongside the chart.
+# Supports Go template expressions via tpl.
+# extraResources:
+# - apiVersion: ako.vmware.com/v1beta1
+#   kind: HostRule
+#   metadata:
+#     name: '{{ .Chart.Name }}-hostrule'
+#   spec:
+#     virtualhost:
+#       fqdn: '{{ .Values.prism.ingress.host }}'
+#       fqdnType: Exact
+#       datascripts:
+#         - expose-nhn-office-client
+#         - bottom-deny-rule
+extraResources: []

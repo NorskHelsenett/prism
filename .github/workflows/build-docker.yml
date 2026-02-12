@@ -75,7 +75,7 @@ jobs:
             build.repository.name=${{ github.event.repository.name }}
             build.repository.branch=${{ github.ref_name }}
             build.repository.commithash=${{ github.sha }}
-            maintainer=Jonas Bo Grimsgaard @ NHN <sikkerhet@nhn.no>
+            maintainer=NorskHelsenett <https://github.com/NorskHelsenett/prism>
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.REGISTRY_PATH }}:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.REGISTRY_PATH }}:buildcache,mode=max
 

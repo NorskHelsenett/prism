@@ -1,4 +1,4 @@
-FROM ncr.sky.nhn.no/dockerhub/library/node AS build
+FROM node AS build
 
 WORKDIR /app
 
@@ -18,7 +18,7 @@ RUN npm run build
 RUN mkdir -p /etc/nginx/conf.d/
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-FROM ncr.sky.nhn.no/dockerhub/nginxinc/nginx-unprivileged
+FROM nginxinc/nginx-unprivileged
 WORKDIR /usr/share/nginx/html
 
 # Copy the built files from the build stage

@@ -1,6 +1,6 @@
 # Multi-stage build for Prism (SvelteKit static + Go server)
 # 1. Frontend build stage
-FROM ncr.sky.nhn.no/dockerhub/library/node:25-alpine AS frontend
+FROM node:25-alpine AS frontend
 WORKDIR /app
 
 # Only copy package manifests first for better layer caching
@@ -14,7 +14,7 @@ COPY web/ .
 RUN npm run build
 
 # 2. Go build stage
-FROM ncr.sky.nhn.no/dockerhub/golang:1.25.0-alpine AS gobuilder
+FROM golang:1.25.0-alpine AS gobuilder
 # Cross-compilation setup
 ARG TARGETOS=linux
 ARG TARGETARCH=amd64
@@ -48,7 +48,7 @@ FROM scratch AS runtime
 LABEL org.opencontainers.image.source="https://github.com/NorskHelsenett/prism" \
       org.opencontainers.image.title="Prism" \
       org.opencontainers.image.description="PRISM - Pentest Report Information Security Management" \
-      maintainer="Jonas Bo Grimsgaard @ NHN <sikkerhet@nhn.no>"
+      maintainer="NorskHelsenett <https://github.com/NorskHelsenett/prism>"
 
 ENV GIN_MODE=release
 ENV CONFIG_PATH=/config
