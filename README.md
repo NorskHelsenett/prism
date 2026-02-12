@@ -1,124 +1,280 @@
-# 🛡️💾 PRISM Pentest Report Information Security Management 🚀
+# PRISM - Pentest Report Information Security Management
 
-Welcome to PRISM (Pentest Report Information Security Management) – the ultimate command center for tech wizards and cyber sentinels! 🧙‍♂️🔍 Dive into a world where managing and decoding pentesting reports becomes a quest of efficiency and top-notch security. 🌐🔐
+PRISM is an internal vulnerability management and reporting tool developed by **CAT (Cyber Action Team)**, the internal penetration testing team at **Norsk helsenett SF (NHN)**. It provides a centralized platform for delegating, tracking, and reporting security vulnerabilities discovered during assessments.
 
-## 📸 Screenshots: A Sneak Peek into the Matrix
+## Screenshots
 
-<div>
-  <table>
-    <tr>
-      <td><img src=".docs/login.png" alt="Login Screen" width="100%"/></td>
-      <td><img src=".docs/frontpage.png" alt="Front Page Overview" width="100%"/></td>
-    </tr>
-    <tr>
-      <td><img src=".docs/new-vulnerability.jpg" alt="Adding New Vulnerability" width="100%"/></td>
-      <td><img src=".docs/new-project.png" alt="Creating New Project" width="100%"/></td>
-    </tr>
-    <tr>
-      <td><img src=".docs/projects.png" alt="Projects Dashboard" width="100%"/></td>
-      <td><img src=".docs/vulnerabilities.png" alt="Vulnerabilities Listing" width="100%"/></td>
-    </tr>
-    <tr>
-      <td><img src=".docs/project.png" alt="Project Details" width="100%"/></td>
-      <td><img src=".docs/vulnerability.png" alt="Vulnerability Details" width="100%"/></td>
-    </tr>
-  </table>
-</div>
+<table>
+  <tr>
+    <td><img src=".docs/login.png" alt="Login Screen" width="100%"/></td>
+    <td><img src=".docs/frontpage.png" alt="Front Page" width="100%"/></td>
+  </tr>
+  <tr>
+    <td><img src=".docs/projects.png" alt="Projects Dashboard" width="100%"/></td>
+    <td><img src=".docs/vulnerabilities.png" alt="Vulnerabilities List" width="100%"/></td>
+  </tr>
+  <tr>
+    <td><img src=".docs/project.png" alt="Project Details" width="100%"/></td>
+    <td><img src=".docs/vulnerability.png" alt="Vulnerability Details" width="100%"/></td>
+  </tr>
+</table>
 
-## 🌌 Overview: Where Technology Meets Security
+## Architecture
 
-PRISM is a meticulously crafted toolkit designed for the guardians of the digital realm - security engineers and pentesters. It's composed of:
+PRISM consists of two main components:
 
-1. **API**: Engineered with GoLang for blistering speed and unwavering reliability. 🚀
-2. **Web Interface**: Crafted using SvelteKit for an immersive and interactive experience. 🖥️
+- **API** - Backend service written in Go, providing a GraphQL and REST API
+- **Web** - Frontend application built with SvelteKit
 
-## 🗂️ Folder Structure: The Architect's Blueprint
+## Development Setup
 
-PRISM's repository is organized in a manner that would make even the most organized minds swoon:
+### Using DevContainer (Recommended)
 
-- 📂 `.cluster`: Home to Helm charts for orchestrating Kubernetes deployments.
-- 📂 `.git`: The heart of Git version control.
-- 📂 `.gitignore`: The keeper of secrets, specifying what to ignore.
-- 📂 `.gitlab`: GitLab CI/CD scrolls and incantations.
-- 📂 `api`: The cerebral cortex of the API component.
-- 📂 `web`: The digital canvas for the Web interface.
+The easiest way to get started is using the provided DevContainer configuration with VS Code or any compatible IDE.
 
-## 🚀 Getting Started: Launch Instructions
+1. Open the project in VS Code
+2. When prompted, click "Reopen in Container" (or run the command `Dev Containers: Reopen in Container`)
+3. The container will automatically:
+   - Install Go, Node.js, and required dependencies
+   - Start [mocc](https://github.com/jonasbg/mocc) as a local OIDC provider on port 9999
+   - Install npm dependencies and start the web dev server
+
+4. Start the API server in a terminal:
+   ```bash
+   cd api
+   CONFIG_PATH="config.yaml" go run .
+   ```
+
+5. Access the application at `http://localhost:5173`
+
+#### Test Users (via mocc)
+
+The mocc OIDC provider comes with pre-configured test users:
+
+| Email | Role |
+|-------|------|
+| `alice.admin@test.local` | Admin (configured in config.yaml) |
+| `bob.user@test.local` | Regular user |
+| `charlie.viewer@test.local` | Regular user |
+
+### Manual Setup
+
+If not using DevContainer:
+
+1. Install Go 1.25+ and Node.js 20+
+2. Start a mocc instance or configure another OIDC provider
+3. Create `api/config.yaml` (see Configuration section)
+4. Install and run:
+   ```bash
+   # Terminal 1 - API
+   cd api
+   CONFIG_PATH="config.yaml" go run .
+
+   # Terminal 2 - Web
+   cd web
+   npm install
+   npm run dev
+   ```
+
+## Configuration
+
+PRISM is configured via a YAML file. The path is specified by the `CONFIG_PATH` environment variable.
+
+### Example config.yaml
+
+```yaml
+oidc:
+  mocc:                                          # Provider key (used in URL path)
+    name: "Mocc IdP"                             # Display name on login page
+    clientID: "prism-local-client"
+    clientSecret: "prism-local-secret"
+    redirectUri: "http://localhost:5173/api/callback"
+    providerUri: "http://localhost:9999"
+
+cors:
+  origin: "http://localhost:5173"                # Frontend URL
+
+admins:
+  - alice.admin@test.local                       # Users with admin privileges
+
+database:
+  path: "./.tmp"                                 # SQLite database location
+
+events:
+  interval: 60                                   # Event processing interval (seconds)
+
+slack:
+  token: ""                                      # Slack bot token (optional)
+  webhookUrl: ""                                 # Slack webhook URL (optional)
+
+secrets:
+  HMAC_SECRET_KEY: "change-this-in-production"  # Used for signing tokens
+```
+
+### Multiple OIDC Providers
+
+You can configure multiple OIDC providers:
+
+```yaml
+oidc:
+  azure:
+    name: "Microsoft AD"
+    clientID: "your-azure-client-id"
+    clientSecret: "your-azure-client-secret"
+    redirectUri: "https://prism.example.com/api/callback"
+    providerUri: "https://login.microsoftonline.com/your-tenant-id/v2.0"
+  gitlab:
+    name: "GitLab"
+    clientID: "your-gitlab-client-id"
+    clientSecret: "your-gitlab-client-secret"
+    redirectUri: "https://prism.example.com/api/callback"
+    providerUri: "https://gitlab.example.com"
+```
+
+## Kubernetes Deployment
+
+PRISM is distributed as a Helm chart via `ghcr.io/norskhelsenett/prism/helm`.
 
 ### Prerequisites
 
-- A cauldron of GoLang brew for the API.
-- A pinch of Node.js and a dash of Bun (or npm) for the web interface.
+- Kubernetes cluster
+- Helm 3+
 
-### Conjuring the API
+### 1. Create the Configuration Secret
 
-Step into the `api` sanctum:
-
-```bash
-cd api
-```
-
-Summon the API with the ancient Go runes:
+The API configuration must be deployed as a Kubernetes Secret before installing the Helm chart:
 
 ```bash
-SLACK_PATH="tmp/slackMessage.json" GO_ENV=dev CONFIG_PATH="tmp/config.yaml" go run *.go
+kubectl create secret generic api-config-secret \
+  --from-file=config.yaml=/path/to/your/config.yaml \
+  -n your-namespace
 ```
 
-### Security
+Example production `config.yaml`:
+
+```yaml
+oidc:
+  azure:
+    name: "Microsoft Entra ID"
+    clientID: "your-client-id"
+    clientSecret: "your-client-secret"
+    redirectUri: "https://prism.example.com/api/callback"
+    providerUri: "https://login.microsoftonline.com/your-tenant-id/v2.0"
+
+cors:
+  origin: "https://prism.example.com"
+
+admins:
+  - admin@example.com
+
+database:
+  path: "/data"
+
+events:
+  interval: 60
+
+slack:
+  token: "xoxb-your-slack-token"
+  webhookUrl: "https://hooks.slack.com/services/xxx/yyy/zzz"
+
+secrets:
+  HMAC_SECRET_KEY: "generate-a-secure-random-string"
+```
+
+### 2. Create values-override.yaml
+
+```yaml
+image:
+  repository: ghcr.io/norskhelsenett/prism
+  tag: "latest"
+
+prism:
+  ingress:
+    enabled: true
+    host: prism.example.com
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    tls: true
+
+  storageClassName: standard
+
+  # Resource limits (adjust based on your needs)
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "1Gi"
+      cpu: "1"
+
+  # The config secret must exist before deployment
+  mounts:
+    - name: config
+      mountPath: /config
+      fromSecret: api-config-secret
+      readOnly: true
+    - name: data
+      mountPath: /data
+      storage: 10Gi
+      statefulSet: true
+    - name: tmp
+      inMemory: true
+      mountPath: /tmp
+      storage: 50Mi
+```
+
+### 3. Install the Chart
 
 ```bash
-go install golang.org/x/vuln/cmd/govulncheck@latest
-govulncheck ./...
-
-go list -m -u all
-go get -u ./... #upgrade all packages
-
-bun update
-npm audit fix
+helm upgrade --install prism oci://ghcr.io/norskhelsenett/prism/helm \
+  -f values-override.yaml \
+  -n your-namespace \
+  --create-namespace
 ```
 
-#### Trivy scan
-```bash
-docker run --rm -v $(pwd):/project aquasec/trivy fs /project
-```
-
-#### OSV-scanner
+### 4. Verify Deployment
 
 ```bash
-docker run -it -v ${PWD}:/src ghcr.io/google/osv-scanner -r /src
+kubectl get pods -n your-namespace
+kubectl logs -f prism-0 -n your-namespace
 ```
 
-### Weaving the Web Interface
+## About mocc
 
-Navigate to the mystical lands of web:
+[mocc](https://github.com/jonasbg/mocc) (Minimal OpenID Connect Core) is a tiny, opinionated mock OIDC provider written in Go. It supports the authorization code flow, provides a JWKS endpoint, and issues short-lived ID tokens. The DevContainer automatically starts mocc on port 9999.
 
-```bash
-cd web
+## Project Structure
+
+```
+prism/
+├── api/                    # Go backend
+│   ├── auth/               # OIDC authentication
+│   ├── config/             # Configuration loading
+│   ├── database/           # SQLite database layer
+│   ├── models/             # Data models
+│   ├── routes/             # HTTP handlers
+│   └── main.go             # Entry point
+├── web/                    # SvelteKit frontend
+│   ├── src/
+│   │   ├── lib/            # Shared components and utilities
+│   │   └── routes/         # Page routes
+│   └── static/             # Static assets
+├── .cluster/               # Helm charts
+│   └── prism/
+├── .devcontainer/          # DevContainer configuration
+└── .docs/                  # Documentation and screenshots
 ```
 
-Bring forth the web interface with Bun's magic (or npm's charm):
+## Security
 
-```bash
-bun run dev -- --host 0.0.0.0
+Report security vulnerabilities to cat[at]nhn.no. See [.well-known/security.txt](.well-known/security.txt) for details.
 
-# or
+## License
 
-npm run dev -- --host 0.0.0.0
-```
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
-## 🤝 Contributing: Join the Fellowship
+## Maintainers
 
-Adventurers and scholars, unite! Contributions to PRISM are more than welcome. Consult our CONTRIBUTING.md for the sacred code of conduct and mystical pull request rituals.
-
-
-## 🛡️ Security: The Fortress Walls
-
-In the realm of security, we are ever-vigilant. Encounter any dark sorcery or security-related issues? Send a raven to the maintainers or report in the issues section.
-
-## 📜 License: The Covenant
-
-Shared across the lands under the MIT License. Peruse LICENSE for the ancient texts.
-
----
-
-Embark on your quest for cybersecurity greatness! 🔐🌟
+**CAT - Cyber Action Team**
+Norsk helsenett SF (NHN)

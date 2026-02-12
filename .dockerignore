@@ -1,0 +1,8 @@
+api/config.yaml
+web/static/.well-known/*
+.docs/*
+.github/*
+.devcontainer/*
+.gitlab/*
+.vscode/*
+.cluster/*

@@ -172,7 +172,7 @@
     <svg height="300px" viewBox="0 0 100 100" id="background">
       <path fill="CornerFlowerBlue" d="M0,0, 100,0, C50,20 50,80 0,100 Z"/>
     </svg>
-    <img src="/inbox-zero.png" alt="..." class="opacity-3" />
+    <img src="/img/inbox-zero.png" alt="..." class="opacity-3" />
     <div class="pb-2">
       <h3 class="text-info text-small text-center m-0">No unread messages</h3>
       <p class="text-secondary text-small text-center">Enjoy yourself a cup of coffee</p>
@@ -185,7 +185,7 @@
       <div class="col">
         <h4 class="text-secondary p-4 pb-0">Enable browser notifications to get the latest news from <strong>PRISM</strong></h4>
         <div class="text-center">
-          <img src="/notification.png" class="w-70" alt="Notification Icon">
+          <img src="/img/notification.png" class="w-70" alt="Notification Icon">
         </div>
         <div class="text-center">
           <NotificationButton {notificationPermission} on:permissionChange={handlePermissionChange}/>

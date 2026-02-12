@@ -39,9 +39,36 @@ func main() {
 	routes.InitNotification()
 	// Set up the primary Gin router for the main application
 	r := gin.Default()
+
+	r.GET("/ws", ws.WSHandler)
+	r.GET("/.well-known/config.json", routes.HandleClientConfig)
+
+	// Serve static files from web/build directory
+	r.Static("/_app", "./web/build/_app")
+	r.Static("/assets", "./web/build/assets")
+	r.Static("/img", "./web/build/img")
+	r.StaticFile("/favicon.png", "./web/build/favicon.png")
+	r.StaticFile("/robots.txt", "./web/build/robots.txt")
+	r.StaticFile("/service-worker.js", "./web/build/service-worker.js")
+
+	// Serve specific .well-known files (config.json is served dynamically via API)
+	r.StaticFile("/.well-known/CHANGELOG.md", "./web/build/.well-known/CHANGELOG.md")
+	r.StaticFile("/.well-known/buildinfo.json", "./web/build/.well-known/buildinfo.json")
+
+	// SPA fallback - serve index.html for all non-API routes
+	r.NoRoute(func(c *gin.Context) {
+		// Don't serve index.html for API routes
+		if len(c.Request.URL.Path) >= 4 && c.Request.URL.Path[:4] == "/api" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "API endpoint not found"})
+			return
+		}
+		c.File("./web/build/index.html")
+	})
+
 	r.Use(CORSMiddleware())
 	r.Use(audit.AuditMiddleware())
 
+	// Public API endpoints (no auth required)
 	r.GET("/api/login", auth.HandleLogin)
 	r.GET("/api/callback", func(c *gin.Context) {
 		auth.HandleCallback(c, sessionStore)
@@ -53,11 +80,10 @@ func main() {
 		shareGroup.POST("/share/:token", func(c *gin.Context) { share.GetPublicVulnerability(c, sessionStore) })
 	}
 
-	// Authenticated users
-	r.Use(auth.AuthMiddleware(sessionStore))
-
-	r.GET("/ws", ws.WSHandler)
+	// Authenticated users (API only)
 	apiRoutes := r.Group("/api")
+	apiRoutes.Use(auth.AuthMiddleware(sessionStore))
+
 	{
 		apiRoutes.GET("/notification/publicKey", routes.GetNotificationPublicKey)
 		apiRoutes.GET("/notification", routes.GetNotificationsHandler)

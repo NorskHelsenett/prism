@@ -1,5 +1,5 @@
 package models
 
-type UserSettings struct{
+type UserSettings struct {
 	SwimlaneUsers []string `json:"swimlaneUsers" gorm:"swimlaneUsers"`
 }

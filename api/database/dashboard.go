@@ -128,6 +128,8 @@ func accessibleVulnerabilities(year, email string, isGlobal bool, projectIDs []u
 	if len(projectIDs) > 0 {
 		constraints = constraints.Or("project_id IN ?", projectIDs)
 	}
+	// Include vulnerabilities assigned to the user
+	constraints = constraints.Or("id IN (SELECT id FROM accessible_vulnerabilities WHERE assigned_to = ?)", email)
 
 	if err := query.Where(constraints).Find(&data).Error; err != nil {
 		return nil, err

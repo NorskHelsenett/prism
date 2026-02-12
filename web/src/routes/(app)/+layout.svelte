@@ -43,11 +43,9 @@
   let notifications = []
   onMount(async () => {
     await initializeApiEndpoint();
-    const currentDomain = window.location.host;
-
-    const protocolSchema = currentDomain == "localhost:5173" ? "ws" : "wss"
-
-    socket = new WebSocket(`${protocolSchema}://${currentDomain == "localhost:5173" ? "localhost:5173": currentDomain}/ws`);
+    const currentHost = window.location.host;
+    const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
+    socket = new WebSocket(`${wsProtocol}://${currentHost}/ws`);
 
     socket.onopen = function(event) {
         console.log('Connected to WebSocket');
@@ -85,7 +83,7 @@
 		<div class="container-xl">
 			<h1 class="navbar-brand navbar-brand-autodark d-none-navbar-horizontal pe-0 pe-md-3">
 				<a href="/">
-					<img src="/favicon.png" width="110" height="32" alt="PRISM" class="navbar-brand-image" />
+					<img src="/img/favicon.png" width="110" height="32" alt="PRISM" class="navbar-brand-image" />
 				</a>
 			</h1>
 

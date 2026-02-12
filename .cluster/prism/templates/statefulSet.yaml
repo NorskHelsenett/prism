@@ -1,21 +1,19 @@
-{{- range $key, $value := .Values }}
-{{- if eq $value.deployment "statefulSet" }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ $key }}
+  name: {{ .Chart.Name }}
   labels:
-    app: {{ $key }}
+    app: {{ .Chart.Name }}
 spec:
-  serviceName: "{{ $key }}"
-  replicas: {{ $value.replicaCount | default 1}}
+  serviceName: "{{ .Chart.Name }}"
+  replicas: {{ .Values.prism.replicaCount | default 1}}
   selector:
     matchLabels:
-      app: {{ $key }}
+      app: {{ .Chart.Name }}
   template:
     metadata:
       labels:
-        app: {{ $key }}
+        app: {{ .Chart.Name }}
     spec:
       automountServiceAccountToken: false
       securityContext:
@@ -27,34 +25,68 @@ spec:
         runAsUser: 101
         fsGroup: 101
       containers:
-      - name: {{ $key }}
-        image: {{ $value.repository }}:{{ $value.tag | default "latest" }}
+      - name: {{ .Chart.Name }}
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag | default "latest" }}
         resources:
-          {{- if $value.resources }}
-          {{- toYaml $value.resources | nindent 10 }}
+          {{- if .Values.prism.resources }}
+          {{- toYaml .Values.prism.resources | nindent 10 }}
           {{- else }}
           requests:
-            memory: "100Mi"  # Request 100 MiB of memory
-            cpu: "100m"      # Request 100 millicpu (0.1 CPU cores)
+            memory: "256Mi"
+            cpu: "250m"
           limits:
-            memory: "200Mi"  # Limit to 200 MiB of memory
-            cpu: "500m"      # Limit to 500 millicpu (0.5 CPU cores)
+            memory: "2Gi"
+            cpu: "4"
           {{- end }}
-        imagePullPolicy: {{ $value.pullPolicy }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
         ports:
-        {{- range $value.services }}
-        - name: {{ .name }}
-          containerPort: {{ .port }}
-        {{- end }}
+        - name: http
+          containerPort: 8080
+        - name: healthz
+          containerPort: 8888
         env:
-        {{- range $value.env }}
-        - name: {{ .name }}
-          value: {{ .value }}
+        - name: CONFIG_PATH
+          value: "/config/config.yaml"
+        {{- with .Values.prism.env }}
+        {{- toYaml . | nindent 8 }}
         {{- end }}
+        livenessProbe:
+          {{- if .Values.prism.livenessProbe }}
+          {{- toYaml .Values.prism.livenessProbe | nindent 10 }}
+          {{- else }}
+          httpGet:
+            path: /healthz
+            port: healthz
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          {{- end }}
+        readinessProbe:
+          {{- if .Values.prism.readinessProbe }}
+          {{- toYaml .Values.prism.readinessProbe | nindent 10 }}
+          {{- else }}
+          httpGet:
+            path: /healthz
+            port: healthz
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          {{- end }}
+        startupProbe:
+          {{- if .Values.prism.startupProbe }}
+          {{- toYaml .Values.prism.startupProbe | nindent 10 }}
+          {{- else }}
+          httpGet:
+            path: /healthz
+            port: healthz
+          periodSeconds: 5
+          failureThreshold: 30
+          {{- end }}
         volumeMounts:
-        {{- range $value.mounts }}
+        {{- range .Values.prism.mounts }}
         - name: {{ .name }}
           mountPath: {{ .mountPath }}
+          {{- if .subPath }}
+          subPath: {{ .subPath }}
+          {{- end }}
           readOnly: {{ .readOnly | default false }}
         {{- end }}
         securityContext:
@@ -70,7 +102,7 @@ spec:
           runAsGroup: 101
           readOnlyRootFilesystem: true
       volumes:
-      {{- range $value.mounts }}
+      {{- range .Values.prism.mounts }}
       {{- if or .fromSecret .inMemory .config }}
       - name: {{ .name }}
         {{- if .fromSecret }}
@@ -87,18 +119,17 @@ spec:
       {{- end }}
       {{- end }}
   volumeClaimTemplates:
-  {{- range $value.mounts }}
+  {{- range .Values.prism.mounts }}
   {{- if not (or .fromSecret .inMemory .config) }}
-  - apiVersion: v1
-    kind: PersistentVolumeClaim
-    metadata:
+  - metadata:
       name: {{ .name }}
     spec:
       accessModes: [ "ReadWriteOnce" ]
+      {{- if $.Values.prism.storageClassName }}
+      storageClassName: {{ $.Values.prism.storageClassName }}
+      {{- end }}
       resources:
         requests:
           storage: {{ .storage | default "1Gi" }}
-  {{- end }}
-  {{- end }}
   {{- end }}
   {{- end }}

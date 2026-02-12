@@ -103,7 +103,7 @@
 </div>
 {:else}
 <div class="card-body text-center py-4 p-sm-5">
-  <img src="/images/public-link.png" class="img mb-n2" alt="apikey factory pipeline"/>
+  <img src="/img/public-link.png" class="img mb-n2" alt="apikey factory pipeline"/>
   <h1 class="mt-5 text-azure">Public links</h1>
   <div class="row">
 <div class="col-2"></div>

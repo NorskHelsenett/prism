@@ -578,7 +578,7 @@ func MarkNotificationAsRead(email string, notificationTime time.Time) error {
 
 func GetNotifications(email string) ([]models.Notification, error) {
 	var userData UserData
-	result := db.First(&userData).Where("email = ?", email)
+	result := db.Where("email = ?", email).First(&userData)
 	if result.Error != nil {
 		return nil, result.Error
 	}
@@ -1698,10 +1698,10 @@ func GetVulnerabilityIds(isGlobal bool, email string, ids []uint) ([]uint, error
 }
 
 func AllVulnerabilities(globalViewer bool, email string, isAdmin bool) ([]MinimalJSONData, error) {
-    var jsonData []JSONData
+	var jsonData []JSONData
 
-    query := db.Preload("Project").
-        Select(`
+	query := db.Preload("Project").
+		Select(`
             json_data.*,
             json_extract(json_data.vulnerability, '$.title') as vulnerability_title,
             json_extract(json_data.vulnerability, '$.isPublicFacing') as vulnerability_isPublicFacing,
@@ -1709,37 +1709,37 @@ func AllVulnerabilities(globalViewer bool, email string, isAdmin bool) ([]Minima
             json_extract(json_data.vulnerability, '$.date') as vulnerability_date,
             json_extract(json_data.vulnerability, '$.visibility') as vulnerability_visibility
         `).
-        Where("json_data.deleted_at IS NULL").
-        Order("json_data.created_at desc")
+		Where("json_data.deleted_at IS NULL").
+		Order("json_data.created_at desc")
 
-    if !isAdmin {
-        // Join with accessible_vulnerabilities view to filter accessible vulnerabilities
-        query = query.Joins("INNER JOIN accessible_vulnerabilities ON accessible_vulnerabilities.id = json_data.id")
-        if globalViewer {
-            query = query.Where(`
+	if !isAdmin {
+		// Join with accessible_vulnerabilities view to filter accessible vulnerabilities
+		query = query.Joins("INNER JOIN accessible_vulnerabilities ON accessible_vulnerabilities.id = json_data.id")
+		if globalViewer {
+			query = query.Where(`
                 accessible_vulnerabilities.visibility IN ('published', 'public') OR
                 accessible_vulnerabilities.assigned_to = ? OR
                 accessible_vulnerabilities.found_by = ? OR
                 ',' || COALESCE(accessible_vulnerabilities.client_email, '') || ',' LIKE ? OR
                 ',' || COALESCE(accessible_vulnerabilities.hacker_name, '') || ',' LIKE ?
             `, email, email, "%,"+email+",%", "%,"+email+",%")
-        } else {
-            query = query.Where(`
+		} else {
+			query = query.Where(`
                 accessible_vulnerabilities.assigned_to = ? OR
                 accessible_vulnerabilities.found_by = ? OR
                 ',' || COALESCE(accessible_vulnerabilities.client_email, '') || ',' LIKE ? OR
                 ',' || COALESCE(accessible_vulnerabilities.hacker_name, '') || ',' LIKE ?
             `, email, email, "%,"+email+",%", "%,"+email+",%")
-        }
-    }
+		}
+	}
 
-    err := query.Find(&jsonData).Error
-    if err != nil {
-        return nil, err
-    }
+	err := query.Find(&jsonData).Error
+	if err != nil {
+		return nil, err
+	}
 
-    filtered := FilterJSONDataForUser(jsonData, email, globalViewer || isAdmin)
-    return minifiedVulnerabilityJSON(filtered), nil
+	filtered := FilterJSONDataForUser(jsonData, email, globalViewer || isAdmin)
+	return minifiedVulnerabilityJSON(filtered), nil
 }
 
 func minifiedVulnerabilityJSON(jsonData []JSONData) []MinimalJSONData {

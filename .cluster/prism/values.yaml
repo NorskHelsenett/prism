@@ -1,12 +1,22 @@
 # Default values for prism.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
-api:
-  repository: registry-helse.nhn.no/jonasbg/prism/api
+
+image:
+  repository: ghcr.io/norskhelsenett/prism
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
-  deployment: statefulSet
+
+prism:
+  ingress:
+    enabled: true
+    host: prism.example.com
+    className: ""
+    annotations: {}
+    tls: true
+  storageClassName: ""
+  serviceType: ClusterIP
   mounts:
   - name: config
     mountPath: /config
@@ -22,7 +32,7 @@ api:
     mountPath: /tmp
     readOnly: false
     storage: 50Mi
-  - name: config-api
+  - name: config-slack
     mountPath: /var/config
     readOnly: true
     subPath: slack.json
@@ -63,93 +73,32 @@ api:
   - name: SLACK_PATH
     value: "/var/config/slack.json"
   services:
-  - name: api
+  - name: http
     port: 8080
   - name: healthz
     port: 8888
-
-web:
-  repository: registry-helse.nhn.no/jonasbg/prism/web
-  pullPolicy: IfNotPresent
-  deployment: deployment
-  replicaCount: 2
-  # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
-  host: prism.t-jonas-001.trd1-sky-test.sky.nhn.no
-  hostRule:
-    datascripts:
-      - expose-nhn-office-client
-      - expose-nhn-office-devops
-      - expose-nhn-office-nat
-      - expose-nhn-office-isp
-      - bottom-deny-rule
-  mounts:
-  - name: temp
-    mountPath: /tmp
-    inMemory: true
-    readOnly: false
-    storage: 64Mi
-  - name: config-web
-    mountPath: /usr/share/nginx/html/.well-known/config.json
-    readOnly: true
-    subPath: config.json
-    config:
-      fileName: config.json
-      data: |
-        {
-          "apiEndpoint": "https://prism.t-jonas-001.trd1-sky-test.sky.nhn.no",
-          "providers": [{
-            "name": "Helsegitlab",
-            "type": "gitlab"
-            }, {
-              "name": "Microsoft AD",
-              "type": "azure"
-            }
-          ]
-        }
-  - name: nginx-config
-    mountPath: etc/nginx/conf.d/default.conf
-    readOnly: true
-    subPath: default.conf
-    config:
-      fileName: default.conf
-      data: |
-        server {
-          listen 8080;
-          server_name localhost;
-          root /usr/share/nginx/html;
-          index index.html;
-
-          add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-          add_header X-Content-Type-Options "nosniff" always;
-          add_header X-Frame-Options "SAMEORIGIN" always;
-          add_header X-XSS-Protection "1; mode=block" always;
-          add_header Referrer-Policy "no-referrer-when-downgrade" always;
-          add_header Feature-Policy "accelerometer 'none'; camera 'none'; geolocation 'none';" always;
-
-          location / {
-            try_files $uri $uri/ /index.html;
-          }
-
-          location ~* ^/.well-known/(CHANGELOG\.md|buildinfo\.json)$ {
-            add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-            add_header X-Content-Type-Options "nosniff" always;
-            add_header X-Frame-Options "SAMEORIGIN" always;
-            add_header X-XSS-Protection "1; mode=block" always;
-            add_header Referrer-Policy "no-referrer-when-downgrade" always;
-            add_header Feature-Policy "accelerometer 'none'; camera 'none'; geolocation 'none';" always;
-
-            # Headers specific to this location. They don't overwrite headers if repeated.
-            add_header Cache-Control "no-cache, no-store, must-revalidate" always;
-            add_header Pragma "no-cache" always;
-            add_header Expires 0 always;
-          }
-
-          error_page 500 502 503 504 /50x.html;
-          location = /50x.html {
-            root /usr/share/nginx/html;
-          }
-        }
-  services:
-  - name: web
-    port: 8080
+    internal: true
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: healthz
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    httpGet:
+      path: /healthz
+      port: healthz
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+  startupProbe:
+    httpGet:
+      path: /healthz
+      port: healthz
+    initialDelaySeconds: 0
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 30
