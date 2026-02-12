@@ -5,25 +5,18 @@
 	import Projects from '$lib/components/dashboard/Projects.svelte';
 	import Tasks from '$lib/components/dashboard/Tasks.svelte';
 	import CountVulnerabilities from '$lib/components/dashboard/countVulnerabilities.svelte';
-	import VulnerabilityReportForm from '$lib/components/vulnerabilityFinding.svelte';
 	import { dashboardStore } from '$lib/stores/dashboardStore';
+	import { page } from '$app/stores';
+
+	// Read year from URL query param, e.g. ?year=2025
+	$: yearParam = $page.url.searchParams.get('year');
+	$: {
+		const year = yearParam ? parseInt(yearParam, 10) : new Date().getFullYear();
+		dashboardStore.setYear(year);
+	}
 
 	function handleRefresh() {
 		dashboardStore.refreshData(); // Force refresh data when button clicked
-	}
-
-	let showModal = false;
-
-	$: if (!showModal) {
-		handleRefresh();
-	}
-
-	function openVulnerabilityReportForm() {
-		showModal = true;
-	}
-
-	function closeModal() {
-		showModal = false;
 	}
 
 	import { pageMeta } from '$lib/stores/pageMeta';
@@ -149,6 +142,3 @@
 			</div> -->
 	</div>
 </div>
-{#if showModal}
-	<VulnerabilityReportForm bind:showModal on:close={closeModal} />
-{/if}
