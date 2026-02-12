@@ -8,8 +8,8 @@ on:
   pull_request:
 
 env:
-  REGISTRY: git.torden.tech
-  REGISTRY_PATH: jonasbg/prism
+  REGISTRY: ghcr.io
+  REGISTRY_PATH: norskhelsenett/prism
 
 jobs:
   build:
@@ -28,7 +28,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.REGISTRY_ACCESS_TOKEN }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Prepare build metadata
         id: metadata
@@ -97,16 +97,16 @@ jobs:
 
       - name: Log in to Helm Registry
         run: |
-          echo "${{ secrets.REGISTRY_ACCESS_TOKEN }}" | helm registry login ${{ env.REGISTRY }} -u "${{ github.actor }}" --password-stdin
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ${{ env.REGISTRY }} -u "${{ github.actor }}" --password-stdin
 
       - name: Determine Helm repository
         id: helm-repo
         run: |
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "repo=jonasbg/prism/helm" >> $GITHUB_OUTPUT
+            echo "repo=norskhelsenett/prism/helm" >> $GITHUB_OUTPUT
             echo "tag_suffix=$(date '+%Y%m%d')" >> $GITHUB_OUTPUT
           else
-            echo "repo=jonasbg/prism/dev" >> $GITHUB_OUTPUT
+            echo "repo=norskhelsenett/prism/dev" >> $GITHUB_OUTPUT
             echo "tag_suffix=dev" >> $GITHUB_OUTPUT
           fi
 
