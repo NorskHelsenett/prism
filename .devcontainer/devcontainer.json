@@ -19,6 +19,16 @@
 		1473,
 		9999
 	],
+	"portsAttributes": {
+		"8080": {
+			"label": "BackendAPI",
+			"onAutoForward": "ignore"
+		},
+		"8888": {
+			"label": "BackendHealthz",
+			"onAutoForward": "ignore"
+		}
+	},
 	"runArgs": [
 		"--add-host=host.containers.internal:host-gateway"
 	],
