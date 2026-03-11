@@ -41,8 +41,7 @@
 			"extensions": [
 				"svelte.svelte-vscode",
 				"dbaeumer.vscode-eslint",
-				"golang.Go",
-				"GitLab.gitlab-workflow"
+				"golang.Go"
 			]
 		}
 	}

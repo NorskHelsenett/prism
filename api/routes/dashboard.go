@@ -33,5 +33,6 @@ func HandleDashboard(c *gin.Context) {
 		"criticalities":      metrics.Criticalities,
 		"owasp":              metrics.OWASP,
 		"owaspCriticalities": metrics.OWASPCriticalities,
+		"years":              metrics.Years,
 	})
 }

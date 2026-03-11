@@ -10,6 +10,7 @@ function createDashboardStore() {
 
   function setYear(year) {
     currentYear = year;
+    fetchData();
   }
 
   async function fetchData(year) {

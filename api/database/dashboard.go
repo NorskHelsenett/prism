@@ -14,6 +14,7 @@ type DashboardMetrics struct {
 	Criticalities      map[string]int
 	OWASP              map[string]int
 	OWASPCriticalities map[string]map[string]int
+	Years              []string
 }
 
 // GetDashboardMetrics returns aggregated dashboard data filtered by what the user is allowed to see.
@@ -41,6 +42,11 @@ func GetDashboardMetrics(year, email string, isGlobalVulnerability, isGlobalProj
 	metrics.Projects = int64(len(projects))
 
 	vulnerabilities, err := accessibleVulnerabilities(year, email, isGlobalVulnerability, projectIDs)
+	if err != nil {
+		return metrics, err
+	}
+
+	metrics.Years, err = availableYears(email, isGlobalVulnerability, projectIDs)
 	if err != nil {
 		return metrics, err
 	}
@@ -93,6 +99,36 @@ func GetDashboardMetrics(year, email string, isGlobalVulnerability, isGlobalProj
 	return metrics, nil
 }
 
+func availableYears(email string, isGlobal bool, projectIDs []uint) ([]string, error) {
+	query := db.Model(&JSONData{}).Select("DISTINCT strftime('%Y', json_extract(vulnerability, '$.date')) as year").Order("year DESC")
+
+	if !isGlobal {
+		if email == "" {
+			return []string{}, nil
+		}
+		emailPattern := "%" + email + "%"
+		constraints := db.Where("found_by LIKE ?", emailPattern)
+		if len(projectIDs) > 0 {
+			constraints = constraints.Or("project_id IN ?", projectIDs)
+		}
+		constraints = constraints.Or("id IN (SELECT id FROM accessible_vulnerabilities WHERE assigned_to = ?)", email)
+		query = query.Where(constraints)
+	}
+
+	var rows []struct{ Year string }
+	if err := query.Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+
+	years := make([]string, 0, len(rows))
+	for _, r := range rows {
+		if r.Year != "" {
+			years = append(years, r.Year)
+		}
+	}
+	return years, nil
+}
+
 func accessibleProjects(email string, isGlobal bool) ([]ProjectData, error) {
 	switch {
 	case isGlobal:
@@ -107,7 +143,7 @@ func accessibleProjects(email string, isGlobal bool) ([]ProjectData, error) {
 func accessibleVulnerabilities(year, email string, isGlobal bool, projectIDs []uint) ([]JSONData, error) {
 	query := db.Preload("Project").Model(&JSONData{})
 	if year != "" {
-		query = query.Where("strftime('%Y', json_data.created_at) = ?", year)
+		query = query.Where("strftime('%Y', json_extract(json_data.vulnerability, '$.date')) = ?", year)
 	}
 
 	var data []JSONData

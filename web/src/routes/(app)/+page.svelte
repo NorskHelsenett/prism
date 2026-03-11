@@ -9,15 +9,13 @@
 	import { page } from '$app/stores';
 
 	// Read year from URL query param, e.g. ?year=2025
-	$: yearParam = $page.url.searchParams.get('year');
-	$: {
-		const year = yearParam ? parseInt(yearParam, 10) : new Date().getFullYear();
-		dashboardStore.setYear(year);
-	}
+	const currentYear = new Date().getFullYear();
 
-	function handleRefresh() {
-		dashboardStore.refreshData(); // Force refresh data when button clicked
-	}
+	$: yearParam = $page.url.searchParams.get('year');
+	$: selectedYear = yearParam ? parseInt(yearParam, 10) : currentYear;
+	$: dashboardStore.setYear(selectedYear);
+
+	$: availableYears = $dashboardStore.years?.length > 0 ? $dashboardStore.years : [String(currentYear)];
 
 	import { pageMeta } from '$lib/stores/pageMeta';
 	import { onMount } from 'svelte';
@@ -53,9 +51,17 @@
 		</h2>
 	</div>
 	<div class="col-auto ms-auto d-print-non">
-		<div class="btn-list">
+		<div class="btn-list align-items-center">
 			<span class="d-none d-sm-inline">
-				<a href="#" class="btn" on:click={handleRefresh}>refresh</a>
+				<select
+					class="form-select"
+					value={String(selectedYear)}
+					on:change={(e) => goto(`/?year=${e.target.value}`)}
+				>
+					{#each availableYears as year}
+						<option value={year}>{year}</option>
+					{/each}
+				</select>
 			</span>
 			<RegisterVulnerabilityButton />
 		</div>
