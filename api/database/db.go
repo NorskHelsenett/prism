@@ -381,7 +381,7 @@ func GetAllProfilesWithTeams() (*ProfileResponse, error) {
 		return nil, err
 	}
 
-	if err := db.Select("Name", "Picture", "Email", "Role").Order("role desc").Find(&users).Error; err != nil {
+	if err := db.Select("Name", "Email").Find(&users).Error; err != nil {
 		return nil, err
 	}
 

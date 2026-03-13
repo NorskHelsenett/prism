@@ -13,3 +13,4 @@ id,title,description,criticality,cvss_score,project_id,visibility,found_by,assig
 12,SQL Injection in SIGMA Login,Bypassed authentication with ' or ''='' via login form,critical,9.0,4,undisclosed,diana.external@test.local,bob.viewer@test.local,Reported,Authentication bypass,High,Update input validation
 13,XSS in SIGMA Dashboard,<script>alert('xss')</script> executed in dashboard input,medium,6.5,4,published,bob.viewer@test.local,,Reported,Session token theft,Medium,Implement output encoding
 14,SIGMA API Key Leak,API keys exposed in response headers,information,4.0,4,undisclosed,diana.external@test.local,eve.visitor@test.local,Reported,Key exposure,Low,Secure headers
+15,IDOR in SIGMA Document Access,Users can access documents of other users via IDOR,medium,6.5,4,published,diana.external@test.local,charlie.visitor@test.local,Reported,Unauthorized document access,Medium,Implement proper authorization checks

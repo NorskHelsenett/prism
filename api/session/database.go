@@ -52,8 +52,8 @@ func (s *SessionStore) GetRole(email string) string {
 	var user database.UserData
 	result := s.DB.Where("email = ?", email).First(&user)
 
-	if result.Error != nil {
-		return ""
+	if result.Error != nil || user.Role == "" {
+		return "visitor"
 	}
 
 	return user.Role

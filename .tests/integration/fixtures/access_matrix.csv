@@ -13,6 +13,7 @@ vulnerability_id,user_email,should_access,reason,test_category
 12,charlie.visitor@test.local,false,Not in SIGMA project,hidden_restricted
 13,charlie.visitor@test.local,false,Not in SIGMA project,hidden_restricted
 14,charlie.visitor@test.local,false,Not in SIGMA project,hidden_restricted
+15,charlie.visitor@test.local,true,Assigned_to VULN in SIGMA,public_access
 
 1,alice.admin@test.local,true,Admin has global access,admin_access
 2,alice.admin@test.local,true,Admin has global access,admin_access
