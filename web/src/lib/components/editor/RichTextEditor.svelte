@@ -454,6 +454,10 @@
 		color: inherit;
 	}
 
+	:global(.editor-wrapper .ProseMirror pre code .ProseMirror-trailingBreak) {
+		display: none;
+	}
+
 	/* Blockquote */
 	:global(.editor-wrapper .ProseMirror blockquote) {
 		border-left: 3px solid var(--rte-accent, #0054a6);
