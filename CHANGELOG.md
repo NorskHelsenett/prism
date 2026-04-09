@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🔐 Logout:** Logout endpoint no longer requires authentication, preventing redirect loops when the session has already expired.
 - **🚫 Deactivated Login:** Deactivated users are silently redirected to the frontpage on login without revealing account status.
 - **🗑️ Delete & Deactivate Modals:** Confirmation dialogs now show the user's avatar, name, and email for clearer identification.
+- **🔑 MFA Reset:** Resetting MFA now clears both TOTP secrets and registered passkeys for the target user.
+- **🔑 Auth Middleware:** Passkey authentication endpoints are allowed through the MFA gate so users can complete passkey verification before full session activation.
 
 ### Fixed
 - **🎨 Swimlane Border:** Fixed hardcoded dark border color on board/swimlane activities that looked wrong in light mode. Now adapts to the active theme.
