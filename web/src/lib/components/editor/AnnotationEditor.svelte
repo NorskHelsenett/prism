@@ -608,7 +608,6 @@
 		gap: 4px;
 		padding: 10px 8px;
 		background: var(--rte-code-bg, #f1f5f9);
-		border-right: 1px solid var(--rte-border, #e6e7e9);
 		overflow-y: auto;
 		flex-shrink: 0;
 	}
