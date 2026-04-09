@@ -114,10 +114,13 @@ function formatDate(dateString) {
 
   let showDropdown = [false]
   let userToResetMFA = null
+  let mfaStatus = null
+  let loadingMfaStatus = false
 
   async function resetMFAok() {
     const response = await Fetch(`/api/settings/session/otp/reset/${userToResetMFA.email}`, {method: "DELETE"})
     userToResetMFA = null
+    mfaStatus = null
     showInfoModal = false
 
     if(!response.error) {
@@ -127,10 +130,18 @@ function formatDate(dateString) {
     }
   }
 
-  function resetMFA(user){
+  async function resetMFA(user){
     userToResetMFA = user
+    mfaStatus = null
+    loadingMfaStatus = true
     showInfoModal = true
     showDropdown = [false]
+
+    const status = await Fetch(`/api/settings/session/mfa-status/${user.email}`);
+    if (status && !status.error) {
+      mfaStatus = status;
+    }
+    loadingMfaStatus = false
   }
 
 
@@ -286,7 +297,49 @@ function formatDate(dateString) {
     {/if}
   </div>
 </DeleteModal>
-<InfoModal bind:showInfoModal onOK={resetMFAok} buttonText="Reset MFA" text="This will reset MFA. The next time the user logs in, {userToResetMFA?.name} has to register for a new MFA flow."/>
+<InfoModal bind:showInfoModal onOK={resetMFAok} buttonText="Reset MFA">
+  <div class="mt-3">
+    {#if userToResetMFA}
+      <div class="d-flex align-items-center justify-content-center mb-3">
+        <span class="avatar avatar-md me-3" style="background-image: url({userToResetMFA.picture})"></span>
+        <div class="text-start">
+          <div class="fw-bold">{userToResetMFA.name}</div>
+          <div class="text-secondary">{userToResetMFA.email}</div>
+        </div>
+      </div>
+      <div class="text-secondary mb-2">
+        This will reset all MFA methods for this user. The next time they log in, they will have to set up MFA again.
+      </div>
+      {#if loadingMfaStatus}
+        <div class="text-secondary">Loading MFA details...</div>
+      {:else if mfaStatus}
+        <div class="list-group list-group-flush mt-2">
+          <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+            <span>TOTP authenticator</span>
+            {#if mfaStatus.hasOTP}
+              <span class="badge bg-green-lt">1 configured</span>
+            {:else}
+              <span class="badge bg-secondary-lt">Not configured</span>
+            {/if}
+          </div>
+          <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+            <span>Passkeys</span>
+            {#if mfaStatus.passkeyCount > 0}
+              <span class="badge bg-green-lt">{mfaStatus.passkeyCount} registered</span>
+            {:else}
+              <span class="badge bg-secondary-lt">None</span>
+            {/if}
+          </div>
+        </div>
+        {#if !mfaStatus.hasOTP && mfaStatus.passkeyCount === 0}
+          <div class="alert alert-warning mt-2 mb-0 py-2">
+            This user has no MFA methods configured.
+          </div>
+        {/if}
+      {/if}
+    {/if}
+  </div>
+</InfoModal>
 <InfoModal bind:showInfoModal={showToggleModal} onOK={toggleUserActivePrompted} buttonText={toggleDialogButton}>
   <div class="mt-3">
     {#if userMarkedForToggle}

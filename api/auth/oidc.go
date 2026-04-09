@@ -336,7 +336,7 @@ func AuthMiddleware(store *session.SessionStore) gin.HandlerFunc {
 		if apiKey != "" {
 			if email, valid := routes.ValidateAPIKey(apiKey); valid {
 				if !store.IsActive(email) {
-					c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "account is deactivated"})
+					c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 					return
 				}
 
@@ -380,7 +380,7 @@ func AuthMiddleware(store *session.SessionStore) gin.HandlerFunc {
 
 		settings, _ := database.GetSettings(false)
 		if settings.MFAEnabled {
-			if !validation.IsOTPVerified && !strings.HasPrefix(c.Request.URL.Path, "/api/share/") && c.Request.URL.Path != "/api/session/otp/generate" && c.Request.URL.Path != "/api/session/otp/validate" {
+			if !validation.IsOTPVerified && !strings.HasPrefix(c.Request.URL.Path, "/api/share/") && c.Request.URL.Path != "/api/session/otp/generate" && c.Request.URL.Path != "/api/session/otp/validate" && c.Request.URL.Path != "/api/session/passkey/begin" && c.Request.URL.Path != "/api/session/passkey/finish" && c.Request.URL.Path != "/api/session/passkey/has" {
 				// OTP is not verified, initiate OTP verification process
 				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "OTP is not verified", "initiateOTP": true})
 				return
@@ -388,7 +388,7 @@ func AuthMiddleware(store *session.SessionStore) gin.HandlerFunc {
 		}
 
 		if !store.IsActive(userInfo.Email) {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "account is deactivated"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 			return
 		}
 
@@ -468,26 +468,12 @@ func HandleUserRequest(c *gin.Context, store *session.SessionStore) {
 }
 
 func HandleLogout(c *gin.Context, store *session.SessionStore) {
-	// Retrieve email from Gin context
-	emailInterface, exists := c.Get(EmailContextKey)
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user email not found in context"})
-		return
-	}
-	email, ok := emailInterface.(string)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid email format in context"})
-		return
+	userInfo, err := GetSignedCookie(c, cookieName)
+	if err == nil && userInfo.Email != "" {
+		_ = store.InvalidateSession(userInfo.Email)
 	}
 
 	ClearSignedCookie(c, cookieName)
-
-	// Invalidate the session
-	if err := store.InvalidateSession(email); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to invalidate session"})
-		return
-	}
-
 	c.Redirect(http.StatusFound, config.AppConfig.Cors.Origin)
 }
 
@@ -571,6 +557,11 @@ func HandleCallback(c *gin.Context, store *session.SessionStore) {
 
 		database.SaveOrUpdateUserData(userInfo.Name, userInfo.Email, profilePicture)
 		store.SaveOrUpdateUserData(userInfo.Name, userInfo.Email, profilePicture)
+
+		if !store.IsActive(userInfo.Email) {
+			c.Redirect(http.StatusFound, config.AppConfig.Cors.Origin)
+			return
+		}
 
 		store.PersistSession(userInfo.Email, userInfo.SessionID)
 

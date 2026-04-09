@@ -136,7 +136,13 @@ func HandleOTPResetForUser(c *gin.Context, session *SessionStore) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "OTP reset successfully"})
+	// Also clear passkeys
+	if err := database.DeleteAllWebAuthnCredentials(email); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset passkeys"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "MFA reset successfully"})
 }
 
 func HandleOTPReset(c *gin.Context, session *SessionStore) {
@@ -156,7 +162,14 @@ func HandleOTPReset(c *gin.Context, session *SessionStore) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to retrieve OTP data"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "OTP reset successfully"})
+
+	// Also clear passkeys
+	if err := database.DeleteAllWebAuthnCredentials(email); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to reset passkeys"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "MFA reset successfully"})
 }
 
 func emailFromContext(c *gin.Context) (string, bool) {

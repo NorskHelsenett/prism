@@ -5,7 +5,7 @@
   "description": "Pentest Report Information Security Management",
   "type": "module",
   "scripts": {
-    "dev": "shx cp ../CHANGELOG.md static/.well-known && vite dev --host 0.0.0.0",
+    "dev": "mkdir -p static/.well-known && cp ../CHANGELOG.md static/.well-known && vite dev --host 0.0.0.0",
     "build": "NODE_ENV=production vite build",
     "check": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./jsconfig.json --watch",

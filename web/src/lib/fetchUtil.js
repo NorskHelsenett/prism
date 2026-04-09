@@ -69,6 +69,58 @@ export async function FetchBlob(endpoint, filename = "") {
   }
 }
 
+export async function FetchFileWithProgress(endpoint, filename = "", onProgress) {
+  const apiUrl = get(apiEndpoint);
+  const url = `${apiUrl}${endpoint}`;
+
+  const response = await fetch(url, { credentials: 'include' });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const contentLength = response.headers.get('Content-Length');
+  const total = contentLength ? parseInt(contentLength, 10) : 0;
+
+  if (!response.body || !total) {
+    // Fallback if no streaming or unknown size
+    const blob = await response.blob();
+    if (onProgress) onProgress({ loaded: blob.size, total: blob.size });
+    return triggerDownload(blob, filename || endpoint.split('/').pop());
+  }
+
+  const reader = response.body.getReader();
+  const chunks = [];
+  let loaded = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.length;
+    if (onProgress) onProgress({ loaded, total });
+  }
+
+  const blob = new Blob(chunks);
+  return triggerDownload(blob, filename || endpoint.split('/').pop());
+}
+
+function triggerDownload(blob, filename) {
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.style.display = 'none';
+  a.href = downloadUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    window.URL.revokeObjectURL(downloadUrl);
+    if (document.body.contains(a)) {
+      document.body.removeChild(a);
+    }
+  }, 100);
+}
+
 export async function FetchFile(endpoint, filename = "") {
   const apiUrl = get(apiEndpoint);
   const url = `${apiUrl}${endpoint}`;

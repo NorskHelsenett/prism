@@ -127,11 +127,55 @@ func ImportData(c *gin.Context) {
 }
 
 // ExportAllData handles the downloading of the prism.db database file.
+// Use ?full=true to include audit logs and event queues.
 func ExportAllData(c *gin.Context) {
-
 	dbFilePath := filepath.Join(config.AppConfig.Database.Path, "prism.db")
+
+	if c.Query("full") == "true" {
+		c.Header("Content-Disposition", "attachment; filename=prism.db")
+		c.FileAttachment(dbFilePath, "prism.db")
+		return
+	}
+
+	// Create a temporary filtered copy excluding audit logs and event queues
+	tmpFile, err := os.CreateTemp("", "prism-export-*.db")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create temporary file"})
+		return
+	}
+	tmpPath := tmpFile.Name()
+	tmpFile.Close()
+	defer os.Remove(tmpPath)
+
+	srcDB, err := gorm.Open(sqlite.Open(dbFilePath+"?mode=ro"), &gorm.Config{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open source database"})
+		return
+	}
+	sqlDB, _ := srcDB.DB()
+	defer sqlDB.Close()
+
+	// Use SQLite backup via VACUUM INTO for a consistent copy
+	if err := srcDB.Exec("VACUUM INTO ?", tmpPath).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to copy database"})
+		return
+	}
+
+	// Open the copy and clear non-essential tables
+	copyDB, err := gorm.Open(sqlite.Open(tmpPath), &gorm.Config{})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open copy"})
+		return
+	}
+	copySqlDB, _ := copyDB.DB()
+	defer copySqlDB.Close()
+
+	copyDB.Exec("DELETE FROM audit_logs")
+	copyDB.Exec("DELETE FROM event_queues")
+	copyDB.Exec("VACUUM")
+
 	c.Header("Content-Disposition", "attachment; filename=prism.db")
-	c.FileAttachment(dbFilePath, "prism.db")
+	c.FileAttachment(tmpPath, "prism.db")
 }
 
 func GetSettings(c *gin.Context) {

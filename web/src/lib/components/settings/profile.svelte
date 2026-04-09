@@ -4,6 +4,7 @@
 	import DebouncedInput from '../DebouncedInput.svelte';
 	import { goto } from '$app/navigation';
 	import { userStore } from '$lib/userStore';
+	import Passkeys from './Passkeys.svelte';
 
   let persisting = false
   let sessions = []
@@ -147,6 +148,8 @@
   <div class="btn-list justify-content-start">
     <button class="btn btn-ghost-warning d-none d-sm-inline-block" on:click={resetMFA} disabled={sessions.every(session => !session.OTPVerified)}>Reset MFA</button>
   </div>
+
+  <Passkeys />
 
 </div>
 {/if}

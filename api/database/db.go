@@ -153,6 +153,13 @@ type Vulnerability struct {
 	ProjectID   uint   `json:"projectID"`
 }
 
+type WebAuthnCredential struct {
+	gorm.Model
+	Email          string `gorm:"index"`
+	Name           string
+	CredentialData []byte
+}
+
 type EventQueue struct {
 	ID        uint `gorm:"primaryKey"`
 	TableID   uint
@@ -234,6 +241,7 @@ func InitDB() {
 	db.AutoMigrate(&models.APIKey{})
 	db.AutoMigrate(&models.SharedDocument{})
 	db.AutoMigrate(&models.Team{})
+	db.AutoMigrate(&WebAuthnCredential{})
 
 	// Create the accessible_vulnerabilities view
 	initAccessibleVulnerabilitiesView()
@@ -1069,6 +1077,59 @@ func GetOTPCode(email string) (string, error) {
 	}
 
 	return user.OTPSecret, nil
+}
+
+func GetUserByEmail(email string) (*UserData, error) {
+	var user UserData
+	result := db.Where("email = ?", email).First(&user)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return &user, nil
+}
+
+func SaveWebAuthnCredential(email, name string, credentialData []byte) error {
+	cred := WebAuthnCredential{
+		Email:          email,
+		Name:           name,
+		CredentialData: credentialData,
+	}
+	return db.Create(&cred).Error
+}
+
+func GetWebAuthnCredentials(email string) ([]WebAuthnCredential, error) {
+	var creds []WebAuthnCredential
+	result := db.Where("email = ?", email).Find(&creds)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return creds, nil
+}
+
+func DeleteWebAuthnCredential(email, id string) error {
+	return db.Where("email = ? AND id = ?", email, id).Delete(&WebAuthnCredential{}).Error
+}
+
+func DeleteAllWebAuthnCredentials(email string) error {
+	return db.Where("email = ?", email).Delete(&WebAuthnCredential{}).Error
+}
+
+func HasWebAuthnCredentials(email string) (bool, error) {
+	var count int64
+	result := db.Model(&WebAuthnCredential{}).Where("email = ?", email).Count(&count)
+	if result.Error != nil {
+		return false, result.Error
+	}
+	return count > 0, nil
+}
+
+func CountWebAuthnCredentials(email string) (int64, error) {
+	var count int64
+	result := db.Model(&WebAuthnCredential{}).Where("email = ?", email).Count(&count)
+	if result.Error != nil {
+		return 0, result.Error
+	}
+	return count, nil
 }
 
 func CheckForOtpEnabled(email string) (bool, error) {

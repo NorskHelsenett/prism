@@ -3,15 +3,23 @@
   import SvgQR from '@svelte-put/qr/svg/QR.svelte';
 	import { Fetch } from '$lib/fetchUtil';
 	import OtpField from '$lib/components/otp-field.svelte';
+	import PasskeyAuth from '$lib/components/PasskeyAuth.svelte';
   let otpData;
   let showOtpEntry = false;
   let canGoBackToQr = false;
+  let hasPasskeys = false;
 
   onMount(async () => {
 
     const redirectShare = localStorage.getItem('redirectToAfterLogin')
     if(redirectShare?.startsWith("/s/")){
       window.location.href = redirectShare
+    }
+
+    // Check if user has passkeys registered (for 2FA option)
+    const passkeyStatus = await Fetch('/api/session/passkey/has');
+    if (passkeyStatus && !passkeyStatus.error) {
+      hasPasskeys = passkeyStatus.hasPasskeys;
     }
 
     otpData = await Fetch('/api/session/otp/generate');
@@ -87,6 +95,9 @@
           <div class="card-body mb-3">
             <OtpField requiresActivation={!otpData?.otp_activated} />
           </div>
+          {#if hasPasskeys}
+            <PasskeyAuth />
+          {/if}
           {#if canGoBackToQr}
             <div class="card-footer d-flex justify-content-start">
               <button class="btn btn-outline-secondary" on:click={() => {

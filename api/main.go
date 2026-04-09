@@ -17,6 +17,7 @@ import (
 	"prism/routes"
 	"prism/session"
 	"prism/share"
+	"prism/webauthn"
 	"prism/ws"
 
 	"fmt"
@@ -36,6 +37,7 @@ func main() {
 	initSessionDatabase()
 	sessionStore := session.NewSessionStore(session_db)
 	session.LoadSessionStore(sessionStore)
+	webauthn.Init()
 	routes.InitNotification()
 	// Set up the primary Gin router for the main application
 	r := gin.Default()
@@ -73,6 +75,7 @@ func main() {
 	r.GET("/api/callback", func(c *gin.Context) {
 		auth.HandleCallback(c, sessionStore)
 	})
+	r.GET("/api/logout", func(c *gin.Context) { auth.HandleLogout(c, sessionStore) })
 
 	shareGroup := r.Group("/api")
 	{
@@ -91,7 +94,6 @@ func main() {
 		apiRoutes.PUT("/notification/:time/read", routes.MarkNotificationReadHandler)
 		apiRoutes.POST("/notification/subscribe", routes.SubscribeNotification)
 
-		apiRoutes.GET("/logout", func(c *gin.Context) { auth.HandleLogout(c, sessionStore) })
 		apiRoutes.GET("/dashboard", routes.HandleDashboard)
 
 		//-- RBAC MIDDLEWARE FROM HERE ON --//
@@ -112,6 +114,15 @@ func main() {
 		apiRoutes.GET("/session/otp/reset", func(c *gin.Context) { session.HandleOTPReset(c, sessionStore) })
 		apiRoutes.GET("/session/all", func(c *gin.Context) { session.GetUserSessions(c, sessionStore) })
 		apiRoutes.DELETE("/session/:uuid", func(c *gin.Context) { session.DeleteUserSession(c, sessionStore) })
+
+		// Passkey (WebAuthn) 2FA endpoints
+		apiRoutes.POST("/session/passkey/register/begin", webauthn.BeginRegistration)
+		apiRoutes.POST("/session/passkey/register/finish", webauthn.FinishRegistration)
+		apiRoutes.POST("/session/passkey/begin", middleware.RateLimiter(), webauthn.BeginAuthentication)
+		apiRoutes.POST("/session/passkey/finish", middleware.RateLimiter(), func(c *gin.Context) { webauthn.FinishAuthentication(c, sessionStore) })
+		apiRoutes.GET("/session/passkey/credentials", webauthn.GetCredentials)
+		apiRoutes.DELETE("/session/passkey/credentials/:id", webauthn.DeleteCredential)
+		apiRoutes.GET("/session/passkey/has", webauthn.HasPasskeys)
 
 		apiRoutes.GET("/profile/access-list", routes.GetAccessListRoutes)
 
@@ -197,6 +208,8 @@ func main() {
 		apiRoutes.GET("/settings/audit", audit.GetAllAudits)
 		apiRoutes.POST("/settings/import", routes.ImportData)
 		apiRoutes.DELETE("/settings/session/otp/reset/:email", func(c *gin.Context) { session.HandleOTPResetForUser(c, sessionStore) })
+		apiRoutes.DELETE("/settings/session/passkey/reset/:email", webauthn.ResetPasskeysForUser)
+		apiRoutes.GET("/settings/session/mfa-status/:email", webauthn.GetMFAStatusForUser)
 	}
 
 	go event.PollEventQueue()
