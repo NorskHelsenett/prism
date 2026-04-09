@@ -467,7 +467,7 @@
         <strong>Project:</strong>
         <div class="project-select-container">
           <div class="form-select" on:click={toggleProjectDropdown}>
-            {#if selectedProject}
+            {#if selectedProject?.name}
               <div class="selected-project">{selectedProject.name}</div>
             {:else}
               <div class="placeholder">Select project</div>
