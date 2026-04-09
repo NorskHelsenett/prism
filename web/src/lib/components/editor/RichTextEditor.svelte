@@ -8,11 +8,10 @@
 	import { Editor } from '@tiptap/core';
 	import StarterKit from '@tiptap/starter-kit';
 	import Placeholder from '@tiptap/extension-placeholder';
-	import Underline from '@tiptap/extension-underline';
 	import Highlight from '@tiptap/extension-highlight';
 	import TaskList from '@tiptap/extension-task-list';
 	import TaskItem from '@tiptap/extension-task-item';
-	import { ImageWithView } from './ImageNodeView.js';
+	import Image from '@tiptap/extension-image';
 	import BubbleMenu from '@tiptap/extension-bubble-menu';
 
 	/** Markdown string (two-way bindable) */
@@ -108,7 +107,7 @@
 	function markdownToHtml(md) {
 		if (!md) return '';
 		return DOMPurify.sanitize(marked.parse(md), {
-			ADD_ATTR: ['data-type', 'data-checked']
+			ADD_ATTR: ['data-type', 'data-checked', 'data-annotations', 'data-crop']
 		});
 	}
 
@@ -132,11 +131,10 @@
 					codeBlock: { HTMLAttributes: { class: 'code-block' } }
 				}),
 				Placeholder.configure({ placeholder }),
-				Underline,
 				Highlight.configure({ multicolor: false }),
 				TaskList,
 				TaskItem.configure({ nested: true }),
-				ImageWithView,
+				Image.configure({ inline: false, allowBase64: true }),
 				...(editable
 					? [
 						BubbleMenu.configure({

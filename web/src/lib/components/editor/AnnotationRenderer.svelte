@@ -1,0 +1,106 @@
+<script>
+	/** Image src */
+	export let src = '';
+	/** Annotation elements array */
+	export let annotations = [];
+	/** Crop rect { x, y, width, height } or null */
+	export let crop = null;
+	/** Alt text / caption */
+	export let alt = '';
+
+	let imgWidth = 0;
+	let imgHeight = 0;
+	let imgEl;
+
+	function onLoad() {
+		imgWidth = imgEl.naturalWidth;
+		imgHeight = imgEl.naturalHeight;
+	}
+
+	// Compute viewBox for crop
+	$: viewBox = crop
+		? `${crop.x} ${crop.y} ${crop.width} ${crop.height}`
+		: `0 0 ${imgWidth} ${imgHeight}`;
+</script>
+
+<figure class="annotated-image">
+	{#if annotations.length > 0 || crop}
+		<svg
+			viewBox={viewBox}
+			class="annotation-svg"
+			xmlns="http://www.w3.org/2000/svg"
+		>
+			<image href={src} x="0" y="0" width={imgWidth} height={imgHeight}
+				bind:this={imgEl} on:load={onLoad} />
+
+			{#each annotations as el}
+				{#if el.type === 'arrow'}
+					<line x1={el.x1} y1={el.y1} x2={el.x2} y2={el.y2}
+						stroke={el.color} stroke-width={el.strokeWidth} stroke-linecap="round" />
+					<!-- arrowhead -->
+					{@const angle = Math.atan2(el.y2 - el.y1, el.x2 - el.x1)}
+					{@const hl = 12}
+					<line x1={el.x2} y1={el.y2}
+						x2={el.x2 - hl * Math.cos(angle - 0.4)} y2={el.y2 - hl * Math.sin(angle - 0.4)}
+						stroke={el.color} stroke-width={el.strokeWidth} stroke-linecap="round" />
+					<line x1={el.x2} y1={el.y2}
+						x2={el.x2 - hl * Math.cos(angle + 0.4)} y2={el.y2 - hl * Math.sin(angle + 0.4)}
+						stroke={el.color} stroke-width={el.strokeWidth} stroke-linecap="round" />
+				{:else if el.type === 'rect'}
+					<rect x={Math.min(el.x1, el.x2)} y={Math.min(el.y1, el.y2)}
+						width={Math.abs(el.x2 - el.x1)} height={Math.abs(el.y2 - el.y1)}
+						stroke={el.color} stroke-width={el.strokeWidth} fill="none" />
+				{:else if el.type === 'text'}
+					<rect x={el.x - 4} y={el.y - (el.fontSize || 16)}
+						width="200" height={(el.fontSize || 16) + 4}
+						fill="rgba(0,0,0,0.5)" rx="2" />
+					<text x={el.x} y={el.y} fill={el.color}
+						font-size="{el.fontSize || 16}px" font-weight="bold" font-family="sans-serif">
+						{el.text}
+					</text>
+				{:else if el.type === 'freehand' && el.points?.length >= 2}
+					<polyline
+						points={el.points.map(p => `${p.x},${p.y}`).join(' ')}
+						stroke={el.color} stroke-width={el.strokeWidth}
+						fill="none" stroke-linecap="round" stroke-linejoin="round" />
+				{/if}
+			{/each}
+		</svg>
+	{:else}
+		<img bind:this={imgEl} {src} {alt} on:load={onLoad} class="plain-image" />
+	{/if}
+
+	{#if alt}
+		<figcaption class="image-caption">{alt}</figcaption>
+	{/if}
+</figure>
+
+<style>
+	.annotated-image {
+		margin: 0.5rem 0;
+		max-width: 100%;
+	}
+
+	.annotation-svg {
+		max-width: 100%;
+		height: auto;
+		border-radius: 5px;
+		display: block;
+	}
+
+	.plain-image {
+		max-width: 100%;
+		max-height: 500px;
+		height: auto;
+		border-radius: 5px;
+		display: block;
+	}
+
+	.image-caption {
+		margin-top: 0.375rem;
+		font-size: 0.8125rem;
+		color: var(--rte-muted, #6c7a91);
+		font-style: italic;
+		text-align: center;
+	}
+</style>
