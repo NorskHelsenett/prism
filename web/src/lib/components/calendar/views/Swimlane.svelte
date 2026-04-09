@@ -658,9 +658,6 @@
 			isShiftPressed = true;
 		}
 
-		// Make all tasks invisible to pointer events so elementFromPoint finds cells
-		document.querySelectorAll('.task').forEach(el => { el.style.pointerEvents = 'none'; });
-
 		// Create and position the preview element
 		createDragPreview(originalTaskElement, task);
 
@@ -726,6 +723,9 @@
     }
 
     if (!dragPreviewElement || !draggedTask) return;
+
+    // Disable pointer events on all tasks once actual dragging starts
+    document.querySelectorAll('.task').forEach(el => { el.style.pointerEvents = 'none'; });
 
     // Calculate movement in pixels
     const deltaX = event.clientX - dragStartX;
