@@ -95,7 +95,7 @@
           <div class="card-body mb-3">
             <OtpField requiresActivation={!otpData?.otp_activated} />
           </div>
-          {#if hasPasskeys}
+          {#if hasPasskeys && otpData?.otp_activated}
             <PasskeyAuth />
           {/if}
           {#if canGoBackToQr}
