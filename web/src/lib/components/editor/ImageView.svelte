@@ -11,6 +11,8 @@
 
 	$: src = node.attrs.src || '';
 	$: altText = node.attrs.alt || '';
+	$: renderedSrc = node.attrs.renderedSrc || '';
+	$: displaySrc = renderedSrc || src;
 
 	function handleImageClick() {
 		if (!editable) return;
@@ -40,7 +42,10 @@
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <figure class="image-node" class:selected>
-	<img src={src} alt={altText} draggable={editable} on:dragstart={handleDragStart} on:click|stopPropagation={handleImageClick} />
+	<!-- svelte-ignore a11y-no-static-element-interactions -->
+	<div class="image-wrapper" on:click|stopPropagation={handleImageClick}>
+		<img src={displaySrc} alt={altText} draggable={editable} on:dragstart={handleDragStart} />
+	</div>
 
 	{#if editable}
 		<figcaption class="image-caption-row">
@@ -68,7 +73,8 @@
 		on:save={(e) => {
 			updateAttributes({
 				annotations: e.detail.annotations,
-				crop: e.detail.crop
+				crop: e.detail.crop,
+				renderedSrc: e.detail.renderedSrc || ''
 			});
 		}}
 	/>
@@ -84,7 +90,13 @@
 		cursor: default;
 	}
 
-	.image-node img {
+	.image-wrapper {
+		cursor: pointer;
+	}
+
+	.image-node img,
+	.image-node :global(.annotation-svg),
+	.image-node :global(.plain-image) {
 		max-width: 100%;
 		max-height: 500px;
 		width: auto;
@@ -93,13 +105,13 @@
 		border-radius: 5px;
 		display: block;
 		transition: outline 0.15s;
-		cursor: pointer;
 	}
 
-	.image-node.selected img,
-	.image-node:hover img {
+	.image-node.selected .image-wrapper,
+	.image-node:hover .image-wrapper {
 		outline: 2px solid var(--rte-accent, #0054a6);
 		outline-offset: 2px;
+		border-radius: 5px;
 	}
 
 	.image-caption-row {

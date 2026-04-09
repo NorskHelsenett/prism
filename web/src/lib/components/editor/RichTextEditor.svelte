@@ -1,5 +1,5 @@
 <script>
-	import { onMount, onDestroy, createEventDispatcher } from 'svelte';
+	import { onMount, onDestroy, createEventDispatcher, tick } from 'svelte';
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
 	import TurndownService from 'turndown';
@@ -11,16 +11,13 @@
 	import Highlight from '@tiptap/extension-highlight';
 	import TaskList from '@tiptap/extension-task-list';
 	import TaskItem from '@tiptap/extension-task-item';
-	import Image from '@tiptap/extension-image';
+	import { ImageWithView } from './ImageNodeView.js';
 	import BubbleMenu from '@tiptap/extension-bubble-menu';
 
 	/** Markdown string (two-way bindable) */
 	export let value = '';
-	/** Placeholder text shown when editor is empty */
 	export let placeholder = 'Start writing...';
-	/** Whether the editor is editable */
 	export let editable = true;
-	/** Minimum height of the editor area */
 	export let minHeight = '200px';
 
 	const dispatch = createEventDispatcher();
@@ -39,8 +36,6 @@
 	turndownService.escape = (s) => s;
 	turndownService.use(gfm);
 
-	// Override after GFM plugin so our rules take priority
-
 	turndownService.addRule('taskList', {
 		filter: (node) =>
 			node.nodeName === 'UL' &&
@@ -58,7 +53,6 @@
 				node.getAttribute('data-checked') === 'false'),
 		replacement(content, node) {
 			const checked = node.getAttribute('data-checked') === 'true';
-			// Strip any checkbox inputs that TipTap may render inside the <li>
 			content = content
 				.replace(/^\s*\[[ x]\]\s*/i, '')
 				.replace(/^\s+/, '')
@@ -67,11 +61,28 @@
 		}
 	});
 
+	turndownService.addRule('annotatedImage', {
+		filter: (node) =>
+			node.nodeName === 'IMG' &&
+			(node.getAttribute('data-annotations') || node.getAttribute('data-crop') || node.getAttribute('data-rendered-src')),
+		replacement(content, node) {
+			const src = node.getAttribute('src') || '';
+			const alt = node.getAttribute('alt') || '';
+			const annotations = node.getAttribute('data-annotations') || '';
+			const crop = node.getAttribute('data-crop') || '';
+			const renderedSrc = node.getAttribute('data-rendered-src') || '';
+			let attrs = `src="${src}" alt="${alt}"`;
+			if (annotations) attrs += ` data-annotations="${annotations.replace(/"/g, '&quot;')}"`;
+			if (crop) attrs += ` data-crop="${crop.replace(/"/g, '&quot;')}"`;
+			if (renderedSrc) attrs += ` data-rendered-src="${renderedSrc.replace(/"/g, '&quot;')}"`;
+			return `<img ${attrs} />`;
+		}
+	});
+
 	turndownService.addRule('fencedCodeBlock', {
 		filter: (node) =>
 			node.nodeName === 'PRE' && node.firstChild && node.firstChild.nodeName === 'CODE',
 		replacement(content, node) {
-			// TipTap always appends a trailing \n inside <code> — strip it so it doesn't grow on each save
 			const code = node.firstChild.textContent.replace(/\n$/, '');
 			const lang = (node.firstChild.getAttribute('class') || '').replace('language-', '');
 			const fence = '```';
@@ -95,7 +106,6 @@
 			},
 			listitem(text, task, checked) {
 				if (task) {
-					// Strip the <input> checkbox that marked's GFM inserts — TipTap uses data-checked instead
 					text = text.replace(/<input[^>]*type="checkbox"[^>]*>\s*/i, '');
 					return `<li data-type="taskItem" data-checked="${checked ? 'true' : 'false'}">${text}</li>`;
 				}
@@ -107,7 +117,7 @@
 	function markdownToHtml(md) {
 		if (!md) return '';
 		return DOMPurify.sanitize(marked.parse(md), {
-			ADD_ATTR: ['data-type', 'data-checked', 'data-annotations', 'data-crop']
+			ADD_ATTR: ['data-type', 'data-checked', 'data-annotations', 'data-crop', 'data-rendered-src']
 		});
 	}
 
@@ -134,7 +144,7 @@
 				Highlight.configure({ multicolor: false }),
 				TaskList,
 				TaskItem.configure({ nested: true }),
-				Image.configure({ inline: false, allowBase64: true }),
+				ImageWithView,
 				...(editable
 					? [
 						BubbleMenu.configure({
@@ -145,6 +155,7 @@
 							},
 							shouldShow: ({ editor: e, view, from, to }) => {
 								if (!e || !e.view || e.isDestroyed) return false;
+								if (e.state.selection.node) return false;
 								return view.hasFocus() && from !== to;
 							}
 						})
@@ -177,7 +188,6 @@
 		return (s || '')
 			.replace(/\r\n/g, '\n')
 			.replace(/\n{3,}/g, '\n\n')
-			// Normalize trailing newlines inside fenced code blocks
 			.replace(/(```\w*\n[\s\S]*?)\n+(```)/g, '$1\n$2')
 			.trim();
 	}
@@ -195,7 +205,7 @@
 	}
 </script>
 
-<!-- Bubble menu: appears when selecting text -->
+<!-- Text selection bubble menu -->
 {#if editable}
 <div
 	bind:this={bubbleMenuElement}
@@ -403,18 +413,18 @@
 
 	:global(.editor-wrapper .ProseMirror ul[data-type="taskList"] li) {
 		display: flex;
-		align-items: flex-start;
+		align-items: baseline;
 		gap: 0.5rem;
 	}
 
 	:global(.editor-wrapper .ProseMirror ul[data-type="taskList"] li label) {
 		flex: 0 0 auto;
-		margin-top: 0.1rem;
+		display: inline-flex;
+		align-items: center;
 	}
 
 	:global(.editor-wrapper .ProseMirror ul[data-type="taskList"] li label input[type="checkbox"]) {
 		margin: 0;
-		vertical-align: middle;
 	}
 
 	:global(.editor-wrapper .ProseMirror ul[data-type="taskList"] li div) {
@@ -475,9 +485,41 @@
 	/* Images */
 	:global(.editor-wrapper .ProseMirror img) {
 		max-width: 100%;
+		max-height: 500px;
 		height: auto;
 		border-radius: 5px;
-		margin: 0.5rem 0;
+		margin: 0.5rem auto 0;
+		cursor: pointer;
+		display: block;
+	}
+
+	:global(.editor-wrapper .ProseMirror img.ProseMirror-selectednode) {
+		outline: 2px solid var(--rte-accent, #0054a6);
+		outline-offset: 2px;
+	}
+
+	/* Image caption — click to edit inline */
+	:global(.editor-wrapper .image-caption) {
+		font-size: 0.8125rem;
+		font-style: italic;
+		color: var(--rte-muted, #6c7a91);
+		text-align: center;
+		margin-top: 0.25rem;
+		margin-bottom: 0.5rem;
+		outline: none;
+		border-radius: 4px;
+		padding: 0.125rem 0.25rem;
+		transition: background 0.15s;
+		cursor: text;
+	}
+
+	:global(.editor-wrapper .image-caption:focus) {
+		background: var(--rte-menu-hover, #f1f5f9);
+		color: var(--rte-menu-color, #1d2939);
+	}
+
+	:global(.editor-wrapper .image-caption-placeholder) {
+		color: var(--rte-placeholder, #b0b8c4);
 	}
 
 	/* Table */

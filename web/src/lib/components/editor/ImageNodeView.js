@@ -30,6 +30,14 @@ export const ImageWithView = Image.extend({
 					if (!attrs.crop) return {};
 					return { 'data-crop': JSON.stringify(attrs.crop) };
 				}
+			},
+			renderedSrc: {
+				default: '',
+				parseHTML: (el) => el.getAttribute('data-rendered-src') || '',
+				renderHTML: (attrs) => {
+					if (!attrs.renderedSrc) return {};
+					return { 'data-rendered-src': attrs.renderedSrc };
+				}
 			}
 		};
 	},

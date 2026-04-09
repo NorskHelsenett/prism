@@ -1,5 +1,5 @@
 <script>
-	import { onMount, onDestroy, createEventDispatcher } from 'svelte';
+	import { createEventDispatcher } from 'svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -55,11 +55,10 @@
 		{ id: 'crop', label: 'Crop', icon: 'M6 2v4H2v2h4v14h2V8h10v10h4v-2h-2V6H8V2H6z' }
 	];
 
-	onMount(() => {
-		if (canvas) {
-			ctx = canvas.getContext('2d');
-		}
-	});
+	// Set canvas context whenever the canvas element becomes available (after {#if open} renders)
+	$: if (canvas) {
+		ctx = canvas.getContext('2d');
+	}
 
 	function onImageLoad() {
 		naturalWidth = imgEl.naturalWidth;
@@ -226,6 +225,7 @@
 	}
 
 	function handleMouseDown(e) {
+		e.preventDefault();
 		const pos = getPos(e);
 		isDrawing = true;
 
@@ -275,6 +275,7 @@
 
 	function handleMouseMove(e) {
 		if (!isDrawing) return;
+		e.preventDefault();
 		const pos = getPos(e);
 
 		switch (activeTool) {
@@ -365,16 +366,65 @@
 	}
 
 	function save() {
+		// Render final image with annotations burned in
+		const hasAnnotations = elements.length > 0 || cropRect;
+		let renderedSrc = '';
+
+		if (hasAnnotations && imgEl && naturalWidth && naturalHeight) {
+			const offscreen = document.createElement('canvas');
+			const offCtx = offscreen.getContext('2d');
+
+			// Work at full natural resolution
+			const prevScale = scale;
+			const prevW = canvasWidth;
+			const prevH = canvasHeight;
+
+			scale = 1;
+			canvasWidth = naturalWidth;
+			canvasHeight = naturalHeight;
+
+			offscreen.width = naturalWidth;
+			offscreen.height = naturalHeight;
+
+			// Draw image
+			offCtx.drawImage(imgEl, 0, 0, naturalWidth, naturalHeight);
+
+			// Draw all annotation elements at full resolution
+			const prevCtx = ctx;
+			ctx = offCtx;
+			for (const el of elements) {
+				drawElement(el);
+			}
+			ctx = prevCtx;
+
+			// Apply crop by copying the cropped region
+			if (cropRect) {
+				const cropped = document.createElement('canvas');
+				cropped.width = cropRect.width;
+				cropped.height = cropRect.height;
+				const cropCtx = cropped.getContext('2d');
+				cropCtx.drawImage(offscreen, cropRect.x, cropRect.y, cropRect.width, cropRect.height, 0, 0, cropRect.width, cropRect.height);
+				renderedSrc = cropped.toDataURL('image/png');
+			} else {
+				renderedSrc = offscreen.toDataURL('image/png');
+			}
+
+			// Restore
+			scale = prevScale;
+			canvasWidth = prevW;
+			canvasHeight = prevH;
+		}
+
 		dispatch('save', {
 			annotations: elements,
-			crop: cropRect
+			crop: cropRect,
+			renderedSrc: renderedSrc || ''
 		});
 		open = false;
 	}
 
-	function cancel() {
-		dispatch('cancel');
-		open = false;
+	function close() {
+		save();
 	}
 
 	$: if (open) {
@@ -390,7 +440,7 @@
 {#if open}
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<div class="annotation-backdrop" on:click|self={cancel}>
+<div class="annotation-backdrop" on:click|self={close}>
 	<div class="annotation-modal">
 		<div class="annotation-toolbar">
 			{#each tools as tool}
@@ -424,6 +474,17 @@
 			<label class="stroke-label">
 				<input type="range" min="1" max="10" bind:value={strokeWidth} class="stroke-range" />
 			</label>
+
+			<div class="toolbar-spacer"></div>
+
+			<button class="tool-btn save-btn" on:click={close} title="Save & Close">
+				<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+					stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+					<polyline points="17 21 17 13 7 13 7 21" />
+					<polyline points="7 3 7 8 15 8" />
+				</svg>
+			</button>
 		</div>
 
 		<div class="annotation-canvas-container">
@@ -455,11 +516,6 @@
 				/>
 			{/if}
 		</div>
-
-		<div class="annotation-actions">
-			<button class="btn-cancel" on:click={cancel}>Cancel</button>
-			<button class="btn-save" on:click={save}>Save Annotations</button>
-		</div>
 	</div>
 </div>
 {/if}
@@ -484,17 +540,19 @@
 		max-width: 95vw;
 		max-height: 95vh;
 		display: flex;
-		flex-direction: column;
+		flex-direction: row;
 	}
 
 	.annotation-toolbar {
 		display: flex;
+		flex-direction: column;
 		align-items: center;
 		gap: 4px;
-		padding: 8px 12px;
+		padding: 10px 8px;
 		background: var(--rte-code-bg, #f1f5f9);
-		border-bottom: 1px solid var(--rte-border, #e6e7e9);
-		flex-wrap: wrap;
+		border-right: 1px solid var(--rte-border, #e6e7e9);
+		overflow-y: auto;
+		flex-shrink: 0;
 	}
 
 	.tool-btn {
@@ -514,6 +572,16 @@
 	.tool-btn:hover { background: var(--rte-menu-hover, #e2e8f0); }
 	.tool-btn.active { background: var(--rte-accent, #0054a6); color: #fff; }
 
+	.toolbar-spacer {
+		flex: 1;
+	}
+
+	.save-btn {
+		background: var(--rte-accent, #0054a6);
+		color: #fff;
+	}
+	.save-btn:hover { opacity: 0.85; }
+
 	.color-btn {
 		width: 22px;
 		height: 22px;
@@ -527,21 +595,24 @@
 	.color-btn.active { border-color: var(--rte-accent, #0054a6); transform: scale(1.2); }
 
 	.toolbar-divider {
-		width: 1px;
-		height: 24px;
+		height: 1px;
+		width: 28px;
 		background: var(--rte-border, #e6e7e9);
-		margin: 0 4px;
+		margin: 4px 0;
 	}
 
 	.stroke-range {
-		width: 80px;
+		width: 28px;
 		accent-color: var(--rte-accent, #0054a6);
+		writing-mode: vertical-lr;
+		direction: rtl;
+		height: 80px;
 	}
 
 	.stroke-label {
 		display: flex;
 		align-items: center;
-		gap: 6px;
+		justify-content: center;
 		font-size: 0.75rem;
 		color: var(--rte-muted, #6c7a91);
 	}
@@ -585,32 +656,5 @@
 		min-width: 120px;
 	}
 
-	.annotation-actions {
-		display: flex;
-		justify-content: flex-end;
-		gap: 8px;
-		padding: 10px 12px;
-		border-top: 1px solid var(--rte-border, #e6e7e9);
-	}
 
-	.btn-cancel {
-		padding: 8px 16px;
-		border: 1px solid var(--rte-border, #e6e7e9);
-		background: transparent;
-		border-radius: 8px;
-		cursor: pointer;
-		color: var(--rte-menu-color, #1d2939);
-	}
-
-	.btn-save {
-		padding: 8px 16px;
-		border: none;
-		background: var(--rte-accent, #0054a6);
-		color: #fff;
-		border-radius: 8px;
-		cursor: pointer;
-	}
-
-	.btn-cancel:hover { background: var(--rte-menu-hover, #f1f5f9); }
-	.btn-save:hover { opacity: 0.9; }
 </style>

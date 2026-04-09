@@ -10,11 +10,11 @@
 
 	let imgWidth = 0;
 	let imgHeight = 0;
-	let imgEl;
+	let sizeProbe;
 
 	function onLoad() {
-		imgWidth = imgEl.naturalWidth;
-		imgHeight = imgEl.naturalHeight;
+		imgWidth = sizeProbe.naturalWidth;
+		imgHeight = sizeProbe.naturalHeight;
 	}
 
 	// Compute viewBox for crop
@@ -24,14 +24,14 @@
 </script>
 
 <figure class="annotated-image">
+	<img bind:this={sizeProbe} {src} alt="" on:load={onLoad} class="size-probe" />
 	{#if annotations.length > 0 || crop}
 		<svg
 			viewBox={viewBox}
 			class="annotation-svg"
 			xmlns="http://www.w3.org/2000/svg"
 		>
-			<image href={src} x="0" y="0" width={imgWidth} height={imgHeight}
-				bind:this={imgEl} on:load={onLoad} />
+			<image href={src} x="0" y="0" width={imgWidth} height={imgHeight} />
 
 			{#each annotations as el}
 				{#if el.type === 'arrow'}
@@ -67,7 +67,7 @@
 			{/each}
 		</svg>
 	{:else}
-		<img bind:this={imgEl} {src} {alt} on:load={onLoad} class="plain-image" />
+		<img {src} {alt} class="plain-image" />
 	{/if}
 
 	{#if alt}
@@ -79,6 +79,15 @@
 	.annotated-image {
 		margin: 0.5rem 0;
 		max-width: 100%;
+	}
+
+	.size-probe {
+		position: absolute;
+		width: 0;
+		height: 0;
+		overflow: hidden;
+		pointer-events: none;
+		opacity: 0;
 	}
 
 	.annotation-svg {
