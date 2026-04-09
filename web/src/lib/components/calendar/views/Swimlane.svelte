@@ -1366,7 +1366,7 @@
 													<h4 style="color:white; margin: 0; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; flex: 1; font-size: {compact ? '0.7em' : '1em'};">
 														{calendar.title}
 													</h4>
-													{#if !compact}
+													{#if lanes.laneCount === 1}
 													<div
 														style="gap: 5px; display: flex; justify-content: flex-end; gap: -10px;"
 													>
