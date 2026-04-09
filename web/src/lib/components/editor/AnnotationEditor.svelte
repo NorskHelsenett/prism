@@ -256,6 +256,10 @@
 
 	function handleMouseDown(e) {
 		e.preventDefault();
+		// Commit any pending text input before starting a new action
+		if (textInputVisible) {
+			commitText();
+		}
 		const pos = getPos(e);
 		isDrawing = true;
 
@@ -456,6 +460,7 @@
 	}
 
 	function close() {
+		if (textInputVisible) commitText();
 		save();
 	}
 
@@ -490,7 +495,7 @@
 				<button
 					class="tool-btn"
 					class:active={activeTool === tool.id}
-					on:click={() => { activeTool = tool.id; }}
+					on:click={() => { if (textInputVisible) commitText(); activeTool = tool.id; }}
 					title={tool.label}
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
