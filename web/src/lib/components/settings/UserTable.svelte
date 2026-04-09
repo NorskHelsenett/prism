@@ -11,15 +11,24 @@
 	import Team from "./teams/Team.svelte";
 	import UserStats from "./UserStats.svelte";
 
+  let teamComponent;
   let users = []
   let roles = []
   let showDeleteModal = false;
   let showInfoModal = false;
-
+  let showToggleModal = false;
+  let userFilter = "active";
 
   onMount(async () => {
     users = await Fetch("/api/settings/users/all")
     roles = await Fetch("/api/settings/roles-list")
+  });
+
+  $: filteredUsers = users.filter(user => {
+    const isActive = user.active === undefined || user.active === null || user.active;
+    if (userFilter === "active") return isActive;
+    if (userFilter === "disabled") return !isActive;
+    return true;
   });
 
   let desc = false
@@ -125,6 +134,38 @@ function formatDate(dateString) {
   }
 
 
+  let userMarkedForToggle = null;
+  let toggleDialogText = "";
+  let toggleDialogButton = "";
+
+  function toggleUserActive(user) {
+    userMarkedForToggle = user;
+    const isActive = user.active !== false;
+    toggleDialogText = isActive
+      ? `Deactivate ${user.name}? The user will no longer be able to log in.`
+      : `Activate ${user.name}? The user will be able to log in again.`;
+    toggleDialogButton = isActive ? "Deactivate" : "Activate";
+    showToggleModal = true;
+    showDropdown = [false];
+  }
+
+  async function toggleUserActivePrompted() {
+    const response = await Fetch(`/api/settings/user/${userMarkedForToggle.ID}/active`, { method: "PATCH" });
+    if (!response.error) {
+      const idx = users.findIndex(u => u.ID === userMarkedForToggle.ID);
+      if (idx !== -1) {
+        users[idx].active = response.active;
+        users = users;
+      }
+      toast.success(response.active ? 'User activated' : 'User deactivated');
+      teamComponent?.fetchTeams();
+    } else {
+      toast.error('Unable to toggle user status');
+    }
+    userMarkedForToggle = null;
+    showToggleModal = false;
+  }
+
   let userMarkedForDeletion = null
   let deleteDialogText = ""
   let deleteDialogButton= ""
@@ -146,6 +187,7 @@ function formatDate(dateString) {
 
     if(!response.error) {
       toast.success('Successfully deleted user');
+      teamComponent?.fetchTeams();
     } else {
       toast.error('Unable to delete user');
     }
@@ -158,8 +200,19 @@ function formatDate(dateString) {
 </div> -->
 
 
-<Team />
+<Team bind:this={teamComponent} />
 <!-- <UserStats /> -->
+
+<div class="ms-3 me-3 mt-3 d-flex justify-content-center">
+  <div class="btn-group" role="group">
+    <input type="radio" class="btn-check" name="userFilter" id="radio-filter-active" value="active" bind:group={userFilter}>
+    <label for="radio-filter-active" class="btn">Active</label>
+    <input type="radio" class="btn-check" name="userFilter" id="radio-filter-disabled" value="disabled" bind:group={userFilter}>
+    <label for="radio-filter-disabled" class="btn">Disabled</label>
+    <input type="radio" class="btn-check" name="userFilter" id="radio-filter-all" value="all" bind:group={userFilter}>
+    <label for="radio-filter-all" class="btn">All</label>
+  </div>
+</div>
 
 <div class="card me-3 mb-3 mt-3 ml-1">
   <div class="table-responsive">
@@ -174,13 +227,13 @@ function formatDate(dateString) {
         </tr>
       </thead>
       <tbody>
-      {#each users as user, index}
+      {#each filteredUsers as user, index}
         <tr>
           <td data-label="name">
             <div class="d-flex py-1 align-items-center">
               <span class="avatar me-2" style="background-image: url({user.picture})"></span>
               <div class="flex-fill">
-                <div class="font-weight-medium">{user.name}</div>
+                <div class="font-weight-medium">{user.name} {#if user.active === false}<span class="badge bg-orange-lt">Disabled</span>{/if}</div>
                 <!-- <div class="text-secondary"><a href="#" class="text-reset">{user.Email}</a></div> -->
                 <div class="mt-2 list-inline list-inline-dots mb-0 text-secondary d-sm-block d-none">
                                   <div class="list-inline-item"><!-- Download SVG icon from http://tabler-icons.io/i/building-community -->
@@ -203,6 +256,11 @@ function formatDate(dateString) {
             <i class="ti ti-dots cursor-pointer" on:click|preventDefault|stopPropagation={() => showDropdown[index] = !showDropdown[index]}></i>
             <Dropdown bind:show={showDropdown[index]}>
               <a class="dropdown-item" href="#" on:click={()=> resetMFA(user)}>Reset MFA</a>
+              {#if user.active === false}
+                <a class="dropdown-item text-green" href="#" on:click={()=> toggleUserActive(user)}>Activate User</a>
+              {:else}
+                <a class="dropdown-item text-orange" href="#" on:click={()=> toggleUserActive(user)}>Deactivate User</a>
+              {/if}
               <div class="dropdown-divider"></div>
               <a class="dropdown-item text-red" href="#" on:click={()=> deleteUser(user)}>Delete User</a>
             </Dropdown>
@@ -214,8 +272,41 @@ function formatDate(dateString) {
   </div>
 </div>
 
-<DeleteModal bind:showDeleteModal onDelete={deleteUserPrompted} deleteButtonText={deleteDialogButton} text={deleteDialogText}/>
+<DeleteModal bind:showDeleteModal onDelete={deleteUserPrompted} deleteButtonText={deleteDialogButton}>
+  <div class="mt-3">
+    {#if userMarkedForDeletion}
+      <div class="d-flex align-items-center justify-content-center mb-3">
+        <span class="avatar avatar-md me-3" style="background-image: url({userMarkedForDeletion.picture})"></span>
+        <div class="text-start">
+          <div class="fw-bold">{userMarkedForDeletion.name}</div>
+          <div class="text-secondary">{userMarkedForDeletion.email}</div>
+        </div>
+      </div>
+      <div class="text-secondary">This action is irreversible.</div>
+    {/if}
+  </div>
+</DeleteModal>
 <InfoModal bind:showInfoModal onOK={resetMFAok} buttonText="Reset MFA" text="This will reset MFA. The next time the user logs in, {userToResetMFA?.name} has to register for a new MFA flow."/>
+<InfoModal bind:showInfoModal={showToggleModal} onOK={toggleUserActivePrompted} buttonText={toggleDialogButton}>
+  <div class="mt-3">
+    {#if userMarkedForToggle}
+      <div class="d-flex align-items-center justify-content-center mb-3">
+        <span class="avatar avatar-md me-3" style="background-image: url({userMarkedForToggle.picture})"></span>
+        <div class="text-start">
+          <div class="fw-bold">{userMarkedForToggle.name}</div>
+          <div class="text-secondary">{userMarkedForToggle.email}</div>
+        </div>
+      </div>
+      <div class="text-secondary">
+        {#if userMarkedForToggle.active !== false}
+          The user will no longer be able to log in.
+        {:else}
+          The user will be able to log in again.
+        {/if}
+      </div>
+    {/if}
+  </div>
+</InfoModal>
 
 <style>
   :global(td .dropdown){

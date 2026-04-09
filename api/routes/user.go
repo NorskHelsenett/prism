@@ -93,6 +93,27 @@ func DeleteUser(c *gin.Context, s *session.SessionStore) {
 	c.JSON(http.StatusOK, gin.H{"message": "Successfully deleted user"})
 }
 
+func ToggleUserActive(c *gin.Context, s *session.SessionStore) {
+	id := c.Param("id")
+
+	isAdmin, _ := c.Get("isAdmin")
+	if !isAdmin.(bool) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	user, err := database.ToggleUserActive(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to toggle user active status"})
+		return
+	}
+
+	// Sync to session store
+	_ = s.DB.Model(&database.UserData{}).Where("email = ?", user.Email).Update("active", user.Active).Error
+
+	c.JSON(http.StatusOK, user)
+}
+
 func GetAllProfilesEmailOnly(c *gin.Context) {
 	users, err := database.GetAllProfilesWithTeams()
 	if err != nil {

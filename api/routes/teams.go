@@ -16,6 +16,20 @@ func GetTeams(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch teams"})
 		return
 	}
+
+	inactive, _ := database.GetInactiveUserEmails()
+	if len(inactive) > 0 {
+		for i := range teams {
+			filtered := make([]string, 0, len(teams[i].MembersJSON))
+			for _, email := range teams[i].MembersJSON {
+				if !inactive[email] {
+					filtered = append(filtered, email)
+				}
+			}
+			teams[i].MembersJSON = filtered
+		}
+	}
+
 	c.JSON(http.StatusOK, teams)
 }
 
@@ -32,6 +46,18 @@ func GetTeam(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Team not found"})
 		return
 	}
+
+	inactive, _ := database.GetInactiveUserEmails()
+	if len(inactive) > 0 {
+		filtered := make([]string, 0, len(team.MembersJSON))
+		for _, email := range team.MembersJSON {
+			if !inactive[email] {
+				filtered = append(filtered, email)
+			}
+		}
+		team.MembersJSON = filtered
+	}
+
 	c.JSON(http.StatusOK, team)
 }
 

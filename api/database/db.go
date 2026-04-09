@@ -141,6 +141,7 @@ type UserData struct {
 	Picture       string         `json:"picture"`
 	Role          string         `json:"role" gorm:"default:visitor"`
 	Title         string         `json:"title" gorm:"default:My title"`
+	Active        *bool          `json:"active" gorm:"default:true"`
 	OTPSecret     string         `json:"-"`
 	Notifications datatypes.JSON `json:"-"`
 	Settings      datatypes.JSON `json:"-"`
@@ -381,8 +382,26 @@ func GetAllProfilesWithTeams() (*ProfileResponse, error) {
 		return nil, err
 	}
 
-	if err := db.Select("Name", "Email").Find(&users).Error; err != nil {
+	if err := db.Select("Name", "Email", "Active").Find(&users).Error; err != nil {
 		return nil, err
+	}
+
+	inactive := make(map[string]bool)
+	for _, u := range users {
+		if u.Active != nil && !*u.Active {
+			inactive[u.Email] = true
+		}
+	}
+
+	// Filter inactive members from team member lists
+	for i := range teams {
+		filtered := make([]string, 0, len(teams[i].MembersJSON))
+		for _, email := range teams[i].MembersJSON {
+			if !inactive[email] {
+				filtered = append(filtered, email)
+			}
+		}
+		teams[i].MembersJSON = filtered
 	}
 
 	usersInTeams := make(map[string]bool)
@@ -394,6 +413,9 @@ func GetAllProfilesWithTeams() (*ProfileResponse, error) {
 
 	var individualUsers []UserData
 	for _, user := range users {
+		if inactive[user.Email] {
+			continue
+		}
 		if !usersInTeams[user.Email] {
 		}
 		individualUsers = append(individualUsers, user)
@@ -1007,6 +1029,31 @@ func PersistOTPSecret(email string, secret string) error {
 
 func DeleteUser(id string) error {
 	return db.Where("id = ?", id).Delete(&UserData{}).Error
+}
+
+func ToggleUserActive(id string) (*UserData, error) {
+	var user UserData
+	if err := db.First(&user, id).Error; err != nil {
+		return nil, err
+	}
+	newActive := !*user.Active
+	user.Active = &newActive
+	if err := db.Model(&user).Update("active", newActive).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func GetInactiveUserEmails() (map[string]bool, error) {
+	var users []UserData
+	if err := db.Where("active = ?", false).Select("email").Find(&users).Error; err != nil {
+		return nil, err
+	}
+	emails := make(map[string]bool, len(users))
+	for _, u := range users {
+		emails[u.Email] = true
+	}
+	return emails, nil
 }
 
 func DeleteOTPCode(email string) error {

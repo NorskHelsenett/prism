@@ -48,6 +48,15 @@ func (s *SessionStore) IsAdmin(email string) bool {
 	return user.Role == "admin"
 }
 
+func (s *SessionStore) IsActive(email string) bool {
+	var user database.UserData
+	result := s.DB.Where("email = ?", email).First(&user)
+	if result.Error != nil {
+		return false
+	}
+	return user.Active == nil || *user.Active
+}
+
 func (s *SessionStore) GetRole(email string) string {
 	var user database.UserData
 	result := s.DB.Where("email = ?", email).First(&user)

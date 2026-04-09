@@ -335,6 +335,11 @@ func AuthMiddleware(store *session.SessionStore) gin.HandlerFunc {
 		apiKey := c.GetHeader("x-api-key")
 		if apiKey != "" {
 			if email, valid := routes.ValidateAPIKey(apiKey); valid {
+				if !store.IsActive(email) {
+					c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "account is deactivated"})
+					return
+				}
+
 				c.Set(EmailContextKey, email)
 
 				role := store.GetRole(email)
@@ -380,6 +385,11 @@ func AuthMiddleware(store *session.SessionStore) gin.HandlerFunc {
 				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "OTP is not verified", "initiateOTP": true})
 				return
 			}
+		}
+
+		if !store.IsActive(userInfo.Email) {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "account is deactivated"})
+			return
 		}
 
 		// Add email to Gin context for easier access in subsequent handlers

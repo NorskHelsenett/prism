@@ -23,7 +23,7 @@
     await fetchTeams();
   });
 
-  async function fetchTeams() {
+  export async function fetchTeams() {
     const response = await Fetch("/api/settings/teams");
     teams = response;
   }

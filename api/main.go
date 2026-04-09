@@ -183,6 +183,7 @@ func main() {
 
 		apiRoutes.GET("/settings/users/all", func(c *gin.Context) { routes.GetAllUsers(c, sessionStore) })
 		apiRoutes.DELETE("/settings/user/:id", func(c *gin.Context) { routes.DeleteUser(c, sessionStore) })
+		apiRoutes.PATCH("/settings/user/:id/active", func(c *gin.Context) { routes.ToggleUserActive(c, sessionStore) })
 		apiRoutes.PUT("/settings/profile", func(c *gin.Context) { routes.UpdateUserRole(c, sessionStore) })
 		apiRoutes.GET("/settings/events", event.EventQueues)
 		apiRoutes.GET("/settings", routes.GetSettings)
