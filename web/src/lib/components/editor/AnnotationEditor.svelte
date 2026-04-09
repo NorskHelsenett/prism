@@ -55,6 +55,8 @@
 		{ id: 'crop', label: 'Crop', icon: 'M6 2v4H2v2h4v14h2V8h10v10h4v-2h-2V6H8V2H6z' }
 	];
 
+	let canvasContainer;
+
 	// Set canvas context whenever the canvas element becomes available (after {#if open} renders)
 	$: if (canvas) {
 		ctx = canvas.getContext('2d');
@@ -64,9 +66,11 @@
 		naturalWidth = imgEl.naturalWidth;
 		naturalHeight = imgEl.naturalHeight;
 
-		// Fit to container (max 900px wide)
-		const maxW = Math.min(900, window.innerWidth - 120);
-		const maxH = window.innerHeight - 200;
+		// Fit to the available container space
+		const container = canvasContainer;
+		const pad = 24; // 12px padding on each side
+		const maxW = container ? container.clientWidth - pad : window.innerWidth - 120;
+		const maxH = container ? container.clientHeight - pad : window.innerHeight - 200;
 		scale = Math.min(maxW / naturalWidth, maxH / naturalHeight, 1);
 		canvasWidth = Math.round(naturalWidth * scale);
 		canvasHeight = Math.round(naturalHeight * scale);
@@ -432,6 +436,17 @@
 		cropRect = crop ? { ...crop } : null;
 	}
 
+	let backdropMouseDown = false;
+
+	function onBackdropMouseDown(e) {
+		if (e.target === e.currentTarget) backdropMouseDown = true;
+	}
+
+	function onBackdropMouseUp(e) {
+		if (backdropMouseDown && e.target === e.currentTarget) close();
+		backdropMouseDown = false;
+	}
+
 	$: if (canvas && canvasWidth && canvasHeight) {
 		requestAnimationFrame(redraw);
 	}
@@ -440,7 +455,7 @@
 {#if open}
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
-<div class="annotation-backdrop" on:click|self={close}>
+<div class="annotation-backdrop" on:mousedown={onBackdropMouseDown} on:mouseup={onBackdropMouseUp}>
 	<div class="annotation-modal">
 		<div class="annotation-toolbar">
 			{#each tools as tool}
@@ -487,7 +502,7 @@
 			</button>
 		</div>
 
-		<div class="annotation-canvas-container">
+		<div class="annotation-canvas-container" bind:this={canvasContainer}>
 			<img bind:this={imgEl} {src} alt="" on:load={onImageLoad} class="hidden-img" />
 			<canvas
 				bind:this={canvas}
@@ -521,6 +536,17 @@
 {/if}
 
 <style>
+	/* Dark theme variable mappings */
+	:global([data-bs-theme="dark"]) .annotation-backdrop {
+		--rte-menu-bg: var(--tblr-bg-surface, #1e2a3a);
+		--rte-menu-color: var(--tblr-body-color, #dcdfe4);
+		--rte-code-bg: var(--tblr-bg-surface-secondary, #1a2234);
+		--rte-border: var(--tblr-border-color, #3a4658);
+		--rte-menu-hover: rgba(255, 255, 255, 0.06);
+		--rte-accent: var(--tblr-primary, #206bc4);
+		--rte-muted: #8a95a5;
+	}
+
 	.annotation-backdrop {
 		position: fixed;
 		inset: 0;
@@ -537,10 +563,14 @@
 		border-radius: 12px;
 		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 		overflow: hidden;
-		max-width: 95vw;
-		max-height: 95vh;
+		width: 90vw;
+		max-width: 1400px;
+		height: calc(90vw * 9 / 16);
+		max-height: 90vh;
 		display: flex;
 		flex-direction: row;
+		user-select: none;
+		-webkit-user-drag: none;
 	}
 
 	.annotation-toolbar {
@@ -625,11 +655,19 @@
 		align-items: center;
 		justify-content: center;
 		padding: 12px;
-		background: #1a1a2e;
+		background: var(--tblr-bg-surface-dark, #2a3a4e);
 	}
 
+	:global([data-bs-theme=\"dark\"]) .annotation-canvas-container {
+		background: #0a0c11;
+	}
+	:global([data-bs-theme="dark"]) .annotation-canvas {
+		background: #0a0c11;
+	}
 	.annotation-canvas {
 		border-radius: 4px;
+		box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+		background: var(--tblr-body-bg, #fff);
 	}
 
 	.cursor-crosshair { cursor: crosshair; }

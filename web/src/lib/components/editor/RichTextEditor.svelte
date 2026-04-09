@@ -267,6 +267,24 @@
 </div>
 
 <style>
+	/* Dark theme variable mappings */
+	:global([data-bs-theme="dark"]) .editor-wrapper {
+		--rte-bg: var(--tblr-body-bg, #1a2234);
+		--rte-border: var(--tblr-border-color, #3a4658);
+		--rte-menu-bg: var(--tblr-bg-surface, #1e2a3a);
+		--rte-menu-color: var(--tblr-body-color, #dcdfe4);
+		--rte-menu-border: var(--tblr-border-color, #3a4658);
+		--rte-menu-hover: rgba(255, 255, 255, 0.06);
+		--rte-menu-active-bg: rgba(255, 255, 255, 0.1);
+		--rte-code-bg: rgba(255, 255, 255, 0.05);
+		--rte-codeblock-color: var(--tblr-body-color, #dcdfe4);
+		--rte-placeholder: #5b6b82;
+		--rte-muted: #8a95a5;
+		--rte-focus-border: var(--tblr-primary, #206bc4);
+		--rte-focus-ring: rgba(32, 107, 196, 0.25);
+		--rte-accent: var(--tblr-primary, #206bc4);
+	}
+
 	/* Floating / Bubble menu pill */
 	.formatting-menu {
 		pointer-events: auto;
