@@ -109,7 +109,7 @@
 
 	.image-node.selected .image-wrapper,
 	.image-node:hover .image-wrapper {
-		outline: 2px solid var(--rte-accent, #0054a6);
+		/* outline: 2px solid var(--rte-accent, #0054a6); */
 		outline-offset: 2px;
 		border-radius: 5px;
 	}

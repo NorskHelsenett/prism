@@ -42,6 +42,7 @@
 	let textInputY = 0;
 	let textInputValue = '';
 	let textInput;
+	let editingTextIndex = -1; // index of text element being edited, -1 = new
 
 	const colors = ['#ff0000', '#ff6600', '#ffcc00', '#00cc00', '#0066ff', '#9933ff', '#000000', '#ffffff'];
 	const tools = [
@@ -85,9 +86,10 @@
 		// Draw image (or cropped region)
 		ctx.drawImage(imgEl, 0, 0, canvasWidth, canvasHeight);
 
-		// Draw all elements
-		for (const el of elements) {
-			drawElement(el);
+		// Draw all elements (skip the one being edited)
+		for (let i = 0; i < elements.length; i++) {
+			if (i === editingTextIndex && textInputVisible) continue;
+			drawElement(elements[i]);
 		}
 
 		// Draw current in-progress element
@@ -240,10 +242,17 @@
 						pos.y >= Math.min(el.y1, el.y2) - threshold &&
 						pos.y <= Math.max(el.y1, el.y2) + threshold) return i;
 					break;
-				case 'text':
-					if (pos.x >= el.x - threshold && pos.x <= el.x + 150 &&
-						pos.y >= el.y - 20 && pos.y <= el.y + threshold) return i;
+				case 'text': {
+					const fontSize = (el.fontSize || 20) * scale;
+					ctx.save();
+					ctx.font = `bold ${fontSize}px sans-serif`;
+					const tw = ctx.measureText(el.text).width / scale;
+					ctx.restore();
+					const th = (el.fontSize || 20);
+					if (pos.x >= el.x - threshold && pos.x <= el.x + tw + threshold &&
+						pos.y >= el.y - th && pos.y <= el.y + threshold) return i;
 					break;
+				}
 				case 'freehand':
 					for (const pt of el.points) {
 						if (Math.abs(pt.x - pos.x) < threshold && Math.abs(pt.y - pos.y) < threshold) return i;
@@ -280,13 +289,27 @@
 			case 'freehand':
 				currentElement = { type: 'freehand', points: [pos], color: activeColor, strokeWidth };
 				break;
-			case 'text':
-				textInputX = pos.x;
-				textInputY = pos.y;
-				textInputValue = '';
+			case 'text': {
+				const textIdx = hitTest(pos);
+				if (textIdx >= 0 && elements[textIdx].type === 'text') {
+					// Edit existing text element
+					const el = elements[textIdx];
+					editingTextIndex = textIdx;
+					textInputX = el.x;
+					textInputY = el.y;
+					textInputValue = el.text;
+					activeColor = el.color;
+				} else {
+					// New text element
+					editingTextIndex = -1;
+					textInputX = pos.x;
+					textInputY = pos.y;
+					textInputValue = '';
+				}
 				textInputVisible = true;
 				setTimeout(() => textInput?.focus(), 0);
 				break;
+			}
 			case 'eraser-dot': {
 				const idx = hitTest(pos);
 				if (idx >= 0) {
@@ -379,9 +402,8 @@
 
 	function commitText() {
 		if (textInputValue.trim()) {
-			// Store fontSize in natural image pixels so it scales correctly
 			const naturalFontSize = 20 / scale;
-			elements = [...elements, {
+			const newEl = {
 				type: 'text',
 				x: textInputX,
 				y: textInputY,
@@ -389,9 +411,21 @@
 				color: activeColor,
 				fontSize: naturalFontSize,
 				strokeWidth
-			}];
+			};
+			if (editingTextIndex >= 0) {
+				// Replace the existing element
+				elements[editingTextIndex] = newEl;
+				elements = elements;
+			} else {
+				elements = [...elements, newEl];
+			}
+			redraw();
+		} else if (editingTextIndex >= 0) {
+			// Cleared the text — remove the element
+			elements = elements.filter((_, i) => i !== editingTextIndex);
 			redraw();
 		}
+		editingTextIndex = -1;
 		textInputVisible = false;
 		textInputValue = '';
 	}

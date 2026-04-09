@@ -512,7 +512,7 @@
 	}
 
 	:global(.editor-wrapper .ProseMirror img.ProseMirror-selectednode) {
-		outline: 2px solid var(--rte-accent, #0054a6);
+		/* outline: 2px solid var(--rte-accent, #0054a6); */
 		outline-offset: 2px;
 	}
 
