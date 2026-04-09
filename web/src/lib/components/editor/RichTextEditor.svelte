@@ -14,7 +14,6 @@
 	import TaskItem from '@tiptap/extension-task-item';
 	import Image from '@tiptap/extension-image';
 	import BubbleMenu from '@tiptap/extension-bubble-menu';
-	import FloatingMenu from '@tiptap/extension-floating-menu';
 
 	/** Markdown string (two-way bindable) */
 	export let value = '';
@@ -31,7 +30,6 @@
 	let editor;
 	let internalUpdate = false;
 	let bubbleMenuElement;
-	let floatingMenuElement;
 
 	// -- Turndown: HTML -> Markdown -------------------------------------------
 
@@ -42,15 +40,43 @@
 	turndownService.escape = (s) => s;
 	turndownService.use(gfm);
 
+	// Override after GFM plugin so our rules take priority
+
+	turndownService.addRule('taskList', {
+		filter: (node) =>
+			node.nodeName === 'UL' &&
+			node.getAttribute('data-type') === 'taskList',
+		replacement(content) {
+			return '\n' + content + '\n';
+		}
+	});
+
 	turndownService.addRule('taskListItems', {
 		filter: (node) =>
 			node.nodeName === 'LI' &&
-			(node.getAttribute('data-checked') === 'true' ||
+			(node.getAttribute('data-type') === 'taskItem' ||
+				node.getAttribute('data-checked') === 'true' ||
 				node.getAttribute('data-checked') === 'false'),
 		replacement(content, node) {
 			const checked = node.getAttribute('data-checked') === 'true';
-			content = content.replace(/^\s+/, '').replace(/\n+$/, '');
+			// Strip any checkbox inputs that TipTap may render inside the <li>
+			content = content
+				.replace(/^\s*\[[ x]\]\s*/i, '')
+				.replace(/^\s+/, '')
+				.replace(/\n+$/, '');
 			return `- [${checked ? 'x' : ' '}] ${content}\n`;
+		}
+	});
+
+	turndownService.addRule('fencedCodeBlock', {
+		filter: (node) =>
+			node.nodeName === 'PRE' && node.firstChild && node.firstChild.nodeName === 'CODE',
+		replacement(content, node) {
+			// TipTap always appends a trailing \n inside <code> — strip it so it doesn't grow on each save
+			const code = node.firstChild.textContent.replace(/\n$/, '');
+			const lang = (node.firstChild.getAttribute('class') || '').replace('language-', '');
+			const fence = '```';
+			return `\n\n${fence}${lang}\n${code}\n${fence}\n\n`;
 		}
 	});
 
@@ -70,6 +96,8 @@
 			},
 			listitem(text, task, checked) {
 				if (task) {
+					// Strip the <input> checkbox that marked's GFM inserts — TipTap uses data-checked instead
+					text = text.replace(/<input[^>]*type="checkbox"[^>]*>\s*/i, '');
 					return `<li data-type="taskItem" data-checked="${checked ? 'true' : 'false'}">${text}</li>`;
 				}
 				return `<li>${text}</li>`;
@@ -79,7 +107,9 @@
 
 	function markdownToHtml(md) {
 		if (!md) return '';
-		return DOMPurify.sanitize(marked.parse(md));
+		return DOMPurify.sanitize(marked.parse(md), {
+			ADD_ATTR: ['data-type', 'data-checked']
+		});
 	}
 
 	function htmlToMarkdown(html) {
@@ -119,27 +149,6 @@
 								if (!e || !e.view || e.isDestroyed) return false;
 								return view.hasFocus() && from !== to;
 							}
-						}),
-						FloatingMenu.configure({
-							element: floatingMenuElement,
-							tippyOptions: {
-								placement: 'bottom-start',
-								offset: [0, 4]
-							},
-							shouldShow: ({ editor: e, view, state, oldState }) => {
-								if (!e || !e.view || e.isDestroyed) return false;
-								// Hide during active typing: if doc content changed, don't show
-								if (oldState && !oldState.doc.eq(state.doc)) return false;
-								const { selection } = state;
-								const { $anchor, empty } = selection;
-								const isRootDepth = $anchor.depth === 1;
-								const isEmptyTextBlock =
-									$anchor.parent.isTextblock &&
-									!$anchor.parent.type.spec.code &&
-									!$anchor.parent.textContent &&
-									$anchor.parent.childCount === 0;
-								return view.hasFocus() && empty && isRootDepth && isEmptyTextBlock && e.isEditable;
-							}
 						})
 					]
 					: [])
@@ -166,9 +175,18 @@
 		}
 	});
 
+	function normalizeMd(s) {
+		return (s || '')
+			.replace(/\r\n/g, '\n')
+			.replace(/\n{3,}/g, '\n\n')
+			// Normalize trailing newlines inside fenced code blocks
+			.replace(/(```\w*\n[\s\S]*?)\n+(```)/g, '$1\n$2')
+			.trim();
+	}
+
 	$: if (editor && !internalUpdate && value !== undefined) {
 		const currentMd = htmlToMarkdown(editor.getHTML());
-		if (value !== currentMd) {
+		if (normalizeMd(value) !== normalizeMd(currentMd)) {
 			const html = markdownToHtml(value);
 			editor.commands.setContent(html, false);
 		}
@@ -234,43 +252,6 @@
 	</div>
 </div>
 
-<!-- Floating menu: appears on empty lines -->
-<div
-	bind:this={floatingMenuElement}
-	class="formatting-menu"
-	style="visibility: hidden; position: absolute; z-index: 9999;"
->
-	<div class="menu-buttons">
-		<button type="button"
-			on:click={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} title="Heading 1">
-			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" class="menu-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M2.243 4.493v7.5m0 0v7.502m0-7.501h10.5m0-7.5v7.5m0 0v7.501m4.501-8.627 2.25-1.5v10.126m0 0h-2.25m2.25 0h2.25" /></svg>
-		</button>
-		<button type="button"
-			on:click={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} title="Heading 2">
-			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" class="menu-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 19.5H16.5v-1.609a2.25 2.25 0 0 1 1.244-2.012l2.89-1.445c.651-.326 1.116-.955 1.116-1.683 0-.498-.04-.987-.118-1.463-.135-.825-.835-1.422-1.668-1.489a15.202 15.202 0 0 0-3.464.12M2.243 4.492v7.5m0 0v7.502m0-7.501h10.5m0-7.5v7.5m0 0v7.501" /></svg>
-		</button>
-		<button type="button"
-			on:click={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} title="Heading 3">
-			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" class="menu-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M20.905 14.626a4.52 4.52 0 0 1 .738 3.603c-.154.695-.794 1.143-1.504 1.208a15.194 15.194 0 0 1-3.639-.104m4.405-4.707a4.52 4.52 0 0 0 .738-3.603c-.154-.696-.794-1.144-1.504-1.209a15.19 15.19 0 0 0-3.639.104m4.405 4.708H18M2.243 4.493v7.5m0 0v7.502m0-7.501h10.5m0-7.5v7.5m0 0v7.501" /></svg>
-		</button>
-		<button type="button"
-			on:click={() => editor?.chain().focus().toggleBulletList().run()} title="Bullet List">
-			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" class="menu-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" /></svg>
-		</button>
-		<button type="button"
-			on:click={() => editor?.chain().focus().toggleOrderedList().run()} title="Numbered List">
-			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" class="menu-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M8.242 5.992h12m-12 6.003H20.24m-12 5.999h12M4.117 7.495v-3.75H2.99m1.125 3.75H2.99m1.125 0H5.24m-1.92 2.577a1.125 1.125 0 1 1 1.591 1.59l-1.83 1.83h2.16M2.99 15.745h1.125a1.125 1.125 0 0 1 0 2.25H3.74m0-.002h.375a1.125 1.125 0 0 1 0 2.25H2.99" /></svg>
-		</button>
-		<button type="button"
-			on:click={() => editor?.chain().focus().toggleTaskList().run()} title="Task List">
-			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" class="menu-icon"><path d="M3 20.4V3.6C3 3.26863 3.26863 3 3.6 3H20.4C20.7314 3 21 3.26863 21 3.6V20.4C21 20.7314 20.7314 21 20.4 21H3.6C3.26863 21 3 20.7314 3 20.4Z" stroke-width="1.5" /><path d="M7 12.5L10 15.5L17 8.5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
-		</button>
-		<button type="button"
-			on:click={() => editor?.chain().focus().toggleCodeBlock().run()} title="Code Block">
-			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" class="menu-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5" /></svg>
-		</button>
-	</div>
-</div>
 {/if}
 
 <div class="editor-wrapper" class:editor-editable={editable} class:editor-readonly={!editable} style="--editor-min-height: {minHeight}">
