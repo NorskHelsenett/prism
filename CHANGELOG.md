@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **👤 User Deactivation:** Deactivate users instead of deleting them. Deactivated users cannot log in and are hidden from team member lists while retaining their membership data. Reactivate at any time from the user management table.
+- **🔘 User Filter:** Radio group filter (Active / Disabled / All) above the user table for quick filtering.
+- **📊 Export Progress Bar:** Download progress indicator with bytes downloaded and total size when exporting the database.
+- **📦 Selective Export:** Export now only includes essential data (projects, vulnerabilities, users, teams, settings) by default. Check "Include all data" to also export access logs and event history.
+- **🔑 Passkey 2FA:** Added WebAuthn passkey support as an alternative second factor alongside TOTP. Users authenticate via SSO first, then verify with either a TOTP code or a passkey (biometrics, security key, device screen lock).
+- **🔑 Passkey Management:** Users can register, view, and remove passkeys from the profile settings page.
+- **🔑 Passkey on Auth Page:** The 2FA verification page offers a "Verify with Passkey" option when the user has registered passkeys (hidden during first-time OTP setup).
+- **🛡️ Admin MFA Status Dialog:** The admin MFA reset dialog now shows an itemized breakdown of configured MFA methods (TOTP status & passkey count) before confirming the reset.
+- **🛡️ Admin Passkey Reset:** Admins can reset a user's passkeys via the user management table, and the MFA reset clears both TOTP and passkeys.
+- **📄 Passkey Signing Spec:** Added specification document (`.docs/PASSKEY_DOCUMENT_SIGNING.md`) for future passkey-based document signing of vulnerability reports.
+
+### Changed
+- **🔐 Logout:** Logout endpoint no longer requires authentication, preventing redirect loops when the session has already expired.
+- **🚫 Deactivated Login:** Deactivated users are silently redirected to the frontpage on login without revealing account status.
+- **🗑️ Delete & Deactivate Modals:** Confirmation dialogs now show the user's avatar, name, and email for clearer identification.
+
+### Fixed
+- **🎨 Swimlane Border:** Fixed hardcoded dark border color on board/swimlane activities that looked wrong in light mode. Now adapts to the active theme.
+
 ## [0.1.15] - 2025-10-14
 
 ### Added

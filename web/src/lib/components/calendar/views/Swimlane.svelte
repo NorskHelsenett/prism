@@ -1397,7 +1397,7 @@
 		position: absolute;
 		top: 5px;
 		border-radius: 7px;
-		border: 3px solid #1b2432;
+		border: 3px solid var(--tblr-border-color);
 		left: 0;
 		z-index: 10;
 		user-select: none;
