@@ -8,6 +8,7 @@
   import { derived } from 'svelte/store';
   import { accessLevels } from '$lib/userStore';
 	import User from '$lib/components/User.svelte';
+	import RegisterVulnerabilityButton from '$lib/components/vulnerability/RegisterVulnerabilityButton.svelte';
 	import Loader from '$lib/components/Loader.svelte';
 	import NotificationDropdown from '$lib/components/Notifications/NotificationDropdown.svelte';
   import { goto } from '$app/navigation';
@@ -88,6 +89,7 @@
 			</h1>
 
 			<div class="navbar-nav flex-row order-md-last">
+        <RegisterVulnerabilityButton />
         <div class="d-none d-md-flex cursor-pointer">
         <a on:click|preventDefault={toggleTheme} class="nav-link px-0">
 						<!-- Download SVG icon from http://tabler-icons.io/i/moon -->

@@ -25,7 +25,6 @@
 	import { accessLevels } from '$lib/userStore';
 	import OwaspBarChart from '$lib/components/dashboard/OwaspBarChart.svelte';
 	import { goto } from '$app/navigation';
-	import RegisterVulnerabilityButton from '$lib/components/vulnerability/RegisterVulnerabilityButton.svelte';
 	let severityData;
 
 	onMount(() => {
@@ -63,7 +62,6 @@
 					{/each}
 				</select>
 			</span>
-			<RegisterVulnerabilityButton />
 		</div>
 	</div>
 </div>
