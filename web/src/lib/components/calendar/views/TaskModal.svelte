@@ -389,9 +389,9 @@
      bind:this={modalRef}
      style="top: {modalPosition.top}; left: {modalPosition.left};"
      use:clickOutside on:outclick={onClose}>
-  <button class="btn-expand" on:click={() => onOpenFullView(task.id)}>
-    <Icon icon="arrows-maximize" />
-  </button>
+  <a class="btn-expand" href="/planning/{task.id}/view" target="_blank" rel="noopener" title="Open in new tab">
+    <Icon icon="external-link" />
+  </a>
   
   <div class="modal-header">
     <div class="title-container">
@@ -587,6 +587,7 @@
     align-items: center;
     justify-content: center;
     border-radius: 4px;
+    text-decoration: none;
   }
   
   .btn-expand:hover {

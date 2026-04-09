@@ -29,6 +29,7 @@
 	let cellWidth = 50; // Default cell width (will be measured on drag start)
 	let weekendCellWidth = 22; // Width of weekend cells
 	let originalTaskElement = null; // Add a reference to track the original element being dragged
+	let dragLaneOffset = 0; // Vertical offset of the task within its cell
 	let isShiftPressed = false; // Track if shift key is pressed during drag
 
 	// Add state variables to track visible dates
@@ -647,6 +648,7 @@
 
 		// Store reference to original element and hide it
 		originalTaskElement = event.currentTarget;
+		dragLaneOffset = parseFloat(originalTaskElement.style.top) || 0;
 		originalTaskElement.style.visibility = 'hidden';
 		
 		// If shift is already pressed, show the original task with FULL opacity
@@ -655,6 +657,9 @@
 			originalTaskElement.style.opacity = '1'; // Full opacity instead of dimmed
 			isShiftPressed = true;
 		}
+
+		// Make all tasks invisible to pointer events so elementFromPoint finds cells
+		document.querySelectorAll('.task').forEach(el => { el.style.pointerEvents = 'none'; });
 
 		// Create and position the preview element
 		createDragPreview(originalTaskElement, task);
@@ -794,8 +799,9 @@
 			const cellRect = targetCell.getBoundingClientRect();
 			const taskDuration = calculateTaskWidth(draggedTask.dateFrom, draggedTask.dateTo);
 
-			// With fixed positioning, we use viewport coordinates directly
-			dragPreviewElement.style.top = cellRect.top + 'px';
+			// Use lane offset only when staying on the same member, otherwise top of row
+			const offset = memberEmail === dragStartMember ? dragLaneOffset : 5;
+			dragPreviewElement.style.top = (cellRect.top + offset) + 'px';
 			dragPreviewElement.style.left = cellRect.left + 'px';
 			dragPreviewElement.style.width = taskDuration;
 			dragPreviewElement.style.visibility = 'visible';
@@ -821,6 +827,7 @@
 
 		// Store and hide the original element
 		originalTaskElement = event.target.closest('.task');
+		dragLaneOffset = parseFloat(originalTaskElement.style.top) || 0;
 		originalTaskElement.style.visibility = 'hidden';
 
 		// Create and position the preview
@@ -987,6 +994,7 @@
       isResizing = false;
       draggedTask = null;
       dragTargetMember = null; // Reset the target member
+      document.querySelectorAll('.task').forEach(el => { el.style.pointerEvents = ''; });
       document.body.classList.remove('dragging-active', 'resizing-active');
     }
   }
@@ -1056,24 +1064,85 @@
 	}
 
 	// Function to filter events for a specific day and member
+	function computeMemberLanes(memberEmail) {
+		if (!calendarEvents?.length) return { laneCount: 1, laneMap: {} };
+
+		// Keep original array order to preserve visual lane stability
+		const memberEvents = calendarEvents
+			.filter(event => event.hackers?.some(h => h.email === memberEmail));
+
+		if (memberEvents.length === 0) return { laneCount: 1, laneMap: {} };
+
+		const lanes = []; // each lane tracks occupied intervals
+		const laneMap = {};
+
+		for (const event of memberEvents) {
+			const eventStart = new Date(event.dateFrom);
+			const eventEnd = new Date(event.dateTo);
+			let assigned = false;
+
+			// Try to fit in existing lanes (first one without overlap)
+			for (let i = 0; i < lanes.length; i++) {
+				const hasOverlap = lanes[i].some(interval =>
+					eventStart <= interval.end && eventEnd >= interval.start
+				);
+				if (!hasOverlap) {
+					lanes[i].push({ start: eventStart, end: eventEnd });
+					laneMap[event.id] = i;
+					assigned = true;
+					break;
+				}
+			}
+
+			if (!assigned) {
+				laneMap[event.id] = lanes.length;
+				lanes.push([{ start: eventStart, end: eventEnd }]);
+			}
+		}
+
+		return { laneCount: Math.max(1, lanes.length), laneMap };
+	}
+
+	// Reactive lane computation per member (depends on both teams and calendarEvents)
+	$: memberLanes = (() => {
+		const _events = calendarEvents; // explicit dependency
+		const result = {};
+		for (const member of teams) {
+			result[member] = computeMemberLanes(member);
+		}
+		return result;
+	})();
+
+	function getEventForDayMemberLane(dayDate, memberEmail, laneIndex, laneMap) {
+		if (!calendarEvents?.length) return null;
+
+		const isFirstDay = formatDateToISO(startDate) === dayDate;
+
+		const matchingEvent = calendarEvents.find((event) => {
+			if (laneMap[event.id] !== laneIndex) return false;
+			if (!event.hackers.some((h) => h.email === memberEmail)) return false;
+
+			const eventStartDate = new Date(event.dateFrom).toISOString().split('T')[0];
+			return isFirstDay ? eventStartDate <= dayDate : eventStartDate === dayDate;
+		});
+
+		return matchingEvent || null;
+	}
+
+	// Keep the old function for drag/drop compatibility
 	function getEventsForDayAndMember(dayDate, memberEmail) {
 		if (!calendarEvents?.length) return null;
 
 		if (formatDateToISO(startDate) === dayDate) {
 			const matchingEvent = calendarEvents.find((event) => {
 				const eventStartDate = new Date(event.dateFrom).toISOString().split('T')[0];
-				// Only show the task on its start date and if member is assigned
 				return eventStartDate <= dayDate && event.hackers.some((h) => h.email === memberEmail);
 			});
 			return matchingEvent || null;
 		}
 
-		// Find the first event that starts on this exact day for this member
-		// This prevents the same task from appearing on multiple days
 		const matchingEvent = calendarEvents.find((event) => {
 			const eventStartDate = new Date(event.dateFrom).toISOString().split('T')[0];
-
-			// Only show the task on its start date and if member is assigned
 			return eventStartDate === dayDate && event.hackers.some((h) => h.email === memberEmail);
 		});
 
@@ -1247,6 +1316,10 @@
 				</thead>
 				<tbody>
 					{#each teams as member, index}
+						{@const lanes = memberLanes[member] || { laneCount: 1, laneMap: {} }}
+						{@const laneHeight = Math.max(16, Math.floor(55 / lanes.laneCount))}
+						{@const rowHeight = laneHeight * lanes.laneCount + 10}
+						{@const compact = lanes.laneCount > 2}
 						<tr>
 							<td class="sticky-col first-col text-muted" style="min-width:20em">
 								<Avatar
@@ -1264,37 +1337,36 @@
 								<td
 									class="cell"
 									class:weekend={day.isWeekend}
+									style="height: {rowHeight}px"
 									on:mousedown={(e) => handleMouseDown(e, day, member)}
 									on:mousemove={(e) => handleMouseMove(e, day, member)}
 									on:dragstart={(e) => e.preventDefault()}
 									data-date={day.date}
 									data-member={member}
 								>
-									<!-- Call the function once and store the result -->
 									{#if calendarEvents?.length}
-										{@const calendar = calendarEvents?.length
-											? getEventsForDayAndMember(day.date, member)
-											: null}
-										{#if calendar}
-											<span class:weekend={day.isWeekend} style="position: relative;">
+										{#each Array(lanes.laneCount) as _, laneIdx}
+											{@const calendar = getEventForDayMemberLane(day.date, member, laneIdx, lanes.laneMap)}
+											{#if calendar}
 												<!-- svelte-ignore a11y-click-events-have-key-events -->
 												<!-- svelte-ignore a11y-no-static-element-interactions -->
 												<div
-                          class:task-done={calendar.status === 'done'}
+													class:task-done={calendar.status === 'done'}
 													class="task planningid-{calendar.id}"
+													class:task-compact={compact}
 													on:click={(e) => handleTaskClick(e, calendar)}
 													on:mousedown={(e) => handleTaskDragStart(e, calendar, member)}
-													style="width: {calendar.width}; background-color: {calendar.color}; display: flex; justify-content: flex-start; align-items: center; gap: 8px; padding: 0 8px; cursor: pointer; color: white;"
+													style="width: {calendar.width}; background-color: {calendar.color}; top: {5 + laneIdx * laneHeight}px; height: {laneHeight - 2}px; display: flex; justify-content: flex-start; align-items: center; gap: 8px; padding: 0 8px; cursor: pointer; color: white;"
 												>
 													<div
 														class="resize-handle-left"
 														on:mousedown={(e) => handleResizeStart(e, calendar, member, 'left')}
 													></div>
 
-													<h4 style="color:white; margin: 0; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; flex: 1;">
+													<h4 style="color:white; margin: 0; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; flex: 1; font-size: {compact ? '0.7em' : '1em'};">
 														{calendar.title}
 													</h4>
-                          <!-- <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-letter-i"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 4l0 16" /></svg> -->
+													{#if !compact}
 													<div
 														style="gap: 5px; display: flex; justify-content: flex-end; gap: -10px;"
 													>
@@ -1313,14 +1385,15 @@
                               </span>
 														{/each}
 													</div>
+													{/if}
 
 													<div
 														class="resize-handle-right"
 														on:mousedown={(e) => handleResizeStart(e, calendar, member, 'right')}
 													></div>
 												</div>
-											</span>
-										{/if}
+											{/if}
+										{/each}
 									{/if}
 								</td>
 							{/each}
@@ -1361,6 +1434,7 @@
 
 	.cell{
 		padding:0;
+		position: relative;
 	}
 
   /* Show avatars by default */
@@ -1393,19 +1467,22 @@
 		max-height: 80vh;
 	}
 	.task {
-		height: 55px;
 		position: absolute;
-		top: 5px;
 		border-radius: 7px;
-		border: 3px solid var(--tblr-border-color);
+		border: 2px solid var(--tblr-border-color);
 		left: 0;
 		z-index: 10;
 		user-select: none;
 		-webkit-user-select: none;
 		-moz-user-select: none;
 		-ms-user-select: none;
-		transition: all 0.2s ease; /* Changed to 'all' to animate selection highlighting */
-		cursor: move; /* Show move cursor for draggable tasks */
+		transition: all 0.2s ease;
+		cursor: move;
+	}
+
+	.task-compact {
+		border-width: 1px;
+		border-radius: 4px;
 	}
 
 	th {
@@ -1532,7 +1609,7 @@
 	/* Task preview styling - improved */
 	.task-preview {
 		pointer-events: none;
-		box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+		box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
 		opacity: 0.8;
 		transition: none;
 		position: fixed !important; /* Ensure fixed positioning */
