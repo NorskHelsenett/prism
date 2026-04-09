@@ -456,7 +456,7 @@
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div class="annotation-backdrop" on:mousedown={onBackdropMouseDown} on:mouseup={onBackdropMouseUp}>
-	<div class="annotation-modal">
+	<div class="annotation-modal" on:mousedown|stopPropagation on:dragstart|preventDefault>
 		<div class="annotation-toolbar">
 			{#each tools as tool}
 				<button
