@@ -24,7 +24,7 @@
 	// Tool state
 	let activeTool = 'pointer'; // pointer | arrow | rect | text | freehand | eraser-dot | eraser-all | crop
 	let activeColor = '#ff0000';
-	let strokeWidth = 3;
+	let strokeWidth = 6;
 	let elements = [...annotations];
 	let currentElement = null;
 	let isDrawing = false;
@@ -113,19 +113,23 @@
 			case 'arrow': {
 				const sx = el.x1 * scale, sy = el.y1 * scale;
 				const ex = el.x2 * scale, ey = el.y2 * scale;
+				const angle = Math.atan2(ey - sy, ex - sx);
+				const headLen = (10 + el.strokeWidth * 3) * scale;
+				const headAngle = 0.45;
+				// Shorten line so it meets the arrowhead base
+				const lineEndX = ex - headLen * 0.6 * Math.cos(angle);
+				const lineEndY = ey - headLen * 0.6 * Math.sin(angle);
 				ctx.beginPath();
 				ctx.moveTo(sx, sy);
-				ctx.lineTo(ex, ey);
+				ctx.lineTo(lineEndX, lineEndY);
 				ctx.stroke();
-				// Arrowhead
-				const angle = Math.atan2(ey - sy, ex - sx);
-				const headLen = 12 * scale;
+				// Arrowhead — filled triangle at the endpoint
 				ctx.beginPath();
 				ctx.moveTo(ex, ey);
-				ctx.lineTo(ex - headLen * Math.cos(angle - 0.4), ey - headLen * Math.sin(angle - 0.4));
-				ctx.moveTo(ex, ey);
-				ctx.lineTo(ex - headLen * Math.cos(angle + 0.4), ey - headLen * Math.sin(angle + 0.4));
-				ctx.stroke();
+				ctx.lineTo(ex - headLen * Math.cos(angle - headAngle), ey - headLen * Math.sin(angle - headAngle));
+				ctx.lineTo(ex - headLen * Math.cos(angle + headAngle), ey - headLen * Math.sin(angle + headAngle));
+				ctx.closePath();
+				ctx.fill();
 				break;
 			}
 			case 'rect': {
@@ -133,11 +137,19 @@
 				const y = Math.min(el.y1, el.y2) * scale;
 				const w = Math.abs(el.x2 - el.x1) * scale;
 				const h = Math.abs(el.y2 - el.y1) * scale;
-				ctx.strokeRect(x, y, w, h);
+				const r = Math.min(8 * scale, w / 3, h / 3);
+				ctx.beginPath();
+				ctx.moveTo(x + r, y);
+				ctx.arcTo(x + w, y, x + w, y + h, r);
+				ctx.arcTo(x + w, y + h, x, y + h, r);
+				ctx.arcTo(x, y + h, x, y, r);
+				ctx.arcTo(x, y, x + w, y, r);
+				ctx.closePath();
+				ctx.stroke();
 				break;
 			}
 			case 'text': {
-				const fontSize = Math.max(14, el.fontSize || 16) * scale;
+				const fontSize = (el.fontSize || 20) * scale;
 				ctx.font = `bold ${fontSize}px sans-serif`;
 				// Background
 				const metrics = ctx.measureText(el.text);
@@ -157,8 +169,22 @@
 				if (el.points.length < 2) break;
 				ctx.beginPath();
 				ctx.moveTo(el.points[0].x * scale, el.points[0].y * scale);
-				for (let i = 1; i < el.points.length; i++) {
-					ctx.lineTo(el.points[i].x * scale, el.points[i].y * scale);
+				if (el.points.length === 2) {
+					ctx.lineTo(el.points[1].x * scale, el.points[1].y * scale);
+				} else {
+					// Smooth curve through midpoints using quadratic bezier
+					for (let i = 1; i < el.points.length - 1; i++) {
+						const cx = el.points[i].x * scale;
+						const cy = el.points[i].y * scale;
+						const nx = el.points[i + 1].x * scale;
+						const ny = el.points[i + 1].y * scale;
+						const mx = (cx + nx) / 2;
+						const my = (cy + ny) / 2;
+						ctx.quadraticCurveTo(cx, cy, mx, my);
+					}
+					// Last point
+					const last = el.points[el.points.length - 1];
+					ctx.lineTo(last.x * scale, last.y * scale);
 				}
 				ctx.stroke();
 				break;
@@ -349,13 +375,15 @@
 
 	function commitText() {
 		if (textInputValue.trim()) {
+			// Store fontSize in natural image pixels so it scales correctly
+			const naturalFontSize = 20 / scale;
 			elements = [...elements, {
 				type: 'text',
 				x: textInputX,
 				y: textInputY,
 				text: textInputValue,
 				color: activeColor,
-				fontSize: 16,
+				fontSize: naturalFontSize,
 				strokeWidth
 			}];
 			redraw();
@@ -487,7 +515,7 @@
 			<div class="toolbar-divider"></div>
 
 			<label class="stroke-label">
-				<input type="range" min="1" max="10" bind:value={strokeWidth} class="stroke-range" />
+				<input type="range" min="2" max="20" bind:value={strokeWidth} class="stroke-range" />
 			</label>
 
 			<div class="toolbar-spacer"></div>
@@ -523,7 +551,7 @@
 					bind:this={textInput}
 					type="text"
 					class="text-overlay-input"
-					style="left: {textInputX * scale}px; top: {textInputY * scale - 20}px; color: {activeColor};"
+					style="left: {textInputX * scale}px; top: {textInputY * scale - 24}px; color: {activeColor}; font-size: 20px;"
 					bind:value={textInputValue}
 					on:keydown={handleTextKeydown}
 					on:blur={commitText}
