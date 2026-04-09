@@ -12,7 +12,7 @@
 	import Highlight from '@tiptap/extension-highlight';
 	import TaskList from '@tiptap/extension-task-list';
 	import TaskItem from '@tiptap/extension-task-item';
-	import Image from '@tiptap/extension-image';
+	import { ImageWithView } from './ImageNodeView.js';
 	import BubbleMenu from '@tiptap/extension-bubble-menu';
 
 	/** Markdown string (two-way bindable) */
@@ -136,7 +136,7 @@
 				Highlight.configure({ multicolor: false }),
 				TaskList,
 				TaskItem.configure({ nested: true }),
-				Image.configure({ inline: false, allowBase64: true }),
+				ImageWithView,
 				...(editable
 					? [
 						BubbleMenu.configure({
