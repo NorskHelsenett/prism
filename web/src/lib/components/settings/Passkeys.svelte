@@ -162,6 +162,25 @@
 {#if loading}
     <div class="text-secondary">Loading passkeys...</div>
 {:else}
+    <div class="d-flex justify-content-end mb-2">
+        <button
+            class="btn btn-primary btn-sm"
+            on:click={registerPasskey}
+            disabled={registering}
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-plus me-1" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                <path d="M12 5l0 14" />
+                <path d="M5 12l14 0" />
+            </svg>
+            {#if registering}
+                Registering...
+            {:else}
+                Register new passkey
+            {/if}
+        </button>
+    </div>
+
     {#if credentials.length > 0}
     <div class="table-responsive">
         <table class="table table-vcenter card-table">
@@ -197,24 +216,5 @@
         </table>
     </div>
     {/if}
-
-    <div class="btn-list justify-content-start mt-2">
-        <button
-            class="btn btn-outline-teal d-inline-block"
-            on:click={registerPasskey}
-            disabled={registering}
-        >
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-plus me-1" width="20" height="20" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                <path d="M12 5l0 14" />
-                <path d="M5 12l14 0" />
-            </svg>
-            {#if registering}
-                Registering...
-            {:else}
-                Register new passkey
-            {/if}
-        </button>
-    </div>
 {/if}
 {/if}
