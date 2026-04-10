@@ -27,6 +27,69 @@
 	let internalUpdate = false;
 	let bubbleMenuElement;
 
+	/**
+	 * Check if the editor is currently focused
+	 */
+	export function isEditorFocused() {
+		return editor?.isFocused ?? false;
+	}
+
+	/**
+	 * Insert an image markdown at the current cursor position
+	 * @param {string} imageLink - The markdown image link (e.g., "![filename](/api/blob/file)")
+	 * @returns {boolean} - Returns true if insertion was successful
+	 */
+	export function insertImageAtCursor(imageLink) {
+		if (!editor || !imageLink) return false;
+
+		try {
+			const urlMatch = imageLink.match(/!\[([^\]]*)\]\(([^)]+)\)/);
+			if (!urlMatch) return false;
+
+			const [_, alt, src] = urlMatch;
+
+			editor.chain().focus().setImage({ src, alt }).run();
+
+			return true;
+		} catch (err) {
+			console.error('Failed to insert image at cursor:', err);
+			return false;
+		}
+	}
+
+	/**
+	 * Insert an image at a specific document position (for drag-and-drop)
+	 */
+	export function insertImageAtPosition(imageLink, pos) {
+		if (!editor || !imageLink) return false;
+
+		try {
+			const urlMatch = imageLink.match(/!\[([^\]]*)\]\(([^)]+)\)/);
+			if (!urlMatch) return false;
+
+			const [_, alt, src] = urlMatch;
+
+			editor.chain()
+				.focus()
+				.insertContentAt(pos, { type: 'image', attrs: { src, alt } })
+				.run();
+
+			return true;
+		} catch (err) {
+			console.error('Failed to insert image at position:', err);
+			return false;
+		}
+	}
+
+	/**
+	 * Get the current markdown content from the editor
+	 */
+	export function getMarkdown() {
+		if (!editor) return '';
+		const html = editor.getHTML();
+		return htmlToMarkdown(html);
+	}
+
 	// -- Turndown: HTML -> Markdown -------------------------------------------
 
 	const turndownService = new TurndownService({
@@ -76,6 +139,17 @@
 			if (crop) attrs += ` data-crop="${crop.replace(/"/g, '&quot;')}"`;
 			if (renderedSrc) attrs += ` data-rendered-src="${renderedSrc.replace(/"/g, '&quot;')}"`;
 			return `<img ${attrs} />`;
+		}
+	});
+
+	turndownService.addRule('image', {
+		filter: (node) =>
+			node.nodeName === 'IMG' &&
+			!(node.getAttribute('data-annotations') || node.getAttribute('data-crop') || node.getAttribute('data-rendered-src')),
+		replacement(content, node) {
+			const src = node.getAttribute('src') || '';
+			const alt = node.getAttribute('alt') || '';
+			return `![${alt}](${src})`;
 		}
 	});
 
@@ -164,6 +238,78 @@
 			],
 			content,
 			editable,
+			editorProps: {
+				handleDrop: (view, event, _slice, moved) => {
+					if (moved) return false;
+
+					const files = event.dataTransfer?.files;
+					if (!files?.length) return false;
+
+					const imageFiles = [...files].filter(f => f.type.startsWith('image/'));
+					if (!imageFiles.length) return false;
+
+					event.stopPropagation();
+
+					const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
+					const pos = coordinates?.pos ?? view.state.doc.content.size;
+
+					dispatch('imagedrop', { files: imageFiles, pos });
+
+					return true;
+				},
+				handlePaste: (view, event) => {
+					const clipboardData = event.clipboardData;
+					if (!clipboardData) return false;
+
+					// Check for image file blobs (e.g. screenshot paste)
+					const items = [...clipboardData.items];
+					for (const item of items) {
+						if (item.kind === 'file' && item.type.startsWith('image/')) {
+							dispatch('imagepaste', { blob: item.getAsFile() });
+							return true;
+						}
+					}
+
+					// Check for pasted text containing markdown image links
+					const text = clipboardData.getData('text/plain');
+					if (text && /!\[([^\]]*)\]\(([^)]+)\)/.test(text)) {
+						const content = [];
+						const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+						let lastIndex = 0;
+						let match;
+
+						while ((match = imageRegex.exec(text)) !== null) {
+							const textBefore = text.slice(lastIndex, match.index).trim();
+							if (textBefore) {
+								content.push({
+									type: 'paragraph',
+									content: [{ type: 'text', text: textBefore }]
+								});
+							}
+							content.push({
+								type: 'image',
+								attrs: { src: match[2], alt: match[1] }
+							});
+							lastIndex = match.index + match[0].length;
+						}
+
+						const textAfter = text.slice(lastIndex).trim();
+						if (textAfter) {
+							content.push({
+								type: 'paragraph',
+								content: [{ type: 'text', text: textAfter }]
+							});
+						}
+
+						if (content.length > 0) {
+							editor.chain().focus().insertContent(content).run();
+							return true;
+						}
+					}
+
+					return false;
+				}
+			},
 			onTransaction: () => {
 				editor = editor;
 			},
@@ -262,7 +408,12 @@
 
 {/if}
 
-<div class="editor-wrapper" class:editor-editable={editable} class:editor-readonly={!editable} style="--editor-min-height: {minHeight}">
+<div 
+	class="editor-wrapper" 
+	class:editor-editable={editable} 
+	class:editor-readonly={!editable} 
+	style="--editor-min-height: {minHeight}"
+>
 	<div bind:this={element}></div>
 </div>
 
