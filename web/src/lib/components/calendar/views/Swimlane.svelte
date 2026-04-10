@@ -25,10 +25,12 @@
 	let dragStartMember = null;
 	let dragTargetMember = null; // Add this variable to track the final drop target
 	let dragPreviewElement = null;
+	let dragPreviewElements = []; // Array to hold all preview elements for linked tasks
 	let originalTaskPosition = { dateFrom: null, dateTo: null, member: null };
 	let cellWidth = 50; // Default cell width (will be measured on drag start)
 	let weekendCellWidth = 22; // Width of weekend cells
 	let originalTaskElement = null; // Add a reference to track the original element being dragged
+	let originalTaskElements = []; // Array to hold all original elements for linked tasks
 	let dragLaneOffset = 0; // Vertical offset of the task within its cell
 	let isShiftPressed = false; // Track if shift key is pressed during drag
 
@@ -614,6 +616,16 @@
 		}
 	}
 
+	// Helper function to get all task elements for a given task ID
+	function getAllTaskElements(taskId) {
+		return Array.from(document.querySelectorAll(`.planningid-${taskId}`));
+	}
+
+	// Helper function to get all members (hackers) assigned to a task
+	function getAllTaskMembers(task) {
+		return task.hackers?.map((h) => h.email) || [];
+	}
+
 	// Start dragging a task
 	function handleTaskDragStart(event, task, member) {
 		event.stopPropagation();
@@ -644,30 +656,75 @@
 		if (regularCell) cellWidth = regularCell.offsetWidth;
 		if (weekendCell) weekendCellWidth = weekendCell.offsetWidth;
 
-		// Store reference to original element and hide it
-		originalTaskElement = event.currentTarget;
+		// Get ALL instances of this task (for all assigned hackers)
+		originalTaskElements = getAllTaskElements(task.id);
+		originalTaskElement = event.currentTarget; // Keep track of the one clicked
 		dragLaneOffset = parseFloat(originalTaskElement.style.top) || 0;
-		originalTaskElement.style.visibility = 'hidden';
 
-		// If shift is already pressed, show the original task with FULL opacity
+		// Hide all instances of the task
+		originalTaskElements.forEach((taskEl) => {
+			taskEl.style.visibility = 'hidden';
+		});
+
+		// If shift is already pressed, show all original task instances with FULL opacity
 		if (event.shiftKey) {
-			originalTaskElement.style.visibility = 'visible';
-			originalTaskElement.style.opacity = '1'; // Full opacity instead of dimmed
+			originalTaskElements.forEach((taskEl) => {
+				taskEl.style.visibility = 'visible';
+				taskEl.style.opacity = '1'; // Full opacity instead of dimmed
+			});
 			isShiftPressed = true;
 		}
 
-		// Dim all other tasks during drag
+		// Dim all other tasks during drag (but not the instances of the same task)
 		document.querySelectorAll('.task').forEach((taskEl) => {
-			if (taskEl !== originalTaskElement) {
+			if (!originalTaskElements.includes(taskEl)) {
 				taskEl.classList.add('task-dimmed-drag');
 			}
 		});
 
-		// Create and position the preview element
-		createDragPreview(originalTaskElement, task);
+		// Create and position preview elements for ALL instances
+		createDragPreviewsForLinkedTasks(task);
 
 		// Add global class to indicate dragging state
 		document.body.classList.add('dragging-active');
+	}
+
+	// Create preview elements for all linked task instances
+	function createDragPreviewsForLinkedTasks(task) {
+		// Remove any existing previews
+		dragPreviewElements.forEach((el) => el.remove());
+		dragPreviewElements = [];
+
+		const taskMembers = getAllTaskMembers(task);
+		const allElements = getAllTaskElements(task.id);
+
+		// Create a preview for each instance of the task
+		allElements.forEach((sourceElement) => {
+			const preview = sourceElement.cloneNode(true);
+			preview.classList.add('task-preview');
+			preview.style.position = 'fixed';
+			preview.style.opacity = '1'; // Full opacity
+			preview.style.pointerEvents = 'none';
+			preview.style.zIndex = '1000';
+			preview.style.visibility = 'visible';
+
+			// Position it at the same place as the original
+			const rect = sourceElement.getBoundingClientRect();
+			preview.style.width = rect.width + 'px';
+			preview.style.height = rect.height + 'px';
+			preview.style.top = rect.top + 'px';
+			preview.style.left = rect.left + 'px';
+
+			// Store the member email for this preview
+			const memberAttr = sourceElement.closest('td')?.getAttribute('data-member');
+			if (memberAttr) {
+				preview.dataset.memberEmail = memberAttr;
+				preview.dataset.laneOffset = parseFloat(sourceElement.style.top) || 0;
+			}
+
+			document.body.appendChild(preview);
+			dragPreviewElements.push(preview);
+		});
 	}
 
 	// Create a visual preview element for dragging - Improved visibility
@@ -713,13 +770,15 @@
 		isShiftPressed = event.shiftKey;
 
 		// Toggle original task visibility if shift state changed
-		if (originalTaskElement && wasShiftPressed !== isShiftPressed) {
-			if (isShiftPressed) {
-				originalTaskElement.style.visibility = 'visible';
-				originalTaskElement.style.opacity = '1'; // Full opacity
-			} else {
-				originalTaskElement.style.visibility = 'hidden';
-			}
+		if (originalTaskElements.length > 0 && wasShiftPressed !== isShiftPressed) {
+			originalTaskElements.forEach((taskEl) => {
+				if (isShiftPressed) {
+					taskEl.style.visibility = 'visible';
+					taskEl.style.opacity = '1'; // Full opacity
+				} else {
+					taskEl.style.visibility = 'hidden';
+				}
+			});
 		}
 
 		if (isResizing) {
@@ -727,27 +786,25 @@
 			return;
 		}
 
-		if (!dragPreviewElement || !draggedTask) return;
+		if (dragPreviewElements.length === 0 || !draggedTask) return;
 
 		// Disable pointer events on all tasks once actual dragging starts
 		document.querySelectorAll('.task').forEach((el) => {
 			el.style.pointerEvents = 'none';
 		});
 
-		// Calculate movement in pixels
-		const deltaX = event.clientX - dragStartX;
-		const deltaY = event.clientY - dragStartY;
-
 		// Find the cell under the cursor for snapping
-		// Temporarily make the preview transparent for hit testing only
-		dragPreviewElement.style.pointerEvents = 'none';
-		const originalOpacity = dragPreviewElement.style.opacity;
-		dragPreviewElement.style.opacity = '0';
+		// Temporarily hide all previews for hit testing
+		dragPreviewElements.forEach((preview) => {
+			preview.style.opacity = '0';
+		});
 
 		const elemBelow = document.elementFromPoint(event.clientX, event.clientY);
 
 		// Restore opacity immediately
-		dragPreviewElement.style.opacity = originalOpacity;
+		dragPreviewElements.forEach((preview) => {
+			preview.style.opacity = '1';
+		});
 
 		const cell = elemBelow?.closest('td:not(.first-col)');
 
@@ -762,27 +819,42 @@
 				// Calculate new dates
 				const daysDiff = calculateDaysDifference(dragStartDate, cellDate);
 
-				// CHANGE: Always update the dates, even if daysDiff is 0
 				const newStartDate = new Date(originalTaskPosition.dateFrom);
 				newStartDate.setDate(newStartDate.getDate() + daysDiff);
 
 				const newEndDate = new Date(originalTaskPosition.dateTo);
 				newEndDate.setDate(newEndDate.getDate() + daysDiff);
 
-				// Update the preview task
+				// Update the preview task dates
 				draggedTask.dateFrom = newStartDate.toISOString().split('T')[0];
 				draggedTask.dateTo = newEndDate.toISOString().split('T')[0];
 
-				// Always position the preview at the appropriate cell
-				positionDragPreviewAtCell(draggedTask.dateFrom, cellMember);
-				dragPreviewElement.style.visibility = 'visible';
+				// Position all preview elements at their appropriate cells
+				dragPreviewElements.forEach((preview) => {
+					const previewMember = preview.dataset.memberEmail;
+					const laneOffset = parseFloat(preview.dataset.laneOffset) || 5;
+
+					if (previewMember) {
+						positionDragPreviewAtCellForMember(
+							preview,
+							draggedTask.dateFrom,
+							previewMember,
+							laneOffset,
+							draggedTask
+						);
+					}
+				});
 			}
 		} else {
-			// If not over a cell, just move the preview with the cursor
-			const rect = dragPreviewElement.getBoundingClientRect();
-			dragPreviewElement.style.top = rect.top + deltaY + 'px';
-			dragPreviewElement.style.left = rect.left + deltaX + 'px';
-			dragPreviewElement.style.visibility = 'visible';
+			// If not over a cell, just move all previews with the cursor
+			const deltaX = event.clientX - dragStartX;
+			const deltaY = event.clientY - dragStartY;
+
+			dragPreviewElements.forEach((preview) => {
+				const rect = preview.getBoundingClientRect();
+				preview.style.top = rect.top + deltaY + 'px';
+				preview.style.left = rect.left + deltaX + 'px';
+			});
 
 			// Reset start positions for relative movement
 			dragStartX = event.clientX;
@@ -815,6 +887,28 @@
 		}
 	}
 
+	// Position a specific preview element at the specified date and member cell
+	function positionDragPreviewAtCellForMember(
+		previewElement,
+		dateStr,
+		memberEmail,
+		laneOffset,
+		task
+	) {
+		const cellSelector = `td[data-date="${dateStr}"][data-member="${memberEmail}"]`;
+		const targetCell = document.querySelector(cellSelector);
+
+		if (targetCell) {
+			const cellRect = targetCell.getBoundingClientRect();
+			const taskDuration = calculateTaskWidth(task.dateFrom, task.dateTo);
+
+			previewElement.style.top = cellRect.top + laneOffset + 'px';
+			previewElement.style.left = cellRect.left + 'px';
+			previewElement.style.width = taskDuration;
+			previewElement.style.visibility = 'visible';
+		}
+	}
+
 	// Start resizing a task
 	function handleResizeStart(event, task, member, direction) {
 		event.stopPropagation();
@@ -832,48 +926,90 @@
 			member: member
 		};
 
-		// Store and hide the original element
+		// Get ALL instances of this task (for all assigned hackers)
+		originalTaskElements = getAllTaskElements(task.id);
 		originalTaskElement = event.target.closest('.task');
 		dragLaneOffset = parseFloat(originalTaskElement.style.top) || 0;
 
-		// Store the original preview position for stable resizing
-		const rect = originalTaskElement.getBoundingClientRect();
-		originalTaskElement._previewTop = rect.top;
-		originalTaskElement._previewLeft = rect.left;
+		// Store the original preview positions for all instances
+		originalTaskElements.forEach((taskEl) => {
+			const rect = taskEl.getBoundingClientRect();
+			taskEl._previewTop = rect.top;
+			taskEl._previewLeft = rect.left;
+			taskEl.style.visibility = 'hidden';
+		});
 
-		originalTaskElement.style.visibility = 'hidden';
-
-		// Dim all other tasks during resize
+		// Dim all other tasks during resize (but not the instances of the same task)
 		document.querySelectorAll('.task').forEach((taskEl) => {
-			if (taskEl !== originalTaskElement) {
+			if (!originalTaskElements.includes(taskEl)) {
 				taskEl.classList.add('task-dimmed-drag');
 			}
 		});
 
-		// Create and position the preview
-		createDragPreview(originalTaskElement, task);
+		// Create and position previews for ALL instances
+		createResizePreviewsForLinkedTasks(task);
 
 		document.body.classList.add('resizing-active');
 	}
 
+	// Create preview elements for all linked task instances during resize
+	function createResizePreviewsForLinkedTasks(task) {
+		// Remove any existing previews
+		dragPreviewElements.forEach((el) => el.remove());
+		dragPreviewElements = [];
+
+		const allElements = getAllTaskElements(task.id);
+
+		// Create a preview for each instance of the task
+		allElements.forEach((sourceElement) => {
+			const preview = sourceElement.cloneNode(true);
+			preview.classList.add('task-preview');
+			preview.style.position = 'fixed';
+			preview.style.opacity = '1'; // Full opacity
+			preview.style.pointerEvents = 'none';
+			preview.style.zIndex = '1000';
+			preview.style.visibility = 'visible';
+
+			// Position it at the same place as the original
+			const rect = sourceElement.getBoundingClientRect();
+			preview.style.width = rect.width + 'px';
+			preview.style.height = rect.height + 'px';
+			preview.style.top = rect.top + 'px';
+			preview.style.left = rect.left + 'px';
+
+			// Store the member email and original position for this preview
+			const memberAttr = sourceElement.closest('td')?.getAttribute('data-member');
+			if (memberAttr) {
+				preview.dataset.memberEmail = memberAttr;
+				preview.dataset.previewTop = rect.top;
+				preview.dataset.previewLeft = rect.left;
+			}
+
+			document.body.appendChild(preview);
+			dragPreviewElements.push(preview);
+		});
+	}
+
 	// Handle resizing movement - Keep task in original lane position
 	function handleResizeMove(event) {
-		if (!isResizing || !dragPreviewElement) return;
+		if (!isResizing || dragPreviewElements.length === 0) return;
 
 		// Disable pointer events on all tasks to allow hit testing through them
 		document.querySelectorAll('.task').forEach((el) => {
 			el.style.pointerEvents = 'none';
 		});
 
-		// Hide preview temporarily to detect cells underneath
-		// Use opacity instead of visibility for hit testing
-		const originalOpacity = dragPreviewElement.style.opacity;
-		dragPreviewElement.style.opacity = '0';
+		// Hide all previews temporarily to detect cells underneath
+		dragPreviewElements.forEach((preview) => {
+			preview.style.opacity = '0';
+		});
 
 		const elemBelow = document.elementFromPoint(event.clientX, event.clientY);
 
 		// Restore opacity immediately
-		dragPreviewElement.style.opacity = originalOpacity;
+		dragPreviewElements.forEach((preview) => {
+			preview.style.opacity = '1';
+		});
 
 		const cell = elemBelow?.closest('td:not(.first-col)');
 
@@ -881,8 +1017,8 @@
 			const cellDate = cell.getAttribute('data-date');
 			const cellMember = cell.getAttribute('data-member');
 
-			// Only resize if we're in the same member lane
-			if (cellDate && cellMember === originalTaskPosition.member) {
+			// Allow resize in any member lane (not just original)
+			if (cellDate) {
 				// Store the proposed dates temporarily
 				let newDateFrom = draggedTask.dateFrom;
 				let newDateTo = draggedTask.dateTo;
@@ -912,26 +1048,34 @@
 
 				// Calculate new width
 				const newWidth = calculateTaskWidth(draggedTask.dateFrom, draggedTask.dateTo);
-				dragPreviewElement.style.width = newWidth;
 
-				if (resizeDirection === 'left') {
-					// When resizing from left, update the left position but keep the same lane (top position)
-					const cellSelector = `td[data-date="${draggedTask.dateFrom}"][data-member="${originalTaskPosition.member}"]`;
-					const targetCell = document.querySelector(cellSelector);
+				// Update all preview elements
+				dragPreviewElements.forEach((preview) => {
+					preview.style.width = newWidth;
 
-					if (targetCell) {
-						const cellRect = targetCell.getBoundingClientRect();
-						// Keep the original top position (lane), only update left
-						dragPreviewElement.style.left = cellRect.left + 'px';
-						dragPreviewElement.style.top = originalTaskElement._previewTop + 'px';
+					if (resizeDirection === 'left') {
+						// When resizing from left, update the left position but keep the same lane (top position)
+						const previewMember = preview.dataset.memberEmail;
+						const cellSelector = `td[data-date="${draggedTask.dateFrom}"][data-member="${previewMember}"]`;
+						const targetCell = document.querySelector(cellSelector);
+
+						if (targetCell) {
+							const cellRect = targetCell.getBoundingClientRect();
+							const originalTop = preview.dataset.previewTop;
+							// Keep the original top position (lane), only update left
+							preview.style.left = cellRect.left + 'px';
+							preview.style.top = originalTop + 'px';
+						}
 					}
-				}
-				// For right resize, position stays the same, only width changes
+					// For right resize, position stays the same, only width changes
+				});
 			}
 		}
 
-		// Always ensure the preview is visible after positioning
-		dragPreviewElement.style.visibility = 'visible';
+		// Always ensure all previews are visible after positioning
+		dragPreviewElements.forEach((preview) => {
+			preview.style.visibility = 'visible';
+		});
 
 		// Reset start X for next calculation
 		dragStartX = event.clientX;
@@ -1019,13 +1163,22 @@
 			// Refresh calendar events in case of error
 			await fetchCalendarEvents();
 		} finally {
-			// Restore visibility of the original element
-			if (originalTaskElement) {
-				originalTaskElement.style.visibility = '';
+			// Restore visibility of all original elements
+			if (originalTaskElements.length > 0) {
+				originalTaskElements.forEach((taskEl) => {
+					taskEl.style.visibility = '';
+				});
+				originalTaskElements = [];
 				originalTaskElement = null;
 			}
 
-			// Clean up
+			// Clean up all preview elements
+			if (dragPreviewElements.length > 0) {
+				dragPreviewElements.forEach((preview) => preview.remove());
+				dragPreviewElements = [];
+			}
+
+			// Fallback cleanup for old single preview element
 			if (dragPreviewElement) {
 				dragPreviewElement.remove();
 				dragPreviewElement = null;
@@ -1203,24 +1356,43 @@
 	function handleScroll() {
 		if (isDragging || isResizing) {
 			// Handle drag preview positioning during drag/resize operations
-			if (!dragPreviewElement || !draggedTask) return;
+			if (dragPreviewElements.length === 0 || !draggedTask) return;
 
 			if (isDragging && dragTargetMember) {
-				positionDragPreviewAtCell(draggedTask.dateFrom, dragTargetMember);
+				// Update all preview elements during drag
+				dragPreviewElements.forEach((preview) => {
+					const previewMember = preview.dataset.memberEmail;
+					const laneOffset = parseFloat(preview.dataset.laneOffset) || 5;
+
+					if (previewMember) {
+						positionDragPreviewAtCellForMember(
+							preview,
+							draggedTask.dateFrom,
+							previewMember,
+							laneOffset,
+							draggedTask
+						);
+					}
+				});
 			} else if (isResizing) {
 				// For resizing, keep stable in original lane - only update horizontal position
-				const cellSelector = `td[data-date="${draggedTask.dateFrom}"][data-member="${originalTaskPosition.member}"]`;
-				const targetCell = document.querySelector(cellSelector);
+				const newWidth = calculateTaskWidth(draggedTask.dateFrom, draggedTask.dateTo);
 
-				if (targetCell && originalTaskElement) {
-					const cellRect = targetCell.getBoundingClientRect();
-					const newWidth = calculateTaskWidth(draggedTask.dateFrom, draggedTask.dateTo);
+				dragPreviewElements.forEach((preview) => {
+					const previewMember = preview.dataset.memberEmail;
+					const cellSelector = `td[data-date="${draggedTask.dateFrom}"][data-member="${previewMember}"]`;
+					const targetCell = document.querySelector(cellSelector);
 
-					// Keep the original top position (lane), update left and width
-					dragPreviewElement.style.left = cellRect.left + 'px';
-					dragPreviewElement.style.top = originalTaskElement._previewTop + 'px';
-					dragPreviewElement.style.width = newWidth;
-				}
+					if (targetCell) {
+						const cellRect = targetCell.getBoundingClientRect();
+						const originalTop = preview.dataset.previewTop;
+
+						// Keep the original top position (lane), update left and width
+						preview.style.left = cellRect.left + 'px';
+						preview.style.top = originalTop + 'px';
+						preview.style.width = newWidth;
+					}
+				});
 			}
 		} else {
 			// Debounce the visible days calculation for better performance
@@ -1235,10 +1407,12 @@
 	function handleKeyDown(event) {
 		if (event.key === 'Shift') {
 			isShiftPressed = true;
-			// Show original task when shift is pressed (with FULL opacity)
-			if (originalTaskElement) {
-				originalTaskElement.style.visibility = 'visible';
-				originalTaskElement.style.opacity = '1'; // Full opacity instead of dimmed
+			// Show all original task instances when shift is pressed (with FULL opacity)
+			if (originalTaskElements.length > 0) {
+				originalTaskElements.forEach((taskEl) => {
+					taskEl.style.visibility = 'visible';
+					taskEl.style.opacity = '1'; // Full opacity instead of dimmed
+				});
 			}
 		}
 	}
@@ -1246,9 +1420,11 @@
 	function handleKeyUp(event) {
 		if (event.key === 'Shift') {
 			isShiftPressed = false;
-			// Hide original task when shift is released
-			if (originalTaskElement && isDragging) {
-				originalTaskElement.style.visibility = 'hidden';
+			// Hide all original task instances when shift is released
+			if (originalTaskElements.length > 0 && isDragging) {
+				originalTaskElements.forEach((taskEl) => {
+					taskEl.style.visibility = 'hidden';
+				});
 			}
 		}
 	}
