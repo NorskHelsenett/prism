@@ -180,89 +180,89 @@
 			team.members.some((email) => email.toLowerCase().includes(userFilter.toLowerCase()))
 	);
 
-  async function updateHackers(task, event) {
-    if (!event) return;
-    
-    // Ensure hackers list has unique emails
-    const uniqueHackers = [];
-    const emailSet = new Set();
-    
-    for (const hacker of event.detail) {
-      if (!emailSet.has(hacker.email)) {
-        emailSet.add(hacker.email);
-        uniqueHackers.push(hacker);
-      }
-    }
-    
-    // Update local state first for immediate UI update
-    const taskIndex = calendarEvents.findIndex((e) => e.id === task.id);
-    if (taskIndex !== -1) {
-      calendarEvents[taskIndex].hackers = uniqueHackers;
-      calendarEvents = [...calendarEvents]; // Trigger reactivity
-    }
-    
-    // Then update on the server
-    await Fetch(`/api/planning/${task.id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ hackers: uniqueHackers })
-    });
-  }
+	async function updateHackers(task, event) {
+		if (!event) return;
 
-  async function updateStatus(task, event) {
-    if (!event) return;
+		// Ensure hackers list has unique emails
+		const uniqueHackers = [];
+		const emailSet = new Set();
 
-    const status = event.detail.status
-    
-    // Update local state first for immediate UI update
-    const taskIndex = calendarEvents.findIndex((e) => e.id === task.id);
-    if (taskIndex !== -1) {
-      calendarEvents[taskIndex].status = status;
-      calendarEvents = [...calendarEvents]; // Trigger reactivity
-    }
-    
-    // Then update on the server
-    await Fetch(`/api/planning/${task.id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ status: status })
-    });
-  }
+		for (const hacker of event.detail) {
+			if (!emailSet.has(hacker.email)) {
+				emailSet.add(hacker.email);
+				uniqueHackers.push(hacker);
+			}
+		}
 
-  async function updateProjects(task, event){
-    if (!event || !event.detail.projects) return;
-    
-    // Ensure projects list has unique IDs
-    const uniqueProjects = [];
-    const idSet = new Set();
-    
-    for (const project of event.detail.projects) {
-      if (!idSet.has(project.id)) {
-        idSet.add(project.id);
-        uniqueProjects.push(project);
-      }
-    }
-    
-    // Update local state first for immediate UI update
-    const taskIndex = calendarEvents.findIndex((e) => e.id === task.id);
-    if (taskIndex !== -1) {
-      calendarEvents[taskIndex].projects = uniqueProjects;
-      calendarEvents = [...calendarEvents]; // Trigger reactivity
-    }
-    
-    // Then update on the server
-    await Fetch(`/api/planning/${task.id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ projects: uniqueProjects })
-    });
-  }
+		// Update local state first for immediate UI update
+		const taskIndex = calendarEvents.findIndex((e) => e.id === task.id);
+		if (taskIndex !== -1) {
+			calendarEvents[taskIndex].hackers = uniqueHackers;
+			calendarEvents = [...calendarEvents]; // Trigger reactivity
+		}
+
+		// Then update on the server
+		await Fetch(`/api/planning/${task.id}`, {
+			method: 'PATCH',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({ hackers: uniqueHackers })
+		});
+	}
+
+	async function updateStatus(task, event) {
+		if (!event) return;
+
+		const status = event.detail.status;
+
+		// Update local state first for immediate UI update
+		const taskIndex = calendarEvents.findIndex((e) => e.id === task.id);
+		if (taskIndex !== -1) {
+			calendarEvents[taskIndex].status = status;
+			calendarEvents = [...calendarEvents]; // Trigger reactivity
+		}
+
+		// Then update on the server
+		await Fetch(`/api/planning/${task.id}`, {
+			method: 'PATCH',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({ status: status })
+		});
+	}
+
+	async function updateProjects(task, event) {
+		if (!event || !event.detail.projects) return;
+
+		// Ensure projects list has unique IDs
+		const uniqueProjects = [];
+		const idSet = new Set();
+
+		for (const project of event.detail.projects) {
+			if (!idSet.has(project.id)) {
+				idSet.add(project.id);
+				uniqueProjects.push(project);
+			}
+		}
+
+		// Update local state first for immediate UI update
+		const taskIndex = calendarEvents.findIndex((e) => e.id === task.id);
+		if (taskIndex !== -1) {
+			calendarEvents[taskIndex].projects = uniqueProjects;
+			calendarEvents = [...calendarEvents]; // Trigger reactivity
+		}
+
+		// Then update on the server
+		await Fetch(`/api/planning/${task.id}`, {
+			method: 'PATCH',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({ projects: uniqueProjects })
+		});
+	}
 
 	async function updateTitle(task, event) {
 		if (!event) return;
@@ -431,32 +431,31 @@
 	// Create a reactive declaration for visible stats that updates whenever
 	// visibleStartDate, visibleEndDate, or calendarEvents change
 	$: {
-    if (visibleStartDate && visibleEndDate && calendarEvents.length) {
-      const start = new Date(visibleStartDate);
-      const end = new Date(visibleEndDate);
-      
-      // Filter events that overlap with visible date range AND have at least one hacker assigned
-      const visibleEvents = calendarEvents.filter(event => {
-        const eventStart = new Date(event.dateFrom);
-        const eventEnd = new Date(event.dateTo);
-        // Check if event overlaps with visible range and has at least one hacker
-        return eventStart <= end && eventEnd >= start && event.hackers && event.hackers.length > 0;
-      });
-      
-      // Calculate total hours for visible events
-      const totalHours = visibleEvents.reduce((total, event) => {
-        return total + (event.durationHours || 0);
-      }, 0);
-      
-      visibleStats = {
-        count: visibleEvents.length,
-        hours: totalHours
-      };
-    } else {
-      visibleStats = { count: 0, hours: 0 };
-    }
-	}
+		if (visibleStartDate && visibleEndDate && calendarEvents.length) {
+			const start = new Date(visibleStartDate);
+			const end = new Date(visibleEndDate);
 
+			// Filter events that overlap with visible date range AND have at least one hacker assigned
+			const visibleEvents = calendarEvents.filter((event) => {
+				const eventStart = new Date(event.dateFrom);
+				const eventEnd = new Date(event.dateTo);
+				// Check if event overlaps with visible range and has at least one hacker
+				return eventStart <= end && eventEnd >= start && event.hackers && event.hackers.length > 0;
+			});
+
+			// Calculate total hours for visible events
+			const totalHours = visibleEvents.reduce((total, event) => {
+				return total + (event.durationHours || 0);
+			}, 0);
+
+			visibleStats = {
+				count: visibleEvents.length,
+				hours: totalHours
+			};
+		} else {
+			visibleStats = { count: 0, hours: 0 };
+		}
+	}
 
 	// Modal properties
 	let showModal = false;
@@ -585,19 +584,18 @@
 		});
 	}
 
-
 	// Function to update which days are visible in the viewport - improved
 	function updateVisibleDays() {
 		const tableContainer = document.querySelector('.table-responsive');
 		if (!tableContainer) return;
-		
+
 		const tableRect = tableContainer.getBoundingClientRect();
 		const headerCells = document.querySelectorAll('thead th:not(.first-col)');
-		
+
 		// Find first and last visible date cells
 		let firstVisibleIndex = -1;
 		let lastVisibleIndex = -1;
-		
+
 		headerCells.forEach((cell, index) => {
 			const cellRect = cell.getBoundingClientRect();
 			// Check if cell is at least partially visible
@@ -606,7 +604,7 @@
 				lastVisibleIndex = index;
 			}
 		});
-		
+
 		// Update visible dates with new arrays to trigger reactivity
 		if (firstVisibleIndex !== -1 && lastVisibleIndex !== -1) {
 			// Use a new Date string to ensure reactivity
@@ -650,7 +648,7 @@
 		originalTaskElement = event.currentTarget;
 		dragLaneOffset = parseFloat(originalTaskElement.style.top) || 0;
 		originalTaskElement.style.visibility = 'hidden';
-		
+
 		// If shift is already pressed, show the original task with FULL opacity
 		if (event.shiftKey) {
 			originalTaskElement.style.visibility = 'visible';
@@ -700,88 +698,90 @@
 	}
 
 	// Handle mouse move during drag - Fixed visibility issues
-  function handleDragMove(event) {
-    if (!isDragging && !isResizing) return;
+	function handleDragMove(event) {
+		if (!isDragging && !isResizing) return;
 
-    // Check if shift key is pressed directly from the event
-    const wasShiftPressed = isShiftPressed;
-    isShiftPressed = event.shiftKey;
-    
-    // Toggle original task visibility if shift state changed
-    if (originalTaskElement && wasShiftPressed !== isShiftPressed) {
-      if (isShiftPressed) {
-        originalTaskElement.style.visibility = 'visible';
-        originalTaskElement.style.opacity = '1'; // Full opacity
-      } else {
-        originalTaskElement.style.visibility = 'hidden';
-      }
-    }
+		// Check if shift key is pressed directly from the event
+		const wasShiftPressed = isShiftPressed;
+		isShiftPressed = event.shiftKey;
 
-    if (isResizing) {
-        handleResizeMove(event);
-        return;
-    }
+		// Toggle original task visibility if shift state changed
+		if (originalTaskElement && wasShiftPressed !== isShiftPressed) {
+			if (isShiftPressed) {
+				originalTaskElement.style.visibility = 'visible';
+				originalTaskElement.style.opacity = '1'; // Full opacity
+			} else {
+				originalTaskElement.style.visibility = 'hidden';
+			}
+		}
 
-    if (!dragPreviewElement || !draggedTask) return;
+		if (isResizing) {
+			handleResizeMove(event);
+			return;
+		}
 
-    // Disable pointer events on all tasks once actual dragging starts
-    document.querySelectorAll('.task').forEach(el => { el.style.pointerEvents = 'none'; });
+		if (!dragPreviewElement || !draggedTask) return;
 
-    // Calculate movement in pixels
-    const deltaX = event.clientX - dragStartX;
-    const deltaY = event.clientY - dragStartY;
+		// Disable pointer events on all tasks once actual dragging starts
+		document.querySelectorAll('.task').forEach((el) => {
+			el.style.pointerEvents = 'none';
+		});
 
-    // Find the cell under the cursor for snapping
-    // Temporarily make the preview transparent for hit testing only
-    dragPreviewElement.style.pointerEvents = 'none';
-    const originalOpacity = dragPreviewElement.style.opacity;
-    dragPreviewElement.style.opacity = '0';
+		// Calculate movement in pixels
+		const deltaX = event.clientX - dragStartX;
+		const deltaY = event.clientY - dragStartY;
 
-    const elemBelow = document.elementFromPoint(event.clientX, event.clientY);
+		// Find the cell under the cursor for snapping
+		// Temporarily make the preview transparent for hit testing only
+		dragPreviewElement.style.pointerEvents = 'none';
+		const originalOpacity = dragPreviewElement.style.opacity;
+		dragPreviewElement.style.opacity = '0';
 
-    // Restore opacity immediately
-    dragPreviewElement.style.opacity = originalOpacity;
+		const elemBelow = document.elementFromPoint(event.clientX, event.clientY);
 
-    const cell = elemBelow?.closest('td:not(.first-col)');
+		// Restore opacity immediately
+		dragPreviewElement.style.opacity = originalOpacity;
 
-    if (cell) {
-        const cellDate = cell.getAttribute('data-date');
-        const cellMember = cell.getAttribute('data-member');
+		const cell = elemBelow?.closest('td:not(.first-col)');
 
-        if (cellDate && cellMember) {
-            // Store the current target member for use when the drag ends
-            dragTargetMember = cellMember;
+		if (cell) {
+			const cellDate = cell.getAttribute('data-date');
+			const cellMember = cell.getAttribute('data-member');
 
-            // Calculate new dates
-            const daysDiff = calculateDaysDifference(dragStartDate, cellDate);
+			if (cellDate && cellMember) {
+				// Store the current target member for use when the drag ends
+				dragTargetMember = cellMember;
 
-            // CHANGE: Always update the dates, even if daysDiff is 0
-            const newStartDate = new Date(originalTaskPosition.dateFrom);
-            newStartDate.setDate(newStartDate.getDate() + daysDiff);
+				// Calculate new dates
+				const daysDiff = calculateDaysDifference(dragStartDate, cellDate);
 
-            const newEndDate = new Date(originalTaskPosition.dateTo);
-            newEndDate.setDate(newEndDate.getDate() + daysDiff);
+				// CHANGE: Always update the dates, even if daysDiff is 0
+				const newStartDate = new Date(originalTaskPosition.dateFrom);
+				newStartDate.setDate(newStartDate.getDate() + daysDiff);
 
-            // Update the preview task
-            draggedTask.dateFrom = newStartDate.toISOString().split('T')[0];
-            draggedTask.dateTo = newEndDate.toISOString().split('T')[0];
+				const newEndDate = new Date(originalTaskPosition.dateTo);
+				newEndDate.setDate(newEndDate.getDate() + daysDiff);
 
-            // Always position the preview at the appropriate cell
-            positionDragPreviewAtCell(draggedTask.dateFrom, cellMember);
-            dragPreviewElement.style.visibility = 'visible';
-        }
-    } else {
-        // If not over a cell, just move the preview with the cursor
-        const rect = dragPreviewElement.getBoundingClientRect();
-        dragPreviewElement.style.top = rect.top + deltaY + 'px';
-        dragPreviewElement.style.left = rect.left + deltaX + 'px';
-        dragPreviewElement.style.visibility = 'visible';
+				// Update the preview task
+				draggedTask.dateFrom = newStartDate.toISOString().split('T')[0];
+				draggedTask.dateTo = newEndDate.toISOString().split('T')[0];
 
-        // Reset start positions for relative movement
-        dragStartX = event.clientX;
-        dragStartY = event.clientY;
-    }
-}
+				// Always position the preview at the appropriate cell
+				positionDragPreviewAtCell(draggedTask.dateFrom, cellMember);
+				dragPreviewElement.style.visibility = 'visible';
+			}
+		} else {
+			// If not over a cell, just move the preview with the cursor
+			const rect = dragPreviewElement.getBoundingClientRect();
+			dragPreviewElement.style.top = rect.top + deltaY + 'px';
+			dragPreviewElement.style.left = rect.left + deltaX + 'px';
+			dragPreviewElement.style.visibility = 'visible';
+
+			// Reset start positions for relative movement
+			dragStartX = event.clientX;
+			dragStartY = event.clientY;
+		}
+	}
 
 	// Calculate days difference between two date strings
 	function calculateDaysDifference(date1, date2) {
@@ -801,7 +801,7 @@
 
 			// Use lane offset only when staying on the same member, otherwise top of row
 			const offset = memberEmail === dragStartMember ? dragLaneOffset : 5;
-			dragPreviewElement.style.top = (cellRect.top + offset) + 'px';
+			dragPreviewElement.style.top = cellRect.top + offset + 'px';
 			dragPreviewElement.style.left = cellRect.left + 'px';
 			dragPreviewElement.style.width = taskDuration;
 			dragPreviewElement.style.visibility = 'visible';
@@ -828,6 +828,12 @@
 		// Store and hide the original element
 		originalTaskElement = event.target.closest('.task');
 		dragLaneOffset = parseFloat(originalTaskElement.style.top) || 0;
+
+		// Store the original preview position for stable resizing
+		const rect = originalTaskElement.getBoundingClientRect();
+		originalTaskElement._previewTop = rect.top;
+		originalTaskElement._previewLeft = rect.left;
+
 		originalTaskElement.style.visibility = 'hidden';
 
 		// Create and position the preview
@@ -836,7 +842,7 @@
 		document.body.classList.add('resizing-active');
 	}
 
-	// Handle resizing movement - Fixed visibility issues
+	// Handle resizing movement - Keep task in original lane position
 	function handleResizeMove(event) {
 		if (!isResizing || !dragPreviewElement) return;
 
@@ -856,36 +862,52 @@
 			const cellDate = cell.getAttribute('data-date');
 			const cellMember = cell.getAttribute('data-member');
 
+			// Only resize if we're in the same member lane
 			if (cellDate && cellMember === originalTaskPosition.member) {
+				// Store the proposed dates temporarily
+				let newDateFrom = draggedTask.dateFrom;
+				let newDateTo = draggedTask.dateTo;
+
 				// Calculate new dates based on resize direction
 				if (resizeDirection === 'left') {
-					// Update start date
-					draggedTask.dateFrom = cellDate;
+					newDateFrom = cellDate;
 				} else if (resizeDirection === 'right') {
-					// Update end date
-					draggedTask.dateTo = cellDate;
+					newDateTo = cellDate;
 				}
 
 				// Ensure end date isn't before start date
-				const startDate = new Date(draggedTask.dateFrom);
-				const endDate = new Date(draggedTask.dateTo);
+				const startDate = new Date(newDateFrom);
+				const endDate = new Date(newDateTo);
 
 				if (endDate < startDate) {
 					if (resizeDirection === 'left') {
-						draggedTask.dateFrom = draggedTask.dateTo;
+						newDateFrom = newDateTo;
 					} else {
-						draggedTask.dateTo = draggedTask.dateFrom;
+						newDateTo = newDateFrom;
 					}
 				}
 
-				// Update width and position of preview
+				// Update draggedTask dates for when drag ends
+				draggedTask.dateFrom = newDateFrom;
+				draggedTask.dateTo = newDateTo;
+
+				// Calculate new width
 				const newWidth = calculateTaskWidth(draggedTask.dateFrom, draggedTask.dateTo);
 				dragPreviewElement.style.width = newWidth;
 
 				if (resizeDirection === 'left') {
-					// When resizing from left, update the position too
-					positionDragPreviewAtCell(draggedTask.dateFrom, originalTaskPosition.member);
+					// When resizing from left, update the left position but keep the same lane (top position)
+					const cellSelector = `td[data-date="${draggedTask.dateFrom}"][data-member="${originalTaskPosition.member}"]`;
+					const targetCell = document.querySelector(cellSelector);
+
+					if (targetCell) {
+						const cellRect = targetCell.getBoundingClientRect();
+						// Keep the original top position (lane), only update left
+						dragPreviewElement.style.left = cellRect.left + 'px';
+						dragPreviewElement.style.top = originalTaskElement._previewTop + 'px';
+					}
 				}
+				// For right resize, position stays the same, only width changes
 			}
 		}
 
@@ -897,107 +919,109 @@
 	}
 
 	// Handle end of drag or resize operation
-  async function handleTaskDragEnd() {
-    if (!isDragging && !isResizing) return;
+	async function handleTaskDragEnd() {
+		if (!isDragging && !isResizing) return;
 
-    try {
-      if (draggedTask) {
-        // Check if the dates changed or if the drop target is different from the start member
-        const datesChanged =
-          draggedTask.dateFrom !== originalTaskPosition.dateFrom ||
-          draggedTask.dateTo !== originalTaskPosition.dateTo;
+		try {
+			if (draggedTask) {
+				// Check if the dates changed or if the drop target is different from the start member
+				const datesChanged =
+					draggedTask.dateFrom !== originalTaskPosition.dateFrom ||
+					draggedTask.dateTo !== originalTaskPosition.dateTo;
 
-        const memberChanged = dragTargetMember && dragTargetMember !== dragStartMember;
+				const memberChanged = dragTargetMember && dragTargetMember !== dragStartMember;
 
-        const hasChanges = datesChanged || memberChanged;
+				const hasChanges = datesChanged || memberChanged;
 
-        if (hasChanges) {
-          // Get the current hackers
-          let updatedHackers = [...draggedTask.hackers];
+				if (hasChanges) {
+					// Get the current hackers
+					let updatedHackers = [...draggedTask.hackers];
 
-          if (memberChanged) {
-            if (isShiftPressed) {
-              // When shift is pressed, add the target member without removing the original
-              // Check if target member is already in the list to avoid duplicates
-              if (!updatedHackers.some(h => h.email === dragTargetMember)) {
-                updatedHackers.push({ email: dragTargetMember });
-              }
-            } else {
-              // Default behavior (replace): Remove the original member
-              updatedHackers = updatedHackers.filter((h) => h.email !== dragStartMember);
-              
-              // Check if target member is already in the list to avoid duplicates
-              if (!updatedHackers.some(h => h.email === dragTargetMember)) {
-                updatedHackers.push({ email: dragTargetMember });
-              }
-            }
-          }
+					if (memberChanged) {
+						if (isShiftPressed) {
+							// When shift is pressed, add the target member without removing the original
+							// Check if target member is already in the list to avoid duplicates
+							if (!updatedHackers.some((h) => h.email === dragTargetMember)) {
+								updatedHackers.push({ email: dragTargetMember });
+							}
+						} else {
+							// Default behavior (replace): Remove the original member
+							updatedHackers = updatedHackers.filter((h) => h.email !== dragStartMember);
 
-          // Additional uniqueness check - create a clean list with no duplicates
-          const uniqueEmails = new Set();
-          updatedHackers = updatedHackers.filter(h => {
-            if (uniqueEmails.has(h.email)) {
-              return false; // Skip duplicates
-            }
-            uniqueEmails.add(h.email);
-            return true;
-          });
+							// Check if target member is already in the list to avoid duplicates
+							if (!updatedHackers.some((h) => h.email === dragTargetMember)) {
+								updatedHackers.push({ email: dragTargetMember });
+							}
+						}
+					}
 
-          // Prepare data for the update
-          const updateData = {
-            dateFrom: draggedTask.dateFrom,
-            dateTo: draggedTask.dateTo,
-            hackers: updatedHackers
-          };
+					// Additional uniqueness check - create a clean list with no duplicates
+					const uniqueEmails = new Set();
+					updatedHackers = updatedHackers.filter((h) => {
+						if (uniqueEmails.has(h.email)) {
+							return false; // Skip duplicates
+						}
+						uniqueEmails.add(h.email);
+						return true;
+					});
 
-          // Update the server
-          await Fetch(`/api/planning/${draggedTask.id}`, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(updateData)
-          });
+					// Prepare data for the update
+					const updateData = {
+						dateFrom: draggedTask.dateFrom,
+						dateTo: draggedTask.dateTo,
+						hackers: updatedHackers
+					};
 
-          // Update local state
-          const taskIndex = calendarEvents.findIndex((e) => e.id === draggedTask.id);
-          if (taskIndex !== -1) {
-            calendarEvents[taskIndex] = {
-              ...calendarEvents[taskIndex],
-              ...updateData,
-              durationDays: calculateDurationDays(updateData),
-              durationHours: calculateDurationHours(updateData),
-              width: calculateTaskWidth(updateData.dateFrom, updateData.dateTo)
-            };
-            calendarEvents = [...calendarEvents]; // Trigger reactivity
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error updating task:', error);
-      // Refresh calendar events in case of error
-      await fetchCalendarEvents();
-    } finally {
-      // Restore visibility of the original element
-      if (originalTaskElement) {
-        originalTaskElement.style.visibility = '';
-        originalTaskElement = null;
-      }
+					// Update the server
+					await Fetch(`/api/planning/${draggedTask.id}`, {
+						method: 'PATCH',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify(updateData)
+					});
 
-      // Clean up
-      if (dragPreviewElement) {
-        dragPreviewElement.remove();
-        dragPreviewElement = null;
-      }
+					// Update local state
+					const taskIndex = calendarEvents.findIndex((e) => e.id === draggedTask.id);
+					if (taskIndex !== -1) {
+						calendarEvents[taskIndex] = {
+							...calendarEvents[taskIndex],
+							...updateData,
+							durationDays: calculateDurationDays(updateData),
+							durationHours: calculateDurationHours(updateData),
+							width: calculateTaskWidth(updateData.dateFrom, updateData.dateTo)
+						};
+						calendarEvents = [...calendarEvents]; // Trigger reactivity
+					}
+				}
+			}
+		} catch (error) {
+			console.error('Error updating task:', error);
+			// Refresh calendar events in case of error
+			await fetchCalendarEvents();
+		} finally {
+			// Restore visibility of the original element
+			if (originalTaskElement) {
+				originalTaskElement.style.visibility = '';
+				originalTaskElement = null;
+			}
 
-      isDragging = false;
-      isResizing = false;
-      draggedTask = null;
-      dragTargetMember = null; // Reset the target member
-      document.querySelectorAll('.task').forEach(el => { el.style.pointerEvents = ''; });
-      document.body.classList.remove('dragging-active', 'resizing-active');
-    }
-  }
+			// Clean up
+			if (dragPreviewElement) {
+				dragPreviewElement.remove();
+				dragPreviewElement = null;
+			}
+
+			isDragging = false;
+			isResizing = false;
+			draggedTask = null;
+			dragTargetMember = null; // Reset the target member
+			document.querySelectorAll('.task').forEach((el) => {
+				el.style.pointerEvents = '';
+			});
+			document.body.classList.remove('dragging-active', 'resizing-active');
+		}
+	}
 
 	// End selection on mouse up
 	async function handleMouseUp() {
@@ -1068,8 +1092,9 @@
 		if (!calendarEvents?.length) return { laneCount: 1, laneMap: {} };
 
 		// Keep original array order to preserve visual lane stability
-		const memberEvents = calendarEvents
-			.filter(event => event.hackers?.some(h => h.email === memberEmail));
+		const memberEvents = calendarEvents.filter((event) =>
+			event.hackers?.some((h) => h.email === memberEmail)
+		);
 
 		if (memberEvents.length === 0) return { laneCount: 1, laneMap: {} };
 
@@ -1083,8 +1108,8 @@
 
 			// Try to fit in existing lanes (first one without overlap)
 			for (let i = 0; i < lanes.length; i++) {
-				const hasOverlap = lanes[i].some(interval =>
-					eventStart <= interval.end && eventEnd >= interval.start
+				const hasOverlap = lanes[i].some(
+					(interval) => eventStart <= interval.end && eventEnd >= interval.start
 				);
 				if (!hasOverlap) {
 					lanes[i].push({ start: eventStart, end: eventEnd });
@@ -1156,12 +1181,22 @@
 			// Handle drag preview positioning during drag/resize operations
 			if (!dragPreviewElement || !draggedTask) return;
 
-			// Update preview position based on the current target
 			if (isDragging && dragTargetMember) {
 				positionDragPreviewAtCell(draggedTask.dateFrom, dragTargetMember);
 			} else if (isResizing) {
-				// For resizing, always use the original member
-				positionDragPreviewAtCell(draggedTask.dateFrom, originalTaskPosition.member);
+				// For resizing, keep stable in original lane - only update horizontal position
+				const cellSelector = `td[data-date="${draggedTask.dateFrom}"][data-member="${originalTaskPosition.member}"]`;
+				const targetCell = document.querySelector(cellSelector);
+
+				if (targetCell && originalTaskElement) {
+					const cellRect = targetCell.getBoundingClientRect();
+					const newWidth = calculateTaskWidth(draggedTask.dateFrom, draggedTask.dateTo);
+
+					// Keep the original top position (lane), update left and width
+					dragPreviewElement.style.left = cellRect.left + 'px';
+					dragPreviewElement.style.top = originalTaskElement._previewTop + 'px';
+					dragPreviewElement.style.width = newWidth;
+				}
 			}
 		} else {
 			// Debounce the visible days calculation for better performance
@@ -1346,7 +1381,12 @@
 								>
 									{#if calendarEvents?.length}
 										{#each Array(lanes.laneCount) as _, laneIdx}
-											{@const calendar = getEventForDayMemberLane(day.date, member, laneIdx, lanes.laneMap)}
+											{@const calendar = getEventForDayMemberLane(
+												day.date,
+												member,
+												laneIdx,
+												lanes.laneMap
+											)}
 											{#if calendar}
 												<!-- svelte-ignore a11y-click-events-have-key-events -->
 												<!-- svelte-ignore a11y-no-static-element-interactions -->
@@ -1356,35 +1396,41 @@
 													class:task-compact={compact}
 													on:click={(e) => handleTaskClick(e, calendar)}
 													on:mousedown={(e) => handleTaskDragStart(e, calendar, member)}
-													style="width: {calendar.width}; background-color: {calendar.color}; top: {5 + laneIdx * laneHeight}px; height: {laneHeight - 2}px; display: flex; justify-content: flex-start; align-items: center; gap: 8px; padding: 0 8px; cursor: pointer; color: white;"
+													style="width: {calendar.width}; background-color: {calendar.color}; top: {5 +
+														laneIdx * laneHeight}px; height: {laneHeight -
+														2}px; display: flex; justify-content: flex-start; align-items: center; gap: 8px; padding: 0 8px; cursor: pointer; color: white;"
 												>
 													<div
 														class="resize-handle-left"
 														on:mousedown={(e) => handleResizeStart(e, calendar, member, 'left')}
 													></div>
 
-													<h4 style="color:white; margin: 0; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; flex: 1; font-size: {compact ? '0.7em' : '1em'};">
+													<h4
+														style="color:white; margin: 0; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; flex: 1; font-size: {compact
+															? '0.7em'
+															: '1em'};"
+													>
 														{calendar.title}
 													</h4>
 													{#if lanes.laneCount === 1}
-													<div
-														style="gap: 5px; display: flex; justify-content: flex-end; gap: -10px;"
-													>
-														{#each calendar.hackers as hacker}
-															<span class="task-avatar-list">
-                                <Avatar
-																email={hacker.email}
-																option={{
-																	showName: false,
-																	size: 'md',
-																	emptyFields: false,
-																	circle: true,
-																	tooltipEnabled: false
-																}}
-															/>
-                              </span>
-														{/each}
-													</div>
+														<div
+															style="gap: 5px; display: flex; justify-content: flex-end; gap: -10px;"
+														>
+															{#each calendar.hackers as hacker}
+																<span class="task-avatar-list">
+																	<Avatar
+																		email={hacker.email}
+																		option={{
+																			showName: false,
+																			size: 'md',
+																			emptyFields: false,
+																			circle: true,
+																			tooltipEnabled: false
+																		}}
+																	/>
+																</span>
+															{/each}
+														</div>
 													{/if}
 
 													<div
@@ -1405,7 +1451,8 @@
 		<div class="card-footer d-flex align-items-center">
 			<p class="m-0 text-secondary">
 				{#if visibleDays.length > 0}
-					Showing <span>{visibleStats.count}</span> tasks with <span>{Math.ceil(visibleStats.hours)}</span> hours
+					Showing <span>{visibleStats.count}</span> tasks with
+					<span>{Math.ceil(visibleStats.hours)}</span> hours
 				{/if}
 				<!-- | Total: <span>{calendarEvents?.length || 0}</span> assessments with <span>{calendarEvents?.reduce(
 					(total, event) => total + (event.durationHours || 0),
@@ -1425,42 +1472,41 @@
 		on:updateHackers={(e) => updateHackers(selectedTask, e)}
 		on:colorchange={(e) => updateColor(selectedTask, e)}
 		on:titlechange={(e) => updateTitle(selectedTask, e)}
-    on:projectchange={(e) => updateProjects(selectedTask, e)}
-    on:statuschange={(e) => updateStatus(selectedTask, e)}
+		on:projectchange={(e) => updateProjects(selectedTask, e)}
+		on:statuschange={(e) => updateStatus(selectedTask, e)}
 	/>
 {/if}
 
 <style>
-
-	.cell{
-		padding:0;
+	.cell {
+		padding: 0;
 		position: relative;
 	}
 
-  /* Show avatars by default */
-  .task {
-    container-type: inline-size;
-  }
+	/* Show avatars by default */
+	.task {
+		container-type: inline-size;
+	}
 
-  @container (max-width: 150px) {
-    .task-avatar-list {
-      display: none !important;
-    }
-  }
+	@container (max-width: 150px) {
+		.task-avatar-list {
+			display: none !important;
+		}
+	}
 
-    /* Only show first avatar when space is limited */
-  @container (min-width: 151px) and (max-width: 200px) {
-    .task-avatar-list:nth-child(n+1) {
-      display: none !important;
-    }
-  }
+	/* Only show first avatar when space is limited */
+	@container (min-width: 151px) and (max-width: 200px) {
+		.task-avatar-list:nth-child(n + 1) {
+			display: none !important;
+		}
+	}
 
-  /* Show two avatars in medium-sized tasks */
-  @container (min-width: 201px) and (max-width: 250px) {
-    .task-avatar-list:nth-child(n+3) {
-      display: none !important;
-    }
-  }
+	/* Show two avatars in medium-sized tasks */
+	@container (min-width: 201px) and (max-width: 250px) {
+		.task-avatar-list:nth-child(n + 3) {
+			display: none !important;
+		}
+	}
 
 	.table-responsive {
 		height: 100%;
@@ -1533,11 +1579,11 @@
 		z-index: 5; /* Lower than normal tasks */
 	}
 
-  .task-done {
-    opacity: 0.5;
-    z-index: 1;
-    /* border:none; */
-  }
+	.task-done {
+		opacity: 0.5;
+		z-index: 1;
+		/* border:none; */
+	}
 
 	/* Selection styling */
 	.cell-selecting {
