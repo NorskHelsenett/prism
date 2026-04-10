@@ -485,13 +485,13 @@
 	}
 
 	.editor-editable {
-		border: 1px solid var(--rte-border, #e6e7e9);
+		border: none;
 		border-radius: var(--rte-radius, 4px);
 	}
 
 	.editor-editable:focus-within {
-		border-color: var(--rte-focus-border, #0054a6);
-		box-shadow: 0 0 0 2px var(--rte-focus-ring, rgba(0, 84, 166, 0.15));
+		border-color: transparent;
+		box-shadow: none;
 	}
 
 	.editor-readonly {

@@ -524,7 +524,7 @@
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div class="annotation-backdrop" on:mousedown={onBackdropMouseDown} on:mouseup={onBackdropMouseUp}>
 	<div class="annotation-modal" on:mousedown|stopPropagation on:dragstart|preventDefault>
-		<div class="annotation-toolbar">
+		<div class="annotation-toolbar" on:pointerdown|stopPropagation>
 			{#each tools as tool}
 				<button
 					class="tool-btn"
@@ -703,6 +703,7 @@
 		writing-mode: vertical-lr;
 		direction: rtl;
 		height: 80px;
+		touch-action: none;
 	}
 
 	.stroke-label {
