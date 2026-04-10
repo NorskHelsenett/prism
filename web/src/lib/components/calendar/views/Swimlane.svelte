@@ -1266,17 +1266,18 @@
 
 	// Function to filter events for a specific day and member
 	function computeMemberLanes(memberEmail) {
-		if (!calendarEvents?.length) return { laneCount: 1, laneMap: {} };
+		if (!calendarEvents?.length) return { laneCount: 1, laneMap: {}, hasOverlaps: {} };
 
 		// Keep original array order to preserve visual lane stability
 		const memberEvents = calendarEvents.filter((event) =>
 			event.hackers?.some((h) => h.email === memberEmail)
 		);
 
-		if (memberEvents.length === 0) return { laneCount: 1, laneMap: {} };
+		if (memberEvents.length === 0) return { laneCount: 1, laneMap: {}, hasOverlaps: {} };
 
 		const lanes = []; // each lane tracks occupied intervals
 		const laneMap = {};
+		const hasOverlaps = {}; // Track which tasks have overlaps
 
 		for (const event of memberEvents) {
 			const eventStart = new Date(event.dateFrom);
@@ -1302,7 +1303,23 @@
 			}
 		}
 
-		return { laneCount: Math.max(1, lanes.length), laneMap };
+		// Now determine which tasks have overlaps
+		for (const event of memberEvents) {
+			const eventStart = new Date(event.dateFrom);
+			const eventEnd = new Date(event.dateTo);
+
+			// Check if this event overlaps with any other event
+			const overlapsWithOther = memberEvents.some((otherEvent) => {
+				if (otherEvent.id === event.id) return false;
+				const otherStart = new Date(otherEvent.dateFrom);
+				const otherEnd = new Date(otherEvent.dateTo);
+				return eventStart <= otherEnd && eventEnd >= otherStart;
+			});
+
+			hasOverlaps[event.id] = overlapsWithOther;
+		}
+
+		return { laneCount: Math.max(1, lanes.length), laneMap, hasOverlaps };
 	}
 
 	// Reactive lane computation per member (depends on both teams and calendarEvents)
@@ -1551,7 +1568,7 @@
 				</thead>
 				<tbody>
 					{#each teams as member, index}
-						{@const lanes = memberLanes[member] || { laneCount: 1, laneMap: {} }}
+						{@const lanes = memberLanes[member] || { laneCount: 1, laneMap: {}, hasOverlaps: {} }}
 						{@const laneHeight = Math.max(16, Math.floor(55 / lanes.laneCount))}
 						{@const rowHeight = laneHeight * lanes.laneCount + 10}
 						{@const compact = lanes.laneCount > 2}
@@ -1588,17 +1605,18 @@
 												lanes.laneMap
 											)}
 											{#if calendar}
+												{@const taskHasOverlap = lanes.hasOverlaps[calendar.id]}
+												{@const taskHeight = taskHasOverlap ? laneHeight - 2 : rowHeight - 12}
+												{@const taskTop = taskHasOverlap ? 5 + laneIdx * laneHeight : 5}
 												<!-- svelte-ignore a11y-click-events-have-key-events -->
 												<!-- svelte-ignore a11y-no-static-element-interactions -->
 												<div
 													class:task-done={calendar.status === 'done'}
 													class="task planningid-{calendar.id}"
-													class:task-compact={compact}
+													class:task-compact={compact && taskHasOverlap}
 													on:click={(e) => handleTaskClick(e, calendar)}
 													on:mousedown={(e) => handleTaskDragStart(e, calendar, member)}
-													style="width: {calendar.width}; background-color: {calendar.color}; top: {5 +
-														laneIdx * laneHeight}px; height: {laneHeight -
-														2}px; display: flex; justify-content: flex-start; align-items: center; gap: 8px; padding: 0 8px; cursor: pointer; color: white;"
+													style="width: {calendar.width}; background-color: {calendar.color}; top: {taskTop}px; height: {taskHeight}px; display: flex; justify-content: flex-start; align-items: center; gap: 8px; padding: 0 8px; cursor: pointer; color: white;"
 												>
 													<div
 														class="resize-handle-left"
@@ -1606,13 +1624,14 @@
 													></div>
 
 													<h4
-														style="color:white; margin: 0; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; flex: 1; font-size: {compact
+														style="color:white; margin: 0; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; flex: 1; font-size: {compact &&
+														taskHasOverlap
 															? '0.7em'
 															: '1em'};"
 													>
 														{calendar.title}
 													</h4>
-													{#if lanes.laneCount === 1}
+													{#if lanes.laneCount === 1 || !taskHasOverlap}
 														<div
 															style="gap: 5px; display: flex; justify-content: flex-end; gap: -10px;"
 														>
@@ -1741,9 +1760,13 @@
 			var(--tblr-muted-rgb),
 			0.1
 		); /* Mimicking tabler.io's bg-muted-lt class */
-		font-size: 0px;
 		min-width: 20px;
 		width: 20px;
+	}
+
+	/* Hide day labels in weekend header cells to make them narrow */
+	th.weekend {
+		font-size: 0px;
 	}
 
 	.table {
