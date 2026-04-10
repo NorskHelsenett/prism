@@ -656,6 +656,13 @@
 			isShiftPressed = true;
 		}
 
+		// Dim all other tasks during drag
+		document.querySelectorAll('.task').forEach((taskEl) => {
+			if (taskEl !== originalTaskElement) {
+				taskEl.classList.add('task-dimmed-drag');
+			}
+		});
+
 		// Create and position the preview element
 		createDragPreview(originalTaskElement, task);
 
@@ -674,7 +681,7 @@
 		dragPreviewElement = sourceElement.cloneNode(true);
 		dragPreviewElement.classList.add('task-preview');
 		dragPreviewElement.style.position = 'fixed'; // Change to fixed positioning
-		dragPreviewElement.style.opacity = '0.8'; // Slightly more opaque
+		dragPreviewElement.style.opacity = '1'; // Full opacity - not transparent
 		dragPreviewElement.style.pointerEvents = 'none';
 		dragPreviewElement.style.zIndex = '1000';
 		dragPreviewElement.style.visibility = 'visible'; // Explicitly set to visible
@@ -835,6 +842,13 @@
 		originalTaskElement._previewLeft = rect.left;
 
 		originalTaskElement.style.visibility = 'hidden';
+
+		// Dim all other tasks during resize
+		document.querySelectorAll('.task').forEach((taskEl) => {
+			if (taskEl !== originalTaskElement) {
+				taskEl.classList.add('task-dimmed-drag');
+			}
+		});
 
 		// Create and position the preview
 		createDragPreview(originalTaskElement, task);
@@ -1011,6 +1025,11 @@
 				dragPreviewElement.remove();
 				dragPreviewElement = null;
 			}
+
+			// Remove dimming from all tasks
+			document.querySelectorAll('.task-dimmed-drag').forEach((taskEl) => {
+				taskEl.classList.remove('task-dimmed-drag');
+			});
 
 			isDragging = false;
 			isResizing = false;
@@ -1579,6 +1598,13 @@
 		z-index: 5; /* Lower than normal tasks */
 	}
 
+	/* Dim tasks during drag operations */
+	.task-dimmed-drag {
+		filter: brightness(0.6) opacity(0.5);
+		z-index: 5; /* Lower than normal tasks */
+		transition: filter 0.15s ease;
+	}
+
 	.task-done {
 		opacity: 0.5;
 		z-index: 1;
@@ -1655,11 +1681,12 @@
 	/* Task preview styling - improved */
 	.task-preview {
 		pointer-events: none;
-		box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
-		opacity: 0.8;
+		box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+		opacity: 1 !important; /* Full opacity - not transparent */
 		transition: none;
 		position: fixed !important; /* Ensure fixed positioning */
-		z-index: 1000;
+		z-index: 2000; /* Very high z-index to appear above everything */
+		transform: scale(1.02); /* Slightly larger to emphasize it's being dragged */
 	}
 
 	/* Body states during drag operations */
