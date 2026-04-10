@@ -860,6 +860,11 @@
 	function handleResizeMove(event) {
 		if (!isResizing || !dragPreviewElement) return;
 
+		// Disable pointer events on all tasks to allow hit testing through them
+		document.querySelectorAll('.task').forEach((el) => {
+			el.style.pointerEvents = 'none';
+		});
+
 		// Hide preview temporarily to detect cells underneath
 		// Use opacity instead of visibility for hit testing
 		const originalOpacity = dragPreviewElement.style.opacity;
