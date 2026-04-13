@@ -24,7 +24,7 @@
 	// Tool state
 	let activeTool = 'pointer'; // pointer | arrow | rect | text | freehand | eraser-dot | eraser-all | crop
 	let activeColor = '#ff0000';
-	let strokeWidth = 6;
+	let strokeWidth = 12;
 	let elements = [...annotations];
 	let currentElement = null;
 	let isDrawing = false;
@@ -43,8 +43,10 @@
 	let textInputValue = '';
 	let textInput;
 	let editingTextIndex = -1; // index of text element being edited, -1 = new
+	let strokeMenuOpen = false;
 
 	const colors = ['#ff0000', '#ff6600', '#ffcc00', '#00cc00', '#0066ff', '#9933ff', '#000000', '#ffffff'];
+	const strokeOptions = [4, 8, 12, 16, 20];
 	const tools = [
 		{ id: 'pointer', label: 'Select', icon: 'M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z' },
 		{ id: 'arrow', label: 'Arrow', icon: 'M5 12h14M12 5l7 7-7 7' },
@@ -168,6 +170,13 @@
 				break;
 			}
 			case 'freehand': {
+				if (el.points.length === 1) {
+					const pt = el.points[0];
+					ctx.beginPath();
+					ctx.arc(pt.x * scale, pt.y * scale, (el.strokeWidth * scale) / 2, 0, Math.PI * 2);
+					ctx.fill();
+					break;
+				}
 				if (el.points.length < 2) break;
 				ctx.beginPath();
 				ctx.moveTo(el.points[0].x * scale, el.points[0].y * scale);
@@ -265,6 +274,7 @@
 
 	function handleMouseDown(e) {
 		e.preventDefault();
+		strokeMenuOpen = false;
 		// Commit any pending text input before starting a new action
 		if (textInputVisible) {
 			commitText();
@@ -506,12 +516,22 @@
 	let backdropMouseDown = false;
 
 	function onBackdropMouseDown(e) {
+		strokeMenuOpen = false;
 		if (e.target === e.currentTarget) backdropMouseDown = true;
 	}
 
 	function onBackdropMouseUp(e) {
 		if (backdropMouseDown && e.target === e.currentTarget) close();
 		backdropMouseDown = false;
+	}
+
+	function consumePointerEvent(e) {
+		e.stopPropagation();
+	}
+
+	function setStrokeWidth(value) {
+		strokeWidth = value;
+		strokeMenuOpen = false;
 	}
 
 	$: if (canvas && canvasWidth && canvasHeight) {
@@ -553,9 +573,34 @@
 
 			<div class="toolbar-divider"></div>
 
-			<label class="stroke-label">
-				<input type="range" min="2" max="20" bind:value={strokeWidth} class="stroke-range" />
-			</label>
+			<div class="stroke-control" on:pointerdown|stopPropagation>
+				<button
+					class="stroke-trigger"
+					class:active={strokeMenuOpen}
+					on:click={() => strokeMenuOpen = !strokeMenuOpen}
+					title="Stroke width"
+					type="button"
+				>
+					<span class="stroke-preview-dot" style={`width: ${strokeWidth}px; height: ${strokeWidth}px; background: ${activeColor};`}></span>
+					<span class="stroke-value">{strokeWidth}</span>
+				</button>
+
+				{#if strokeMenuOpen}
+					<div class="stroke-menu">
+						{#each strokeOptions as option}
+							<button
+								class="stroke-option"
+								class:active={strokeWidth === option}
+								on:click={() => setStrokeWidth(option)}
+								title={`Stroke width ${option}`}
+								type="button"
+							>
+								<span class="stroke-option-dot" style={`width: ${option}px; height: ${option}px; background: ${activeColor};`}></span>
+							</button>
+						{/each}
+					</div>
+				{/if}
+			</div>
 
 			<div class="toolbar-spacer"></div>
 
@@ -629,7 +674,7 @@
 		background: var(--rte-menu-bg, #fff);
 		border-radius: 12px;
 		box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-		overflow: hidden;
+		overflow: visible;
 		width: 90vw;
 		max-width: 1400px;
 		height: calc(90vw * 9 / 16);
@@ -647,8 +692,10 @@
 		gap: 4px;
 		padding: 10px 8px;
 		background: var(--rte-code-bg, #f1f5f9);
-		overflow-y: auto;
+		overflow: visible;
 		flex-shrink: 0;
+		position: relative;
+		z-index: 3;
 	}
 
 	.tool-btn {
@@ -679,8 +726,14 @@
 	.save-btn:hover { opacity: 0.85; }
 
 	.color-btn {
+		display: block;
+		flex: 0 0 22px;
 		width: 22px;
 		height: 22px;
+		min-width: 22px;
+		min-height: 22px;
+		aspect-ratio: 1 / 1;
+		box-sizing: border-box;
 		border-radius: 50%;
 		border: 2px solid transparent;
 		cursor: pointer;
@@ -697,21 +750,88 @@
 		margin: 4px 0;
 	}
 
-	.stroke-range {
-		width: 28px;
-		accent-color: var(--rte-accent, #0054a6);
-		writing-mode: vertical-lr;
-		direction: rtl;
-		height: 80px;
-		touch-action: none;
+	.stroke-control {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 6px;
+		width: 34px;
+		overflow: visible;
 	}
 
-	.stroke-label {
-		display: flex;
+	.stroke-trigger,
+	.stroke-option {
+		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		font-size: 0.75rem;
+		border: none;
+		background: transparent;
+		color: var(--rte-menu-color, #1d2939);
+		cursor: pointer;
+		padding: 0;
+	}
+
+	.stroke-trigger:hover,
+	.stroke-trigger.active,
+	.stroke-option:hover,
+	.stroke-option.active {
+		background: var(--rte-menu-hover, #e2e8f0);
+	}
+
+	.stroke-trigger {
+		flex-direction: column;
+		gap: 6px;
+		width: 34px;
+		min-height: 54px;
+		padding: 8px 0;
+		border-radius: 10px;
+	}
+
+	.stroke-menu {
+		position: absolute;
+		left: calc(100% + 10px);
+		top: 50%;
+		transform: translateY(-50%);
+		display: flex;
+		flex-direction: row;
+		gap: 6px;
+		padding: 8px;
+		border-radius: 12px;
+		background: var(--rte-menu-bg, #fff);
+		border: 1px solid var(--rte-border, #e6e7e9);
+		box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+		z-index: 2;
+	}
+
+	.stroke-preview-dot {
+		display: block;
+		flex: 0 0 auto;
+		border-radius: 999px;
+		max-width: 20px;
+		max-height: 20px;
+	}
+
+	.stroke-value {
+		font-size: 0.7rem;
+		font-weight: 600;
 		color: var(--rte-muted, #6c7a91);
+	}
+
+	.stroke-option {
+		width: 32px;
+		height: 32px;
+		min-width: 32px;
+		padding: 0;
+		border-radius: 8px;
+	}
+
+	.stroke-option-dot {
+		display: block;
+		flex: 0 0 auto;
+		border-radius: 999px;
+		max-width: 14px;
+		max-height: 14px;
 	}
 
 	.annotation-canvas-container {
