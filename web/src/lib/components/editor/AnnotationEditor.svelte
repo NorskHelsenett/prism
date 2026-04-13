@@ -155,16 +155,6 @@
 			case 'text': {
 				const fontSize = (el.fontSize || 20) * scale;
 				ctx.font = `bold ${fontSize}px sans-serif`;
-				// Background
-				const metrics = ctx.measureText(el.text);
-				const pad = 4 * scale;
-				ctx.fillStyle = 'rgba(0,0,0,0.5)';
-				ctx.fillRect(
-					el.x * scale - pad,
-					el.y * scale - fontSize + pad,
-					metrics.width + pad * 2,
-					fontSize + pad
-				);
 				ctx.fillStyle = el.color;
 				ctx.fillText(el.text, el.x * scale, el.y * scale);
 				break;
