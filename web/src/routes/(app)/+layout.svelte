@@ -11,7 +11,7 @@
 	import RegisterVulnerabilityButton from '$lib/components/vulnerability/RegisterVulnerabilityButton.svelte';
 	import Loader from '$lib/components/Loader.svelte';
 	import NotificationDropdown from '$lib/components/Notifications/NotificationDropdown.svelte';
-	import { Fetch } from '$lib/fetchUtil';
+	import { apiEndpoint } from '$lib/stores/configStore';
   import { goto } from '$app/navigation';
 	import { Toaster } from 'svelte-sonner';
 
@@ -41,28 +41,50 @@
 
 	let isInitialized = false;
 
-  let pollingHandle
+  let pollingHandle = null;
   let notifications = []
 
   async function refreshNotifications() {
     try {
-      notifications = await Fetch('/api/notification');
+      const endpoint = $apiEndpoint;
+      if (!endpoint) return;
+
+      const response = await fetch(`${endpoint}/api/notification`, { credentials: 'include' });
+      if (!response.ok) return;
+
+      notifications = await response.json();
     } catch {
-      notifications = [];
+      // Ignore background polling failures to avoid auth redirect loops.
     }
+  }
+
+  function startNotificationPolling() {
+    if (pollingHandle) return;
+    refreshNotifications();
+    pollingHandle = setInterval(refreshNotifications, 60000);
+  }
+
+  function stopNotificationPolling() {
+    if (!pollingHandle) return;
+    clearInterval(pollingHandle);
+    pollingHandle = null;
   }
 
   onMount(async () => {
     await initializeApiEndpoint();
-    await refreshNotifications();
-    pollingHandle = setInterval(refreshNotifications, 60000);
   });
 
   onDestroy(() => {
-    if (pollingHandle) {
-      clearInterval(pollingHandle);
-    }
+    stopNotificationPolling();
   });
+
+  $: {
+    if ($isAuthenticated && !$isLoginPage && !$isAuthPage) {
+      startNotificationPolling();
+    } else {
+      stopNotificationPolling();
+    }
+  }
 
 	$: isInitialized = !$isLoading;
 </script>

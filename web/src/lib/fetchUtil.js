@@ -2,6 +2,15 @@ import { get } from 'svelte/store';
 import { apiEndpoint } from '$lib/stores/configStore';
 import { goto } from '$app/navigation'; // for declarative redirects
 
+function isValidAppRedirect(path) {
+  if (!path || typeof path !== 'string') return false;
+  if (!path.startsWith('/')) return false;
+  if (path.startsWith('/+')) return false;
+  if (path.includes('.svelte')) return false;
+  if (path.startsWith('/_app/')) return false;
+  return true;
+}
+
 export async function Fetch(endpoint, options = {}) {
   const apiUrl = get(apiEndpoint);
   const url = `${apiUrl}${endpoint}`;
@@ -14,7 +23,7 @@ export async function Fetch(endpoint, options = {}) {
 
       if (response.status === 401) {
         const returnPath = window.location.pathname + window.location.search;
-        if (returnPath != "/login"){
+        if (returnPath != "/login" && isValidAppRedirect(returnPath)){
           localStorage.setItem('redirectToAfterLogin', returnPath);
         }
         window.location.href = '/login';
