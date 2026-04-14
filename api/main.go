@@ -169,7 +169,7 @@ func main() {
 
 		apiRoutes.POST("/project", routes.HandleProjectPost)
 		apiRoutes.GET("/project/all", routes.GetProjects)
-		apiRoutes.GET("/vulnerability/all", routes.GetAllVulnerabilities)
+		apiRoutes.GET("/vulnerability/search", routes.SearchVulnerabilities)
 
 		apiRoutes.GET("/profile/all", routes.GetAllProfilesEmailOnly)
 		apiRoutes.GET("/slack/channels", routes.GetSlackChannels)

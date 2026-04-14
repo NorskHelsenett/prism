@@ -1699,6 +1699,17 @@ type MinifiedVulnerability struct {
 	Criticality    string `json:"criticality"`
 	Date           string `json:"date"`
 	Visibility     string `json:"visibility"`
+	Category       string `json:"category"`
+}
+
+type VulnerabilitySearchParams struct {
+	Query        string
+	Criticality  []string
+	Status       []string
+	Location     string // "public", "internal", or ""
+	HideClosed   bool
+	AssignedToMe bool
+	Year         string // e.g. "2026", or "" for all years
 }
 
 type vulnerabilityAccessEnvelope struct {
@@ -1805,7 +1816,7 @@ func GetVulnerabilityIds(isGlobal bool, email string, ids []uint) ([]uint, error
 	return accessibleIds, nil
 }
 
-func AllVulnerabilities(globalViewer bool, email string, isAdmin bool) ([]MinimalJSONData, error) {
+func SearchVulnerabilities(globalViewer bool, email string, isAdmin bool, params VulnerabilitySearchParams) ([]MinimalJSONData, error) {
 	var jsonData []JSONData
 
 	query := db.Preload("Project").
@@ -1815,29 +1826,80 @@ func AllVulnerabilities(globalViewer bool, email string, isAdmin bool) ([]Minima
             json_extract(json_data.vulnerability, '$.isPublicFacing') as vulnerability_isPublicFacing,
             json_extract(json_data.vulnerability, '$.criticality') as vulnerability_criticality,
             json_extract(json_data.vulnerability, '$.date') as vulnerability_date,
-            json_extract(json_data.vulnerability, '$.visibility') as vulnerability_visibility
+            json_extract(json_data.vulnerability, '$.visibility') as vulnerability_visibility,
+            json_extract(json_data.vulnerability, '$.category') as vulnerability_category
         `).
 		Where("json_data.deleted_at IS NULL").
 		Order("json_data.created_at desc")
 
 	if !isAdmin {
-		// Join with accessible_vulnerabilities view to filter accessible vulnerabilities
 		query = query.Joins("INNER JOIN accessible_vulnerabilities ON accessible_vulnerabilities.id = json_data.id")
 		if globalViewer {
-			query = query.Where(`
-                accessible_vulnerabilities.visibility IN ('published', 'public') OR
-                accessible_vulnerabilities.assigned_to = ? OR
-                accessible_vulnerabilities.found_by = ? OR
-                ',' || COALESCE(accessible_vulnerabilities.client_email, '') || ',' LIKE ? OR
-                ',' || COALESCE(accessible_vulnerabilities.hacker_name, '') || ',' LIKE ?
-            `, email, email, "%,"+email+",%", "%,"+email+",%")
+			query = query.Where(
+				db.Where(`accessible_vulnerabilities.visibility IN ('published', 'public')`).
+					Or("accessible_vulnerabilities.assigned_to = ?", email).
+					Or("accessible_vulnerabilities.found_by = ?", email).
+					Or("',' || COALESCE(accessible_vulnerabilities.client_email, '') || ',' LIKE ?", "%,"+email+",%").
+					Or("',' || COALESCE(accessible_vulnerabilities.hacker_name, '') || ',' LIKE ?", "%,"+email+",%"),
+			)
 		} else {
-			query = query.Where(`
-                accessible_vulnerabilities.assigned_to = ? OR
-                accessible_vulnerabilities.found_by = ? OR
-                ',' || COALESCE(accessible_vulnerabilities.client_email, '') || ',' LIKE ? OR
-                ',' || COALESCE(accessible_vulnerabilities.hacker_name, '') || ',' LIKE ?
-            `, email, email, "%,"+email+",%", "%,"+email+",%")
+			query = query.Where(
+				db.Where("accessible_vulnerabilities.assigned_to = ?", email).
+					Or("accessible_vulnerabilities.found_by = ?", email).
+					Or("',' || COALESCE(accessible_vulnerabilities.client_email, '') || ',' LIKE ?", "%,"+email+",%").
+					Or("',' || COALESCE(accessible_vulnerabilities.hacker_name, '') || ',' LIKE ?", "%,"+email+",%"),
+			)
+		}
+	}
+
+	// Text search across title, category, evidence, remediation, endpoint, project name, foundBy, and ID
+	if params.Query != "" {
+		q := "%" + params.Query + "%"
+		query = query.Where(
+			db.Where("json_extract(json_data.vulnerability, '$.title') LIKE ?", q).
+				Or("json_extract(json_data.vulnerability, '$.category') LIKE ?", q).
+				Or("json_extract(json_data.vulnerability, '$.evidence') LIKE ?", q).
+				Or("json_extract(json_data.vulnerability, '$.remediation') LIKE ?", q).
+				Or("json_extract(json_data.vulnerability, '$.endpoint') LIKE ?", q).
+				Or("json_data.found_by LIKE ?", q).
+				Or("CAST(json_data.id AS TEXT) LIKE ?", q).
+				Or("json_data.project_id IN (SELECT id FROM project_data WHERE project_name LIKE ?)", q),
+		)
+	}
+
+	// Filter by criticality
+	if len(params.Criticality) > 0 {
+		query = query.Where("LOWER(json_extract(json_data.vulnerability, '$.criticality')) IN ?", params.Criticality)
+	}
+
+	// Filter by status
+	if len(params.Status) > 0 {
+		query = query.Where("json_data.status IN ?", params.Status)
+	}
+
+	// Filter by location
+	if params.Location == "public" {
+		query = query.Where("json_extract(json_data.vulnerability, '$.isPublicFacing') = true")
+	} else if params.Location == "internal" {
+		query = query.Where("json_extract(json_data.vulnerability, '$.isPublicFacing') = false")
+	}
+
+	// Hide closed (Resolved / Rejected)
+	if params.HideClosed {
+		query = query.Where("json_data.status NOT IN ?", []string{"Resolved", "Rejected"})
+	}
+
+	// Filter by year (based on vulnerability date field)
+	if params.Year != "" {
+		query = query.Where("json_extract(json_data.vulnerability, '$.date') LIKE ?", params.Year+"%")
+	}
+
+	// Assigned to me: match only the assignedTo field from the vulnerability JSON
+	if params.AssignedToMe {
+		if isAdmin {
+			query = query.Where("LOWER(json_extract(json_data.vulnerability, '$.assignedTo')) = LOWER(?)", email)
+		} else {
+			query = query.Where("LOWER(accessible_vulnerabilities.assigned_to) = LOWER(?)", email)
 		}
 	}
 
