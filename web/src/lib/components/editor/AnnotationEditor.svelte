@@ -47,7 +47,7 @@
 	let editingTextIndex = -1; // index of text element being edited, -1 = new
 	let strokeMenuOpen = false;
 	let shapeMenuOpen = false;
-	const SCREEN_TEXT_SIZE = 20;
+	const MIN_TEXT_SIZE = 12;
 
 	const colors = ['#ff0000', '#ff6600', '#ffcc00', '#00cc00', '#0066ff', '#9933ff', '#000000', '#ffffff'];
 	const strokeOptions = [4, 8, 12, 16, 20];
@@ -172,6 +172,10 @@
 		ctx.restore();
 	}
 
+	function getScreenTextSize() {
+		return Math.max(MIN_TEXT_SIZE, strokeWidth * 2);
+	}
+
 	function drawElement(el) {
 		ctx.save();
 		ctx.strokeStyle = el.color;
@@ -230,7 +234,7 @@
 				break;
 			}
 			case 'text': {
-				const fontSize = (el.fontSize || 20) * scale;
+				const fontSize = (el.fontSize || getScreenTextSize() / scale) * scale;
 				ctx.font = `bold ${fontSize}px sans-serif`;
 				ctx.textBaseline = 'top';
 				ctx.fillStyle = el.color;
@@ -322,13 +326,13 @@
 						pos.y <= Math.max(el.y1, el.y2) + threshold) return i;
 					break;
 				case 'text': {
-					const fontSize = (el.fontSize || 20) * scale;
+					const fontSize = (el.fontSize || getScreenTextSize() / scale) * scale;
 					ctx.save();
 					ctx.font = `bold ${fontSize}px sans-serif`;
 					ctx.textBaseline = 'top';
 					const tw = ctx.measureText(el.text).width / scale;
 					ctx.restore();
-					const th = (el.fontSize || 20);
+					const th = (el.fontSize || getScreenTextSize() / scale);
 					if (pos.x >= el.x - threshold && pos.x <= el.x + tw + threshold &&
 						pos.y >= el.y - threshold && pos.y <= el.y + th + threshold) return i;
 					break;
@@ -414,7 +418,7 @@
 				);
 			}
 			case 'text': {
-				const fontSize = el.fontSize || SCREEN_TEXT_SIZE / scale;
+				const fontSize = el.fontSize || getScreenTextSize() / scale;
 				ctx.save();
 				ctx.font = `bold ${fontSize * scale}px sans-serif`;
 				ctx.textBaseline = 'top';
@@ -607,7 +611,7 @@
 
 	function commitText() {
 		if (textInputValue.trim()) {
-			const naturalFontSize = SCREEN_TEXT_SIZE / scale;
+			const naturalFontSize = getScreenTextSize() / scale;
 			const newEl = {
 				type: 'text',
 				x: textInputX,
@@ -898,7 +902,7 @@
 					bind:this={textInput}
 					type="text"
 					class="text-overlay-input"
-					style="left: {textInputX * scale}px; top: {textInputY * scale}px; color: {activeColor}; font-size: {SCREEN_TEXT_SIZE}px;"
+					style="left: {textInputX * scale}px; top: {textInputY * scale}px; color: {activeColor}; font-size: {getScreenTextSize()}px;"
 					bind:value={textInputValue}
 					on:keydown={handleTextKeydown}
 					on:blur={commitText}
@@ -1204,11 +1208,12 @@
 		background: rgba(0, 0, 0, 0.6);
 		border: 1px solid rgba(255, 255, 255, 0.3);
 		border-radius: 4px;
-		padding: 4px 8px;
-		font-size: 16px;
+		padding: 4px 6px;
 		font-weight: bold;
 		outline: none;
 		min-width: 120px;
+		text-align: left;
+		line-height: 1.2;
 	}
 
 
