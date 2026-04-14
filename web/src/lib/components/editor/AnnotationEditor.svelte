@@ -22,7 +22,7 @@
 	let scale = 1;
 
 	// Tool state
-	let activeTool = 'pointer'; // pointer | arrow | rect | text | freehand | eraser-dot | eraser-all | crop
+	let activeTool = 'pointer'; // pointer | arrow | rect | filled-rect | solid-filled-rect | text | freehand | eraser-dot | eraser-all | crop
 	let activeColor = '#ff0000';
 	let strokeWidth = 12;
 	let elements = [...annotations];
@@ -30,6 +30,8 @@
 	let isDrawing = false;
 	let dragTarget = null;
 	let dragOffset = { x: 0, y: 0 };
+	let eraserTrail = [];
+	let hoverPos = null;
 
 	// Crop state
 	let cropRect = crop ? { ...crop } : null;
@@ -44,18 +46,23 @@
 	let textInput;
 	let editingTextIndex = -1; // index of text element being edited, -1 = new
 	let strokeMenuOpen = false;
+	let shapeMenuOpen = false;
+	const SCREEN_TEXT_SIZE = 20;
 
 	const colors = ['#ff0000', '#ff6600', '#ffcc00', '#00cc00', '#0066ff', '#9933ff', '#000000', '#ffffff'];
 	const strokeOptions = [4, 8, 12, 16, 20];
 	const tools = [
 		{ id: 'pointer', label: 'Select', icon: 'M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z' },
 		{ id: 'arrow', label: 'Arrow', icon: 'M5 12h14M12 5l7 7-7 7' },
-		{ id: 'rect', label: 'Rectangle', icon: 'M3 3h18v18H3z' },
 		{ id: 'text', label: 'Text', icon: 'M5 4h14M12 4v16M9 20h6' },
-		{ id: 'freehand', label: 'Freehand', icon: 'M3 17c3.333-3.333 5-6.667 8-8 3-1.333 5.667 1.333 7 0' },
+		{ id: 'freehand', label: 'Freehand', icon: 'M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z' },
 		{ id: 'eraser-dot', label: 'Eraser', icon: 'M19 20H5M18 7L8.7 17.3c-.4.4-1 .4-1.4 0L4 14l10-10 4 3z' },
-		{ id: 'eraser-all', label: 'Clear All', icon: 'M3 6h18M8 6V4h8v2M5 6v14h14V6M10 11v6M14 11v6' },
-		{ id: 'crop', label: 'Crop', icon: 'M6 2v4H2v2h4v14h2V8h10v10h4v-2h-2V6H8V2H6z' }
+		{ id: 'eraser-all', label: 'Clear All', icon: 'M3 6h18M8 6V4h8v2M5 6v14h14V6M10 11v6M14 11v6' }
+	];
+	const shapeOptions = [
+		{ id: 'rect', label: 'Square', filled: false },
+		{ id: 'filled-rect', label: 'Filled square', filled: true, solid: false },
+		{ id: 'solid-filled-rect', label: 'Solid filled square', filled: true, solid: true }
 	];
 
 	let canvasContainer;
@@ -99,10 +106,70 @@
 			drawElement(currentElement);
 		}
 
+		if (eraserTrail.length > 0) {
+			drawEraserTrail();
+		}
+
+		if ((activeTool === 'eraser-dot' || activeTool === 'freehand') && hoverPos) {
+			drawEraserCursor();
+		}
+
 		// Draw crop overlay
 		if (cropRect && activeTool === 'crop') {
 			drawCropOverlay();
 		}
+	}
+
+	function drawEraserTrail() {
+		if (!ctx || eraserTrail.length === 0) return;
+		ctx.save();
+		ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+		ctx.fillStyle = 'rgba(255,255,255,0.16)';
+		ctx.lineWidth = strokeWidth * scale;
+		ctx.lineCap = 'round';
+		ctx.lineJoin = 'round';
+
+		if (eraserTrail.length === 1) {
+			const pt = eraserTrail[0];
+			ctx.beginPath();
+			ctx.arc(pt.x * scale, pt.y * scale, (strokeWidth * scale) / 2, 0, Math.PI * 2);
+			ctx.fill();
+		} else if (eraserTrail.length === 2) {
+			ctx.beginPath();
+			ctx.moveTo(eraserTrail[0].x * scale, eraserTrail[0].y * scale);
+			ctx.lineTo(eraserTrail[1].x * scale, eraserTrail[1].y * scale);
+			ctx.stroke();
+		} else {
+			ctx.beginPath();
+			ctx.moveTo(eraserTrail[0].x * scale, eraserTrail[0].y * scale);
+			for (let i = 1; i < eraserTrail.length - 1; i++) {
+				const cx = eraserTrail[i].x * scale;
+				const cy = eraserTrail[i].y * scale;
+				const nx = eraserTrail[i + 1].x * scale;
+				const ny = eraserTrail[i + 1].y * scale;
+				const mx = (cx + nx) / 2;
+				const my = (cy + ny) / 2;
+				ctx.quadraticCurveTo(cx, cy, mx, my);
+			}
+			const last = eraserTrail[eraserTrail.length - 1];
+			ctx.lineTo(last.x * scale, last.y * scale);
+			ctx.stroke();
+		}
+		ctx.restore();
+	}
+
+	function drawEraserCursor() {
+		if (!ctx || !hoverPos) return;
+		const radius = (Math.max(8, strokeWidth) * scale) / 2;
+		ctx.save();
+		ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+		ctx.fillStyle = 'rgba(255,255,255,0.12)';
+		ctx.lineWidth = 1.5;
+		ctx.beginPath();
+		ctx.arc(hoverPos.x * scale, hoverPos.y * scale, radius, 0, Math.PI * 2);
+		ctx.fill();
+		ctx.stroke();
+		ctx.restore();
 	}
 
 	function drawElement(el) {
@@ -136,7 +203,9 @@
 				ctx.fill();
 				break;
 			}
-			case 'rect': {
+			case 'rect':
+			case 'filled-rect':
+			case 'solid-filled-rect': {
 				const x = Math.min(el.x1, el.x2) * scale;
 				const y = Math.min(el.y1, el.y2) * scale;
 				const w = Math.abs(el.x2 - el.x1) * scale;
@@ -149,12 +218,21 @@
 				ctx.arcTo(x, y + h, x, y, r);
 				ctx.arcTo(x, y, x + w, y, r);
 				ctx.closePath();
-				ctx.stroke();
+				if (el.type === 'filled-rect' || el.type === 'solid-filled-rect') {
+					const previousAlpha = ctx.globalAlpha;
+					ctx.globalAlpha = el.type === 'solid-filled-rect' ? 1 : 0.22;
+					ctx.fill();
+					ctx.globalAlpha = previousAlpha;
+				}
+				if (el.type === 'rect' || el.type === 'filled-rect' || el.type === 'solid-filled-rect') {
+					ctx.stroke();
+				}
 				break;
 			}
 			case 'text': {
 				const fontSize = (el.fontSize || 20) * scale;
 				ctx.font = `bold ${fontSize}px sans-serif`;
+				ctx.textBaseline = 'top';
 				ctx.fillStyle = el.color;
 				ctx.fillText(el.text, el.x * scale, el.y * scale);
 				break;
@@ -236,6 +314,8 @@
 			switch (el.type) {
 				case 'arrow':
 				case 'rect':
+				case 'filled-rect':
+				case 'solid-filled-rect':
 					if (pos.x >= Math.min(el.x1, el.x2) - threshold &&
 						pos.x <= Math.max(el.x1, el.x2) + threshold &&
 						pos.y >= Math.min(el.y1, el.y2) - threshold &&
@@ -245,11 +325,12 @@
 					const fontSize = (el.fontSize || 20) * scale;
 					ctx.save();
 					ctx.font = `bold ${fontSize}px sans-serif`;
+					ctx.textBaseline = 'top';
 					const tw = ctx.measureText(el.text).width / scale;
 					ctx.restore();
 					const th = (el.fontSize || 20);
 					if (pos.x >= el.x - threshold && pos.x <= el.x + tw + threshold &&
-						pos.y >= el.y - th && pos.y <= el.y + threshold) return i;
+						pos.y >= el.y - threshold && pos.y <= el.y + th + threshold) return i;
 					break;
 				}
 				case 'freehand':
@@ -262,9 +343,117 @@
 		return -1;
 	}
 
+	function pointToSegmentDistance(px, py, x1, y1, x2, y2) {
+		const dx = x2 - x1;
+		const dy = y2 - y1;
+		if (dx === 0 && dy === 0) return Math.hypot(px - x1, py - y1);
+		const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)));
+		const projX = x1 + t * dx;
+		const projY = y1 + t * dy;
+		return Math.hypot(px - projX, py - projY);
+	}
+
+	function pointHitsTrail(point, radius) {
+		if (eraserTrail.length === 0) return false;
+		if (eraserTrail.length === 1) {
+			return Math.hypot(point.x - eraserTrail[0].x, point.y - eraserTrail[0].y) <= radius;
+		}
+		for (let i = 1; i < eraserTrail.length; i++) {
+			const a = eraserTrail[i - 1];
+			const b = eraserTrail[i];
+			if (pointToSegmentDistance(point.x, point.y, a.x, a.y, b.x, b.y) <= radius) return true;
+		}
+		return false;
+	}
+
+	function segmentIntersectsTrail(a, b, radius) {
+		if (eraserTrail.length === 0) return false;
+		if (pointHitsTrail(a, radius) || pointHitsTrail(b, radius)) return true;
+		if (eraserTrail.length === 1) {
+			return pointToSegmentDistance(eraserTrail[0].x, eraserTrail[0].y, a.x, a.y, b.x, b.y) <= radius;
+		}
+		for (let i = 1; i < eraserTrail.length; i++) {
+			const p = eraserTrail[i - 1];
+			const q = eraserTrail[i];
+			if (
+				pointToSegmentDistance(a.x, a.y, p.x, p.y, q.x, q.y) <= radius ||
+				pointToSegmentDistance(b.x, b.y, p.x, p.y, q.x, q.y) <= radius ||
+				pointToSegmentDistance(p.x, p.y, a.x, a.y, b.x, b.y) <= radius ||
+				pointToSegmentDistance(q.x, q.y, a.x, a.y, b.x, b.y) <= radius
+			) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	function elementIntersectsTrail(el, radius) {
+		switch (el.type) {
+			case 'arrow': {
+				return segmentIntersectsTrail({ x: el.x1, y: el.y1 }, { x: el.x2, y: el.y2 }, radius);
+			}
+			case 'rect':
+			case 'filled-rect':
+			case 'solid-filled-rect': {
+				const minX = Math.min(el.x1, el.x2);
+				const maxX = Math.max(el.x1, el.x2);
+				const minY = Math.min(el.y1, el.y2);
+				const maxY = Math.max(el.y1, el.y2);
+				const corners = [
+					{ x: minX, y: minY },
+					{ x: maxX, y: minY },
+					{ x: maxX, y: maxY },
+					{ x: minX, y: maxY }
+				];
+				return (
+					segmentIntersectsTrail(corners[0], corners[1], radius) ||
+					segmentIntersectsTrail(corners[1], corners[2], radius) ||
+					segmentIntersectsTrail(corners[2], corners[3], radius) ||
+					segmentIntersectsTrail(corners[3], corners[0], radius) ||
+					pointHitsTrail({ x: (minX + maxX) / 2, y: (minY + maxY) / 2 }, radius)
+				);
+			}
+			case 'text': {
+				const fontSize = el.fontSize || SCREEN_TEXT_SIZE / scale;
+				ctx.save();
+				ctx.font = `bold ${fontSize * scale}px sans-serif`;
+				ctx.textBaseline = 'top';
+				const textWidth = ctx.measureText(el.text).width / scale;
+				ctx.restore();
+				const minX = el.x;
+				const maxX = el.x + textWidth;
+				const minY = el.y;
+				const maxY = el.y + fontSize;
+				return (
+					pointHitsTrail({ x: minX, y: minY }, radius) ||
+					pointHitsTrail({ x: maxX, y: minY }, radius) ||
+					pointHitsTrail({ x: maxX, y: maxY }, radius) ||
+					pointHitsTrail({ x: minX, y: maxY }, radius) ||
+					pointHitsTrail({ x: (minX + maxX) / 2, y: (minY + maxY) / 2 }, radius)
+				);
+			}
+			case 'freehand':
+				for (let i = 1; i < el.points.length; i++) {
+					if (segmentIntersectsTrail(el.points[i - 1], el.points[i], radius)) return true;
+				}
+				return el.points.some((point) => pointHitsTrail(point, radius));
+			default:
+				return false;
+		}
+	}
+
+	function eraseAtTrail() {
+		const radius = Math.max(10, strokeWidth) / 2;
+		const next = elements.filter((el) => !elementIntersectsTrail(el, radius));
+		if (next.length !== elements.length) {
+			elements = next;
+		}
+	}
+
 	function handleMouseDown(e) {
 		e.preventDefault();
 		strokeMenuOpen = false;
+		shapeMenuOpen = false;
 		// Commit any pending text input before starting a new action
 		if (textInputVisible) {
 			commitText();
@@ -284,6 +473,8 @@
 			}
 			case 'arrow':
 			case 'rect':
+			case 'filled-rect':
+			case 'solid-filled-rect':
 				currentElement = { type: activeTool, x1: pos.x, y1: pos.y, x2: pos.x, y2: pos.y, color: activeColor, strokeWidth };
 				break;
 			case 'freehand':
@@ -311,11 +502,9 @@
 				break;
 			}
 			case 'eraser-dot': {
-				const idx = hitTest(pos);
-				if (idx >= 0) {
-					elements = elements.filter((_, i) => i !== idx);
-					redraw();
-				}
+				eraserTrail = [pos];
+				eraseAtTrail();
+				redraw();
 				break;
 			}
 			case 'eraser-all':
@@ -331,9 +520,13 @@
 	}
 
 	function handleMouseMove(e) {
-		if (!isDrawing) return;
+		hoverPos = getPos(e);
+		if (!isDrawing) {
+			if (activeTool === 'eraser-dot' || activeTool === 'freehand') redraw();
+			return;
+		}
 		e.preventDefault();
-		const pos = getPos(e);
+		const pos = hoverPos;
 
 		switch (activeTool) {
 			case 'pointer':
@@ -341,7 +534,7 @@
 					const el = elements[dragTarget];
 					const dx = pos.x - dragOffset.x - (el.x1 ?? el.x ?? el.points?.[0]?.x ?? 0);
 					const dy = pos.y - dragOffset.y - (el.y1 ?? el.y ?? el.points?.[0]?.y ?? 0);
-					if (el.type === 'arrow' || el.type === 'rect') {
+					if (el.type === 'arrow' || el.type === 'rect' || el.type === 'filled-rect' || el.type === 'solid-filled-rect') {
 						el.x1 += dx; el.y1 += dy; el.x2 += dx; el.y2 += dy;
 					} else if (el.type === 'text') {
 						el.x += dx; el.y += dy;
@@ -355,6 +548,8 @@
 				break;
 			case 'arrow':
 			case 'rect':
+			case 'filled-rect':
+			case 'solid-filled-rect':
 				if (currentElement) {
 					currentElement.x2 = pos.x;
 					currentElement.y2 = pos.y;
@@ -368,11 +563,9 @@
 				}
 				break;
 			case 'eraser-dot': {
-				const idx = hitTest(pos);
-				if (idx >= 0) {
-					elements = elements.filter((_, i) => i !== idx);
-					redraw();
-				}
+				eraserTrail = [...eraserTrail, pos];
+				eraseAtTrail();
+				redraw();
 				break;
 			}
 			case 'crop':
@@ -397,12 +590,24 @@
 		isDrawing = false;
 		dragTarget = null;
 		isCropping = false;
+		eraserTrail = [];
+		redraw();
+	}
+
+	function handleMouseEnter(e) {
+		hoverPos = getPos(e);
+		redraw();
+	}
+
+	function handleMouseLeave() {
+		handleMouseUp();
+		hoverPos = null;
 		redraw();
 	}
 
 	function commitText() {
 		if (textInputValue.trim()) {
-			const naturalFontSize = 20 / scale;
+			const naturalFontSize = SCREEN_TEXT_SIZE / scale;
 			const newEl = {
 				type: 'text',
 				x: textInputX,
@@ -507,6 +712,7 @@
 
 	function onBackdropMouseDown(e) {
 		strokeMenuOpen = false;
+		shapeMenuOpen = false;
 		if (e.target === e.currentTarget) backdropMouseDown = true;
 	}
 
@@ -524,6 +730,32 @@
 		strokeMenuOpen = false;
 	}
 
+	function selectShapeTool(toolId) {
+		if (textInputVisible) commitText();
+		activeTool = toolId;
+		shapeMenuOpen = false;
+	}
+
+	function toggleShapeMenu() {
+		if (textInputVisible) commitText();
+		if (activeTool !== 'rect' && activeTool !== 'filled-rect' && activeTool !== 'solid-filled-rect') {
+			activeTool = 'rect';
+			shapeMenuOpen = false;
+			return;
+		}
+		shapeMenuOpen = !shapeMenuOpen;
+	}
+
+	function isFilledShape(toolId) {
+		return toolId === 'filled-rect' || toolId === 'solid-filled-rect';
+	}
+
+	function isSolidShape(toolId) {
+		return toolId === 'solid-filled-rect';
+	}
+
+	$: selectedShapeTool = shapeOptions.some((shape) => shape.id === activeTool) ? activeTool : 'rect';
+
 	$: if (canvas && canvasWidth && canvasHeight) {
 		requestAnimationFrame(redraw);
 	}
@@ -539,7 +771,7 @@
 				<button
 					class="tool-btn"
 					class:active={activeTool === tool.id}
-					on:click={() => { if (textInputVisible) commitText(); activeTool = tool.id; }}
+					on:click={() => { if (textInputVisible) commitText(); activeTool = tool.id; shapeMenuOpen = false; }}
 					title={tool.label}
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
@@ -547,6 +779,46 @@
 						<path d={tool.icon} />
 					</svg>
 				</button>
+
+				{#if tool.id === 'freehand'}
+					<div class="shape-control" on:pointerdown|stopPropagation>
+						<button
+							class="shape-trigger"
+							class:active={activeTool === 'rect' || activeTool === 'filled-rect' || activeTool === 'solid-filled-rect' || shapeMenuOpen}
+							on:click={toggleShapeMenu}
+							title="Shapes"
+							type="button"
+						>
+							<span
+								class="shape-trigger-preview"
+								class:filled={isFilledShape(selectedShapeTool)}
+								class:soft-filled={isFilledShape(selectedShapeTool) && !isSolidShape(selectedShapeTool)}
+								style={`border-color:${activeColor};background:${isFilledShape(selectedShapeTool) ? activeColor : 'transparent'};`}
+							></span>
+						</button>
+
+						{#if shapeMenuOpen}
+							<div class="shape-menu">
+								{#each shapeOptions as shape}
+									<button
+										class="shape-option"
+										class:active={activeTool === shape.id}
+										on:click={() => selectShapeTool(shape.id)}
+										title={shape.label}
+										type="button"
+									>
+										<span
+											class="shape-option-preview"
+											class:filled={shape.filled}
+											class:soft-filled={shape.filled && !shape.solid}
+											style={`border-color:${activeColor};background:${shape.filled ? activeColor : 'transparent'};`}
+										></span>
+									</button>
+								{/each}
+							</div>
+						{/if}
+					</div>
+				{/if}
 			{/each}
 
 			<div class="toolbar-divider"></div>
@@ -611,13 +883,14 @@
 				width={canvasWidth}
 				height={canvasHeight}
 				class="annotation-canvas"
-				class:cursor-crosshair={activeTool !== 'pointer' && activeTool !== 'eraser-dot'}
+				class:cursor-crosshair={activeTool !== 'pointer' && activeTool !== 'eraser-dot' && activeTool !== 'freehand'}
 				class:cursor-pointer={activeTool === 'pointer'}
-				class:cursor-eraser={activeTool === 'eraser-dot'}
+				class:cursor-eraser={activeTool === 'eraser-dot' || activeTool === 'freehand'}
 				on:mousedown={handleMouseDown}
+				on:mouseenter={handleMouseEnter}
 				on:mousemove={handleMouseMove}
 				on:mouseup={handleMouseUp}
-				on:mouseleave={handleMouseUp}
+				on:mouseleave={handleMouseLeave}
 			></canvas>
 
 			{#if textInputVisible}
@@ -625,7 +898,7 @@
 					bind:this={textInput}
 					type="text"
 					class="text-overlay-input"
-					style="left: {textInputX * scale}px; top: {textInputY * scale - 24}px; color: {activeColor}; font-size: 20px;"
+					style="left: {textInputX * scale}px; top: {textInputY * scale}px; color: {activeColor}; font-size: {SCREEN_TEXT_SIZE}px;"
 					bind:value={textInputValue}
 					on:keydown={handleTextKeydown}
 					on:blur={commitText}
@@ -750,8 +1023,20 @@
 		overflow: visible;
 	}
 
+	.shape-control {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 6px;
+		width: 34px;
+		overflow: visible;
+	}
+
 	.stroke-trigger,
-	.stroke-option {
+	.stroke-option,
+	.shape-trigger,
+	.shape-option {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
@@ -765,7 +1050,11 @@
 	.stroke-trigger:hover,
 	.stroke-trigger.active,
 	.stroke-option:hover,
-	.stroke-option.active {
+	.stroke-option.active,
+	.shape-trigger:hover,
+	.shape-trigger.active,
+	.shape-option:hover,
+	.shape-option.active {
 		background: var(--rte-menu-hover, #e2e8f0);
 	}
 
@@ -778,7 +1067,30 @@
 		border-radius: 10px;
 	}
 
+	.shape-trigger {
+		width: 34px;
+		height: 34px;
+		padding: 0;
+		border-radius: 10px;
+	}
+
 	.stroke-menu {
+		position: absolute;
+		left: calc(100% + 10px);
+		top: 50%;
+		transform: translateY(-50%);
+		display: flex;
+		flex-direction: row;
+		gap: 6px;
+		padding: 8px;
+		border-radius: 12px;
+		background: var(--rte-menu-bg, #fff);
+		border: 1px solid var(--rte-border, #e6e7e9);
+		box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+		z-index: 2;
+	}
+
+	.shape-menu {
 		position: absolute;
 		left: calc(100% + 10px);
 		top: 50%;
@@ -824,6 +1136,34 @@
 		max-height: 14px;
 	}
 
+	.shape-trigger-preview,
+	.shape-option-preview {
+		display: block;
+		width: 16px;
+		height: 16px;
+		border: 2px solid currentColor;
+		border-radius: 4px;
+		box-sizing: border-box;
+	}
+
+	.shape-trigger-preview.filled,
+	.shape-option-preview.filled {
+		opacity: 0.9;
+	}
+
+	.shape-trigger-preview.soft-filled,
+	.shape-option-preview.soft-filled {
+		opacity: 0.22;
+	}
+
+	.shape-option {
+		width: 32px;
+		height: 32px;
+		min-width: 32px;
+		padding: 0;
+		border-radius: 8px;
+	}
+
 	.annotation-canvas-container {
 		position: relative;
 		overflow: auto;
@@ -849,7 +1189,7 @@
 
 	.cursor-crosshair { cursor: crosshair; }
 	.cursor-pointer { cursor: default; }
-	.cursor-eraser { cursor: pointer; }
+	.cursor-eraser { cursor: none; }
 
 	.hidden-img {
 		position: absolute;
