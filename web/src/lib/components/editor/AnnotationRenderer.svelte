@@ -77,8 +77,10 @@
 
 <style>
 	.annotated-image {
-		margin: 0.5rem 0;
+		display: inline-block;
+		margin: 0.5rem auto;
 		max-width: 100%;
+		text-align: center;
 	}
 
 	.size-probe {
@@ -95,6 +97,8 @@
 		height: auto;
 		border-radius: 5px;
 		display: block;
+		margin-left: auto;
+		margin-right: auto;
 	}
 
 	.plain-image {
@@ -103,6 +107,8 @@
 		height: auto;
 		border-radius: 5px;
 		display: block;
+		margin-left: auto;
+		margin-right: auto;
 	}
 
 	.image-caption {

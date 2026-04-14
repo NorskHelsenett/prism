@@ -83,15 +83,17 @@
 <style>
 	.image-node {
 		position: relative;
-		display: inline-block;
+		display: block;
+		width: fit-content;
 		max-width: 100%;
-		margin: 0.5rem 0;
+		margin: 0.5rem auto;
 		padding: 0;
 		cursor: default;
 	}
 
 	.image-wrapper {
 		cursor: pointer;
+		text-align: center;
 	}
 
 	.image-node img,
