@@ -6,6 +6,15 @@ export const providers = writable('')
 export const isLoading = writable(true);
 export const isAuthenticated = writable(false);
 
+function isValidAppRedirect(path) {
+  if (!path || typeof path !== 'string') return false;
+  if (!path.startsWith('/')) return false;
+  if (path.startsWith('/+')) return false;
+  if (path.includes('.svelte')) return false;
+  if (path.startsWith('/_app/')) return false;
+  return true;
+}
+
 export async function initializeApiEndpoint(anon = false) {
   isLoading.set(true);
   try {
@@ -23,16 +32,19 @@ export async function initializeApiEndpoint(anon = false) {
           isAuthenticated.set(true)
           isLoading.set(false);
           const redirectPath = localStorage.getItem('redirectToAfterLogin');
-          if (redirectPath) {
+          if (redirectPath && isValidAppRedirect(redirectPath)) {
             localStorage.removeItem('redirectToAfterLogin');
             window.location.href = redirectPath != "/login" ? redirectPath : "/";
+          } else if (redirectPath) {
+            localStorage.removeItem('redirectToAfterLogin');
+            window.location.href = "/";
           }
         }
 
         if (responseAuth.status === 401) {
           isLoading.set(false);
           const returnPath = window.location.pathname + window.location.search;
-          if (returnPath != "/login"){
+          if (returnPath != "/login" && isValidAppRedirect(returnPath)){
             localStorage.setItem('redirectToAfterLogin', returnPath);
           }
           goto("/login")

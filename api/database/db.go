@@ -1850,6 +1850,81 @@ func AllVulnerabilities(globalViewer bool, email string, isAdmin bool) ([]Minima
 	return minifiedVulnerabilityJSON(filtered), nil
 }
 
+func GetAdjacentVulnerabilityIDs(currentID uint, globalViewer bool, email string, isAdmin bool) (*uint, *uint, error) {
+	var current struct {
+		ID        uint
+		CreatedAt time.Time
+	}
+
+	if err := db.Table("json_data").
+		Select("id, created_at").
+		Where("id = ? AND deleted_at IS NULL", currentID).
+		Take(&current).Error; err != nil {
+		return nil, nil, err
+	}
+
+	buildBaseQuery := func() *gorm.DB {
+		query := db.Table("json_data").
+			Select("json_data.id").
+			Where("json_data.deleted_at IS NULL")
+
+		if isAdmin {
+			return query
+		}
+
+		query = query.Joins("INNER JOIN accessible_vulnerabilities ON accessible_vulnerabilities.id = json_data.id")
+		if globalViewer {
+			return query.Where(`
+                accessible_vulnerabilities.visibility IN ('published', 'public') OR
+                accessible_vulnerabilities.assigned_to = ? OR
+                accessible_vulnerabilities.found_by = ? OR
+                ',' || COALESCE(accessible_vulnerabilities.client_email, '') || ',' LIKE ? OR
+                ',' || COALESCE(accessible_vulnerabilities.hacker_name, '') || ',' LIKE ?
+            `, email, email, "%,"+email+",%", "%,"+email+",%")
+		}
+
+		return query.Where(`
+                accessible_vulnerabilities.assigned_to = ? OR
+                accessible_vulnerabilities.found_by = ? OR
+                ',' || COALESCE(accessible_vulnerabilities.client_email, '') || ',' LIKE ? OR
+                ',' || COALESCE(accessible_vulnerabilities.hacker_name, '') || ',' LIKE ?
+            `, email, email, "%,"+email+",%", "%,"+email+",%")
+	}
+
+	var previousID *uint
+	var nextID *uint
+
+	var previous struct {
+		ID uint
+	}
+	prevErr := buildBaseQuery().
+		Where("(json_data.created_at < ?) OR (json_data.created_at = ? AND json_data.id < ?)", current.CreatedAt, current.CreatedAt, current.ID).
+		Order("json_data.created_at DESC, json_data.id DESC").
+		Limit(1).
+		Take(&previous).Error
+	if prevErr == nil {
+		previousID = &previous.ID
+	} else if !errors.Is(prevErr, gorm.ErrRecordNotFound) {
+		return nil, nil, prevErr
+	}
+
+	var next struct {
+		ID uint
+	}
+	nextErr := buildBaseQuery().
+		Where("(json_data.created_at > ?) OR (json_data.created_at = ? AND json_data.id > ?)", current.CreatedAt, current.CreatedAt, current.ID).
+		Order("json_data.created_at ASC, json_data.id ASC").
+		Limit(1).
+		Take(&next).Error
+	if nextErr == nil {
+		nextID = &next.ID
+	} else if !errors.Is(nextErr, gorm.ErrRecordNotFound) {
+		return nil, nil, nextErr
+	}
+
+	return previousID, nextID, nil
+}
+
 func minifiedVulnerabilityJSON(jsonData []JSONData) []MinimalJSONData {
 	var minifiedList []MinimalJSONData
 	for _, item := range jsonData {

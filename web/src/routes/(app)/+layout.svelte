@@ -8,8 +8,10 @@
   import { derived } from 'svelte/store';
   import { accessLevels } from '$lib/userStore';
 	import User from '$lib/components/User.svelte';
+	import RegisterVulnerabilityButton from '$lib/components/vulnerability/RegisterVulnerabilityButton.svelte';
 	import Loader from '$lib/components/Loader.svelte';
 	import NotificationDropdown from '$lib/components/Notifications/NotificationDropdown.svelte';
+	import { apiEndpoint } from '$lib/stores/configStore';
   import { goto } from '$app/navigation';
 	import { Toaster } from 'svelte-sonner';
 
@@ -39,36 +41,50 @@
 
 	let isInitialized = false;
 
-  let socket
+  let pollingHandle = null;
   let notifications = []
+
+  async function refreshNotifications() {
+    try {
+      const endpoint = $apiEndpoint;
+      if (!endpoint) return;
+
+      const response = await fetch(`${endpoint}/api/notification`, { credentials: 'include' });
+      if (!response.ok) return;
+
+      notifications = await response.json();
+    } catch {
+      // Ignore background polling failures to avoid auth redirect loops.
+    }
+  }
+
+  function startNotificationPolling() {
+    if (pollingHandle) return;
+    refreshNotifications();
+    pollingHandle = setInterval(refreshNotifications, 60000);
+  }
+
+  function stopNotificationPolling() {
+    if (!pollingHandle) return;
+    clearInterval(pollingHandle);
+    pollingHandle = null;
+  }
+
   onMount(async () => {
     await initializeApiEndpoint();
-    const currentHost = window.location.host;
-    const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
-    socket = new WebSocket(`${wsProtocol}://${currentHost}/ws`);
-
-    socket.onopen = function(event) {
-        console.log('Connected to WebSocket');
-    };
-
-    socket.onmessage = function(event) {
-        const message = JSON.parse(event.data);
-
-        if (message.type == "notifications"){
-          notifications = message.data
-        }
-    };
-
-    socket.onclose = function(event) {
-        console.log('Disconnected from WebSocket');
-    };
   });
 
   onDestroy(() => {
-        if (socket) {
-            socket.close();
-        }
-    });
+    stopNotificationPolling();
+  });
+
+  $: {
+    if ($isAuthenticated && !$isLoginPage && !$isAuthPage) {
+      startNotificationPolling();
+    } else {
+      stopNotificationPolling();
+    }
+  }
 
 	$: isInitialized = !$isLoading;
 </script>
@@ -88,6 +104,7 @@
 			</h1>
 
 			<div class="navbar-nav flex-row order-md-last">
+        <RegisterVulnerabilityButton />
         <div class="d-none d-md-flex cursor-pointer">
         <a on:click|preventDefault={toggleTheme} class="nav-link px-0">
 						<!-- Download SVG icon from http://tabler-icons.io/i/moon -->

@@ -3,7 +3,25 @@
 
   export let images = []; // Prop for the list of images
   export let showModal = false; // Prop to control the visibility of the modal
-  let currentImageIndex = 0; // Local state for the current image index
+  export let currentImageIndex = 0; // Current image index (bindable from parent)
+
+  function resolveImageSrc(image) {
+    if (!image) return '';
+    if (image.startsWith('data:image/')) return image;
+    if (image.startsWith('/api/blob/') || image.startsWith('http://') || image.startsWith('https://')) {
+      return image;
+    }
+
+    // Merge both modes:
+    // 1) short-ish file/blob ids -> /api/blob/<id>
+    // 2) large payload-like strings -> base64 data URL
+    const likelyBase64Payload = image.length > 100 || /[+/=]/.test(image);
+    if (likelyBase64Payload) {
+      return `data:image/png;base64,${image}`;
+    }
+
+    return `/api/blob/${image}`;
+  }
 
   // // Function to change the current image
   // function changeImage(step) {
@@ -54,7 +72,7 @@
             {#each images as image, index}
               <div class={`carousel-item ${index === currentImageIndex ? 'active' : ''}`}>
                 <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-                <img src={image.length > 40 ? `data:image/png;base64,${image}` : `/api/blob/${image}`} class="d-block cursor-zoom-out" alt={`Image ${index}`} on:click={closeModal}>
+                <img src={resolveImageSrc(image)} class="d-block cursor-zoom-out" alt={`Image ${index}`} on:click={closeModal}>
               </div>
             {/each}
           </div>

@@ -159,7 +159,11 @@ function updateText(index) {
     vertical-align: top;
   }
 
-  :global(img){
+  :global(.markdown-content img){
     border-radius: 5px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 100%;
   }
 </style>

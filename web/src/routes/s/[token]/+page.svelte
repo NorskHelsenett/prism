@@ -459,33 +459,30 @@
     <hr />
 
     <div class="row mb-3 mt-5">
-      <!-- svelte-ignore a11y-no-static-element-interactions -->
-      <!-- svelte-ignore a11y-mouse-events-have-key-events -->
-      <div class="col-2" >
-        <div class="datagrid-title" style="position: relative">Evidence
-
-        </div>
-      </div>
-      <div class="col-10">
+      <div class="col-12 evidence-textviewer">
         <Markdown markdown={vulnerability?.Vulnerability?.evidence} />
-      </div>
-    </div>
-    <div class="row mb-3">
-      <div class="col-2">
-        <div class="datagrid-title">Remediation</div>
-      </div>
-      <div class="col-10">
-        <Markdown markdown={vulnerability?.Vulnerability?.remediation} />
       </div>
     </div>
   </div>
 </div>
 </div>
 
-<ImageCarousel images={vulnerability.Vulnerability.images} bind:showModal />
+<ImageCarousel images={vulnerability.Vulnerability.images} bind:showModal bind:currentImageIndex />
 {/if}
 
 <style>
+  .evidence-textviewer {
+    padding-left: 4rem;
+    padding-right: 4rem;
+  }
+
+  @media (max-width: 767px) {
+    .evidence-textviewer {
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+  }
+
   .stroke-normal{
     stroke-width: 1.75 !important;
   }

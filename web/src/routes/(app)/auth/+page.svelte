@@ -10,10 +10,11 @@
   let hasPasskeys = false;
 
   onMount(async () => {
-
-    const redirectShare = localStorage.getItem('redirectToAfterLogin')
-    if(redirectShare?.startsWith("/s/")){
+    const redirectShare = localStorage.getItem('redirectToAfterLogin');
+    if (redirectShare?.startsWith("/s/") && !redirectShare.startsWith("/+")) {
       window.location.href = redirectShare
+    } else if (redirectShare?.startsWith("/+")) {
+      localStorage.removeItem('redirectToAfterLogin');
     }
 
     // Check if user has passkeys registered (for 2FA option)
