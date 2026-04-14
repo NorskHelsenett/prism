@@ -18,7 +18,6 @@ import (
 	"prism/session"
 	"prism/share"
 	"prism/webauthn"
-	"prism/ws"
 
 	"fmt"
 	"net/http"
@@ -42,7 +41,6 @@ func main() {
 	// Set up the primary Gin router for the main application
 	r := gin.Default()
 
-	r.GET("/ws", ws.WSHandler)
 	r.GET("/.well-known/config.json", routes.HandleClientConfig)
 
 	// Serve static files from web/build directory

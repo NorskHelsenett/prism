@@ -11,6 +11,7 @@
 	import RegisterVulnerabilityButton from '$lib/components/vulnerability/RegisterVulnerabilityButton.svelte';
 	import Loader from '$lib/components/Loader.svelte';
 	import NotificationDropdown from '$lib/components/Notifications/NotificationDropdown.svelte';
+	import { Fetch } from '$lib/fetchUtil';
   import { goto } from '$app/navigation';
 	import { Toaster } from 'svelte-sonner';
 
@@ -40,36 +41,28 @@
 
 	let isInitialized = false;
 
-  let socket
+  let pollingHandle
   let notifications = []
+
+  async function refreshNotifications() {
+    try {
+      notifications = await Fetch('/api/notification');
+    } catch {
+      notifications = [];
+    }
+  }
+
   onMount(async () => {
     await initializeApiEndpoint();
-    const currentHost = window.location.host;
-    const wsProtocol = window.location.protocol === "https:" ? "wss" : "ws";
-    socket = new WebSocket(`${wsProtocol}://${currentHost}/ws`);
-
-    socket.onopen = function(event) {
-        console.log('Connected to WebSocket');
-    };
-
-    socket.onmessage = function(event) {
-        const message = JSON.parse(event.data);
-
-        if (message.type == "notifications"){
-          notifications = message.data
-        }
-    };
-
-    socket.onclose = function(event) {
-        console.log('Disconnected from WebSocket');
-    };
+    await refreshNotifications();
+    pollingHandle = setInterval(refreshNotifications, 60000);
   });
 
   onDestroy(() => {
-        if (socket) {
-            socket.close();
-        }
-    });
+    if (pollingHandle) {
+      clearInterval(pollingHandle);
+    }
+  });
 
 	$: isInitialized = !$isLoading;
 </script>
