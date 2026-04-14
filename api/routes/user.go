@@ -115,6 +115,15 @@ func ToggleUserActive(c *gin.Context, s *session.SessionStore) {
 }
 
 func GetAllProfilesEmailOnly(c *gin.Context) {
+	role, _ := c.Get("role")
+	switch role.(string) {
+	case "admin", "pentester", "manager", "PET01":
+		// Roles that use user pickers for assessments/team management
+	default:
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		return
+	}
+
 	users, err := database.GetAllProfilesWithTeams()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
