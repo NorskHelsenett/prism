@@ -27,6 +27,21 @@
 	let internalUpdate = false;
 	let bubbleMenuElement;
 
+	function handleReadonlyImageClick(event) {
+		const detail = event.detail || {};
+		const wrappers = Array.from(element?.querySelectorAll('.image-node .image-wrapper') || []);
+		const clickedIndex = wrappers.findIndex((wrapper) => wrapper === detail.wrapperEl);
+		const sources = wrappers
+			.map((wrapper) => wrapper.querySelector('img')?.getAttribute('src') || '')
+			.filter(Boolean);
+
+		dispatch('imageclick', {
+			...detail,
+			clickedIndex,
+			sources
+		});
+	}
+
 	/**
 	 * Check if the editor is currently focused
 	 */
@@ -206,6 +221,7 @@
 
 	onMount(() => {
 		const content = markdownToHtml(value);
+		element?.addEventListener('rte-image-click', handleReadonlyImageClick);
 
 		editor = new Editor({
 			element: element,
@@ -325,6 +341,7 @@
 	});
 
 	onDestroy(() => {
+		element?.removeEventListener('rte-image-click', handleReadonlyImageClick);
 		if (editor) {
 			editor.destroy();
 		}

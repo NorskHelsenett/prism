@@ -14,8 +14,20 @@
 	$: renderedSrc = node.attrs.renderedSrc || '';
 	$: displaySrc = renderedSrc || src;
 
-	function handleImageClick() {
-		if (!editable) return;
+	function handleImageClick(event) {
+		if (!editable) {
+			event.currentTarget?.dispatchEvent(new CustomEvent('rte-image-click', {
+				detail: {
+					src: displaySrc,
+					originalSrc: src,
+					renderedSrc,
+					alt: altText,
+					wrapperEl: event.currentTarget
+				},
+				bubbles: true
+			}));
+			return;
+		}
 		annotationOpen = true;
 	}
 

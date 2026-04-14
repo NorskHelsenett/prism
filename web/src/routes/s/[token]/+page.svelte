@@ -467,7 +467,7 @@
 </div>
 </div>
 
-<ImageCarousel images={vulnerability.Vulnerability.images} bind:showModal />
+<ImageCarousel images={vulnerability.Vulnerability.images} bind:showModal bind:currentImageIndex />
 {/if}
 
 <style>
