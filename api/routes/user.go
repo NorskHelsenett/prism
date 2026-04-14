@@ -115,11 +115,15 @@ func ToggleUserActive(c *gin.Context, s *session.SessionStore) {
 }
 
 func GetAllProfilesEmailOnly(c *gin.Context) {
-	role, _ := c.Get("role")
-	switch role.(string) {
-	case "admin", "pentester", "manager", "PET01":
-		// Roles that use user pickers for assessments/team management
-	default:
+	roleName, _ := c.Get("role")
+	role, exists := config.AppConfig.Roles[roleName.(string)]
+	if !exists {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
+		return
+	}
+
+	// Only roles with write access to projects or planning need user listings
+	if !roleHasWriteAccess(role, "/project", "/planning") {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Access denied"})
 		return
 	}
@@ -130,4 +134,19 @@ func GetAllProfilesEmailOnly(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, users)
+}
+
+func roleHasWriteAccess(role config.Role, resources ...string) bool {
+	for _, perm := range role.Permissions {
+		for _, res := range resources {
+			if perm.Resource == res {
+				for _, action := range perm.Action {
+					if action == "write" || action == "*" {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
 }
