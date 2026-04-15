@@ -518,13 +518,57 @@
 			on:click={() => editor?.chain().focus().toggleStrike().run()} title="Strikethrough">
 			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" class="menu-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M12 12a8.912 8.912 0 0 1-.318-.079c-1.585-.424-2.904-1.247-3.76-2.236-.873-1.009-1.265-2.19-.968-3.301.59-2.2 3.663-3.29 6.863-2.432A8.186 8.186 0 0 1 16.5 5.21M6.42 17.81c.857.99 2.176 1.812 3.761 2.237 3.2.858 6.274-.23 6.863-2.431.233-.868.044-1.779-.465-2.617M3.75 12h16.5" /></svg>
 		</button>
-		<button type="button" class:active={editor?.isActive('code')}
-			on:click={() => editor?.chain().focus().toggleCode().run()} title="Inline Code">
+		<button type="button" class:active={editor?.isActive('code') || editor?.isActive('codeBlock')}
+			on:click={() => {
+				if (!editor) return;
+				// If already in either code or codeBlock, toggle it off.
+				if (editor.isActive('codeBlock')) {
+					editor.chain().focus().toggleCodeBlock().run();
+					return;
+				}
+				if (editor.isActive('code')) {
+					editor.chain().focus().toggleCode().run();
+					return;
+				}
+				const { from, to } = editor.state.selection;
+				const hasSelection = from !== to;
+				const selected = hasSelection ? editor.state.doc.textBetween(from, to, '\n') : '';
+				if (!hasSelection) {
+					// No selection: start a code block, cursor stays inside ready to type.
+					editor.chain().focus().toggleCodeBlock().run();
+					return;
+				}
+				if (selected.includes('\n')) {
+					// Multi-line selection: collapse into ONE code block (not one per line),
+					// then drop the cursor after it so typing continues outside the block.
+					editor.chain()
+						.focus()
+						.insertContentAt(
+							{ from, to },
+							{ type: 'codeBlock', content: [{ type: 'text', text: selected }] }
+						)
+						.command(({ tr, dispatch }) => {
+							// Move cursor to the position just after the inserted code block.
+							const insertedEnd = from + selected.length + 2; // +2 = codeBlock open/close
+							const $after = tr.doc.resolve(Math.min(insertedEnd + 1, tr.doc.content.size));
+							if (dispatch) {
+								dispatch(tr.setSelection(tr.selection.constructor.near($after, 1)));
+							}
+							return true;
+						})
+						.run();
+				} else {
+					// Single-line selection: inline code, then collapse cursor past it and
+					// clear the stored code mark so the next typed text isn't code.
+					editor.chain()
+						.focus()
+						.toggleCode()
+						.setTextSelection(to)
+						.unsetMark('code')
+						.run();
+				}
+			}} title="Code (inline or block)">
 			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" class="menu-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5" /></svg>
-		</button>
-		<button type="button" class:active={editor?.isActive('codeBlock')}
-			on:click={() => editor?.chain().focus().toggleCodeBlock().run()} title="Code Block">
-			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" class="menu-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M14.25 9.75 16.5 12l-2.25 2.25m-4.5 0L7.5 12l2.25-2.25M6 20.25h12A2.25 2.25 0 0 0 20.25 18V6A2.25 2.25 0 0 0 18 3.75H6A2.25 2.25 0 0 0 3.75 6v12A2.25 2.25 0 0 0 6 20.25Z" /></svg>
 		</button>
 	</div>
 </div>
