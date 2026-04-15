@@ -5,7 +5,7 @@
 	import TurndownService from 'turndown';
 	import { gfm } from '@joplin/turndown-plugin-gfm';
 
-	import { Editor } from '@tiptap/core';
+	import { Editor, Extension } from '@tiptap/core';
 	import StarterKit from '@tiptap/starter-kit';
 	import Placeholder from '@tiptap/extension-placeholder';
 	import Highlight from '@tiptap/extension-highlight';
@@ -217,6 +217,50 @@
 			.replace(/\u00a0/g, ' ');
 	}
 
+	// -- Custom extension for unified code block handling ----------------------
+
+	const UnifiedCodeBlockExtension = Extension.create({
+		name: 'unifiedCodeBlock',
+		addCommands() {
+			return {
+				toggleUnifiedCodeBlock: () => ({ commands, editor }) => {
+					// If already in a code block, toggle off
+					if (editor.isActive('codeBlock')) {
+						return commands.toggleCodeBlock();
+					}
+					
+					// For selections, decide between inline code and code block
+					const { from, to } = editor.state.selection;
+					if (from !== to) {
+						// Extract selected text with newlines preserved
+						const selectedText = editor.state.doc.textBetween(from, to, '\n');
+						
+						if (selectedText) {
+							// Check if selection spans multiple lines
+							if (selectedText.includes('\n')) {
+								// Multiple lines: create a code block
+								return (
+									commands.deleteSelection() &&
+									commands.setCodeBlock() &&
+									commands.insertContent(selectedText)
+								);
+							} else {
+								// Single line or word: create inline code
+								return commands.toggleCode();
+							}
+						}
+					}
+					
+					// If no selection, just toggle normally (toggles based on context)
+					if (editor.isActive('code')) {
+						return commands.toggleCode();
+					}
+					return commands.toggleCodeBlock();
+				}
+			};
+		}
+	});
+
 	// -- Editor setup ---------------------------------------------------------
 
 	onMount(() => {
@@ -235,6 +279,7 @@
 				TaskList,
 				TaskItem.configure({ nested: true }),
 				ImageWithView,
+				UnifiedCodeBlockExtension,
 				...(editable
 					? [
 						BubbleMenu.configure({
@@ -417,7 +462,7 @@
 			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" class="menu-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M12 12a8.912 8.912 0 0 1-.318-.079c-1.585-.424-2.904-1.247-3.76-2.236-.873-1.009-1.265-2.19-.968-3.301.59-2.2 3.663-3.29 6.863-2.432A8.186 8.186 0 0 1 16.5 5.21M6.42 17.81c.857.99 2.176 1.812 3.761 2.237 3.2.858 6.274-.23 6.863-2.431.233-.868.044-1.779-.465-2.617M3.75 12h16.5" /></svg>
 		</button>
 		<button type="button" class:active={editor?.isActive('codeBlock')}
-			on:click={() => editor?.chain().focus().toggleCodeBlock().run()} title="Code Block">
+			on:click={() => editor?.chain().focus().toggleUnifiedCodeBlock().run()} title="Code Block">
 			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" class="menu-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5" /></svg>
 		</button>
 	</div>
