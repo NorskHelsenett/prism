@@ -36,6 +36,26 @@ func GetShareVulnerability(c *gin.Context) {
 	}
 	id := uint(id64)
 
+	// ShareMiddleware already enforces role-level write on /vulnerability.
+	// Combined with the per-vulnerability access check below, this matches
+	// the project's existing definition of effective write access on the
+	// resource — preventing any authenticated pentester from reading the
+	// passphrase of a share for a vulnerability they cannot access.
+	email, _ := c.Get("email")
+	role, _ := c.Get("role")
+	isGlobal, _ := c.Get("isGlobalVulnerability")
+
+	allowed, err := database.CanAccessVulnerability(id, email.(string), role.(string), isGlobal.(bool))
+	if err != nil {
+		fmt.Printf("CanAccessVulnerability failed for vuln %d: %v\n", id, err)
+		c.AbortWithStatus(http.StatusForbidden)
+		return
+	}
+	if !allowed {
+		c.AbortWithStatus(http.StatusForbidden)
+		return
+	}
+
 	sharedDocument.DocumentID = id
 
 	document, err := database.GetShareDocument(id)
@@ -61,6 +81,21 @@ func DeleteShareVulnerability(c *gin.Context) {
 	}
 
 	id := uint(id64)
+
+	email, _ := c.Get("email")
+	role, _ := c.Get("role")
+	isGlobal, _ := c.Get("isGlobalVulnerability")
+
+	allowed, err := database.CanAccessVulnerability(id, email.(string), role.(string), isGlobal.(bool))
+	if err != nil {
+		fmt.Printf("CanAccessVulnerability failed for vuln %d: %v\n", id, err)
+		c.AbortWithStatus(http.StatusForbidden)
+		return
+	}
+	if !allowed {
+		c.AbortWithStatus(http.StatusForbidden)
+		return
+	}
 
 	err = database.DeleteShareDocument(id)
 	if err != nil {
@@ -99,6 +134,19 @@ func ShareVulnerability(c *gin.Context) {
 	id := uint(id64)
 
 	email, _ := c.Get("email")
+	role, _ := c.Get("role")
+	isGlobal, _ := c.Get("isGlobalVulnerability")
+
+	allowed, err := database.CanAccessVulnerability(id, email.(string), role.(string), isGlobal.(bool))
+	if err != nil {
+		fmt.Printf("CanAccessVulnerability failed for vuln %d: %v\n", id, err)
+		c.AbortWithStatus(http.StatusForbidden)
+		return
+	}
+	if !allowed {
+		c.AbortWithStatus(http.StatusForbidden)
+		return
+	}
 
 	var expirationDate *time.Time
 	if input.ExpirationDate != "" {
@@ -169,66 +217,27 @@ func ShareVulnerability(c *gin.Context) {
 
 func GetAll(c *gin.Context) {
 	email, _ := c.Get("email")
-	isGlobal, _ := c.Get("isGlobalVulnerability")
 
-	allShares, err := database.GetAllShares()
+	userShares, err := database.GetAllShares(email.(string))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "error getting all shares"})
 		return
 	}
 
-	// Extract document IDs from shares
-	var shareDocumentIds []uint
-	for _, share := range *allShares {
-		shareDocumentIds = append(shareDocumentIds, share.DocumentID)
-	}
-
-	requestedIds, err := database.GetVulnerabilityIds(isGlobal.(bool), email.(string), shareDocumentIds)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "error getting vulnerabilities and shares"})
-		return
-	}
-
-	// Get the intersection of requested IDs and share document IDs
-	intersectedIds := intersect(requestedIds, shareDocumentIds)
-
-	var filteredShares []models.SharedDocument
-	for _, share := range *allShares {
-		if contains(intersectedIds, share.DocumentID) {
-			share.Passphrase = ""
-			filteredShares = append(filteredShares, share)
-		}
-	}
-
-	if len(filteredShares) == 0 {
+	if len(*userShares) == 0 {
 		c.JSON(http.StatusOK, []models.SharedDocument{}) // Return an empty list if no shares
 		return
 	}
 
-	c.JSON(http.StatusOK, filteredShares)
-}
+	// Strip passphrase from the list response; it's only exposed via the
+	// per-finding endpoint that backs the share modal dialog.
+	sanitized := make([]models.SharedDocument, 0, len(*userShares))
+	for _, share := range *userShares {
+		share.Passphrase = ""
+		sanitized = append(sanitized, share)
+	}
 
-func contains(slice []uint, item uint) bool {
-	for _, a := range slice {
-		if a == item {
-			return true
-		}
-	}
-	return false
-}
-
-func intersect(a, b []uint) []uint {
-	set := make(map[uint]bool)
-	var result []uint
-	for _, item := range a {
-		set[item] = true
-	}
-	for _, item := range b {
-		if set[item] {
-			result = append(result, item)
-		}
-	}
-	return result
+	c.JSON(http.StatusOK, sanitized)
 }
 
 func generateRandomString(n int) (string, error) {

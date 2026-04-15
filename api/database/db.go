@@ -473,9 +473,9 @@ func ExistsShare(token string) (*models.SharedDocument, error) {
 	return &share, nil
 }
 
-func GetAllShares() (*[]models.SharedDocument, error) {
+func GetAllShares(email string) (*[]models.SharedDocument, error) {
 	var shares []models.SharedDocument
-	result := db.Find(&shares)
+	result := db.Where("shared_by_email = ?", email).Find(&shares)
 
 	if result.Error != nil {
 		return nil, result.Error
