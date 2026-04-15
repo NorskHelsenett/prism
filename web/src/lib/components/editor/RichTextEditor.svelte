@@ -6,6 +6,7 @@
 	import { gfm } from '@joplin/turndown-plugin-gfm';
 
 	import { Editor, Extension } from '@tiptap/core';
+	import { Plugin } from '@tiptap/pm/state';
 	import StarterKit from '@tiptap/starter-kit';
 	import Placeholder from '@tiptap/extension-placeholder';
 	import Highlight from '@tiptap/extension-highlight';
@@ -223,7 +224,7 @@
 		name: 'unifiedCodeBlock',
 		addCommands() {
 			return {
-				toggleUnifiedCodeBlock: () => ({ commands, editor }) => {
+				toggleUnifiedCodeBlock: () => ({ commands, editor, tr }) => {
 					// If already in a code block, toggle off
 					if (editor.isActive('codeBlock')) {
 						return commands.toggleCodeBlock();
@@ -238,12 +239,13 @@
 						if (selectedText) {
 							// Check if selection spans multiple lines
 							if (selectedText.includes('\n')) {
-								// Multiple lines: create a code block
-								return (
-									commands.deleteSelection() &&
-									commands.setCodeBlock() &&
-									commands.insertContent(selectedText)
-								);
+								// Multiple lines: delete selection, then create a code block with the text as a single node
+								const codeBlockType = editor.schema.nodes.codeBlock;
+								const textNode = editor.schema.text(selectedText + '\n');
+								const codeBlock = codeBlockType.create(null, textNode);
+								
+								tr.replaceSelectionWith(codeBlock);
+								return true;
 							} else {
 								// Single line or word: create inline code
 								return commands.toggleCode();
@@ -256,6 +258,107 @@
 						return commands.toggleCode();
 					}
 					return commands.toggleCodeBlock();
+				}
+			};
+		}
+	});
+
+	// -- Extension to handle cursor positioning after links ----------------------
+
+	const LinkCursorExtension = Extension.create({
+		name: 'linkCursor',
+		addProseMirrorPlugins() {
+			return [
+				new Plugin({
+					props: {
+						handleTextInput: (view, from, to, text) => {
+							// Check if cursor is at the end of a link mark
+							const resolvedFrom = view.state.doc.resolve(from);
+							const marks = resolvedFrom.marks();
+							const hasLink = marks.some(mark => mark.type.name === 'link');
+							
+							if (hasLink && (text === ' ' || text === '.' || text === ',' || text === '!' || text === '?')) {
+								// Insert the text first
+								view.dispatch(view.state.tr.insertText(text, from, to));
+								
+								// Then move cursor after the link
+								const newState = view.state;
+								const newFrom = newState.doc.resolve(from + text.length);
+								const hasLinkAfter = newFrom.marks().some(mark => mark.type.name === 'link');
+								
+								if (!hasLinkAfter) {
+									// Already at the end of the link
+									return true;
+								}
+								
+								// Find the end of the link
+								let pos = from + text.length;
+								while (pos < newState.doc.content.size) {
+									const resolvedPos = newState.doc.resolve(pos);
+									if (!resolvedPos.marks().some(mark => mark.type.name === 'link')) {
+										break;
+									}
+									pos++;
+								}
+								
+								view.dispatch(newState.tr.setSelection(newState.selection.constructor.near(newState.doc.resolve(pos))));
+								return true;
+							}
+							
+							return false;
+						}
+					}
+				})
+			];
+		},
+		addKeyboardShortcuts() {
+			return {
+				// When pressing End key while in a link, move to after the link
+				End: ({ editor }) => {
+					if (editor.isActive('link')) {
+						const resolvedTo = editor.state.selection.$to;
+						let pos = resolvedTo.pos;
+						
+						// Find the end of the link mark
+						while (pos < editor.state.doc.content.size) {
+							const resolvedPos = editor.state.doc.resolve(pos);
+							if (!resolvedPos.marks().some(mark => mark.type.name === 'link')) {
+								break;
+							}
+							pos++;
+						}
+						
+						if (pos !== resolvedTo.pos) {
+							editor.commands.setSelection(pos);
+							return true;
+						}
+					}
+					return false;
+				},
+				// When pressing right arrow at the end of a link, move past it
+				ArrowRight: ({ editor }) => {
+					const { from, to } = editor.state.selection;
+					const resolvedTo = editor.state.selection.$to;
+					
+					// Only if cursor is at the end of selection
+					if (from === to && editor.isActive('link')) {
+						const marks = resolvedTo.marks();
+						const hasLink = marks.some(mark => mark.type.name === 'link');
+						
+						if (hasLink) {
+							// Try to move to next position
+							let pos = resolvedTo.pos + 1;
+							const newMarks = editor.state.doc.resolve(pos).marks();
+							const stillInLink = newMarks.some(mark => mark.type.name === 'link');
+							
+							if (!stillInLink) {
+								// We're now outside the link, stay here
+								editor.commands.setSelection(pos);
+								return true;
+							}
+						}
+					}
+					return false;
 				}
 			};
 		}
@@ -280,6 +383,7 @@
 				TaskItem.configure({ nested: true }),
 				ImageWithView,
 				UnifiedCodeBlockExtension,
+				LinkCursorExtension,
 				...(editable
 					? [
 						BubbleMenu.configure({
