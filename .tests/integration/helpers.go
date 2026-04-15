@@ -324,7 +324,9 @@ func SeedDatabase(projectsFile, vulnsFile string) error {
 			IsBugBounty:  p.IsBugBounty,
 		}
 		project.ID = p.ID
-		database.CreateProject(project)
+		if err := database.CreateProject(project); err != nil {
+			return fmt.Errorf("failed to seed project %q: %w", p.Name, err)
+		}
 	}
 
 	// Load and seed vulnerabilities

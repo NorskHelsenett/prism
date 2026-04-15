@@ -43,12 +43,9 @@ type Subscriber struct {
 	Subscription datatypes.JSON
 }
 
-func CreateProject(project *ProjectData) {
+func CreateProject(project *ProjectData) error {
 	result := db.Create(project) // Create a new record
-	if result.Error != nil {
-		// Handle error here, for example:
-		panic(result.Error)
-	}
+	return result.Error
 }
 
 func UpdateProject(project *ProjectData) error {

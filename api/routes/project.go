@@ -2,10 +2,12 @@ package routes
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 
 	"prism/database"
 	"strconv"
@@ -20,14 +22,16 @@ func GetProjects(c *gin.Context) {
 	if isGlobal == true {
 		dbProjects, err = database.GetProjects()
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("GetProjects() failed: %v", err)
+			c.AbortWithStatus(http.StatusNotFound)
 			return
 		}
 	} else {
 		email, _ := c.Get("email")
 		dbProjects, err = database.GetProjectsFor(email.(string))
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			log.Printf("GetProjectsFor(%q) failed: %v", email, err)
+			c.AbortWithStatus(http.StatusNotFound)
 			return
 		}
 	}
@@ -80,11 +84,10 @@ func HandleProjectPut(c *gin.Context) {
 
 	err = database.UpdateProject(&updatedProjectData)
 	if err != nil {
-		if errors.Is(err, database.ErrNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Project not found"})
-			return
+		if !errors.Is(err, database.ErrNotFound) && !errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Printf("UpdateProject(%d) failed: %v", updatedProjectData.ID, err)
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.AbortWithStatus(http.StatusNotFound)
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Project updated successfully"})
@@ -97,7 +100,11 @@ func HandleProjectPost(c *gin.Context) {
 		return
 	}
 
-	database.CreateProject(&projectData)
+	if err := database.CreateProject(&projectData); err != nil {
+		log.Printf("CreateProject failed: %v", err)
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
 	c.JSON(http.StatusCreated, gin.H{"id": projectData.ID})
 }
 
@@ -119,7 +126,10 @@ func GetProject(c *gin.Context) {
 
 	dbProject, err := database.GetProject(id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Printf("GetProject(%d) failed: %v", id, err)
+		}
+		c.AbortWithStatus(http.StatusNotFound)
 		return
 	}
 
@@ -168,7 +178,10 @@ func GetProjectVulnerabilitiesForProject(c *gin.Context) {
 
 	vulnerabilites, err := database.GetProjectVulnerabilities(uint(projectID), dateFrom, dateTo)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Printf("GetProjectVulnerabilities(%d) failed: %v", projectID, err)
+		}
+		c.AbortWithStatus(http.StatusNotFound)
 		return
 	}
 
@@ -192,7 +205,10 @@ func GetProjectVulnerabilitiesTotal(c *gin.Context) {
 
 	total, err := database.CountProjectVulnerabilities(uint(projectID))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Printf("CountProjectVulnerabilities(%d) failed: %v", projectID, err)
+		}
+		c.AbortWithStatus(http.StatusNotFound)
 		return
 	}
 
@@ -214,7 +230,10 @@ func DeleteProject(c *gin.Context) {
 
 	err = database.DeleteProjectAndAssets(uint(projectID))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Printf("DeleteProjectAndAssets(%d) failed: %v", projectID, err)
+		}
+		c.AbortWithStatus(http.StatusNotFound)
 		return
 	}
 
