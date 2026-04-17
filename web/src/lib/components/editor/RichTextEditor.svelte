@@ -20,6 +20,8 @@
 	export let placeholder = 'Start writing...';
 	export let editable = true;
 	export let minHeight = '200px';
+	/** Additional Tiptap extensions to plug in (e.g., tag highlighting for notes). */
+	export let extraExtensions = [];
 
 	const dispatch = createEventDispatcher();
 
@@ -48,6 +50,15 @@
 	 */
 	export function isEditorFocused() {
 		return editor?.isFocused ?? false;
+	}
+
+	/**
+	 * Focus the editor and optionally place the caret at a given position
+	 * ('start' | 'end' | number). Defaults to 'end'.
+	 */
+	export function focusEditor(position = 'end') {
+		if (!editor || editor.isDestroyed) return;
+		editor.commands.focus(position);
 	}
 
 	/**
@@ -337,6 +348,7 @@
 				TaskItem.configure({ nested: true }),
 				ImageWithView,
 				LinkCursorExtension,
+				...extraExtensions,
 				...(editable
 					? [
 						BubbleMenu.configure({

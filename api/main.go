@@ -178,6 +178,17 @@ func main() {
 		apiRoutes.POST("/blob/upload", routes.HandleBlobUpload)
 		apiRoutes.DELETE("/blob/:filename", routes.HandleBlobDelete)
 
+		apiRoutes.GET("/notes", routes.ListNotes)
+		apiRoutes.GET("/notes/tags", routes.ListNoteTags)
+		apiRoutes.GET("/notes/events", routes.StreamNotes)
+		apiRoutes.POST("/notes", routes.CreateNote)
+		apiRoutes.GET("/notes/:id", routes.GetNote)
+		apiRoutes.PATCH("/notes/:id", routes.UpdateNote)
+		apiRoutes.DELETE("/notes/:id", routes.DeleteNote)
+		apiRoutes.POST("/notes/:id/restore", routes.RestoreNote)
+		apiRoutes.DELETE("/notes/:id/permanent", routes.HardDeleteNote)
+		apiRoutes.DELETE("/notes/trash", routes.EmptyNoteTrash)
+
 		apiRoutes.POST("/vulnerability", routes.PostVulnerability)
 
 		apiRoutes.GET("/settings/teams", routes.GetTeams)

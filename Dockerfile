@@ -40,7 +40,7 @@ COPY --from=frontend /app/web/build ./web/build
 RUN CGO_ENABLED=1 go build \
     -a \
     -ldflags '-linkmode external -extldflags "-static"  -w -s' \
-    -tags 'sqlite_omit_load_extension' \
+    -tags 'sqlite_omit_load_extension sqlite_fts5' \
     -o /go/bin/prism .
 
 # 3. Final runtime stage (alpine for CGO binary support)

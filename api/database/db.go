@@ -239,6 +239,9 @@ func InitDB() {
 	db.AutoMigrate(&models.SharedDocument{})
 	db.AutoMigrate(&models.Team{})
 	db.AutoMigrate(&WebAuthnCredential{})
+	db.AutoMigrate(&models.Note{})
+
+	initNotesFTS()
 
 	// Create the accessible_vulnerabilities view
 	initAccessibleVulnerabilitiesView()
