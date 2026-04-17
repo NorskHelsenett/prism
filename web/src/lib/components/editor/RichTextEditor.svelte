@@ -661,6 +661,7 @@
 	/* Editor wrapper */
 	.editor-wrapper {
 		background: var(--rte-bg, #fff);
+		cursor: text;
 	}
 
 	.editor-editable {

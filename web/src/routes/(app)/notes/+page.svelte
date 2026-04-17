@@ -209,12 +209,14 @@
     position: relative;
     padding: 24px clamp(20px, 6vw, 80px) 48px;
     background: transparent;
+    cursor: text;
   }
 
   .editor-container {
     max-width: 820px;
     margin: 0 auto;
     min-height: 100%;
+    cursor: text;
   }
 
   .empty-editor {
