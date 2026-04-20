@@ -17,8 +17,6 @@
     remoteUpdatedConflict,
   } from '$lib/stores/notesStore';
   import { Fetch } from '$lib/fetchUtil';
-  import { apiEndpoint } from '$lib/stores/configStore';
-  import { get } from 'svelte/store';
 
   const pretitle = 'Personal';
   const title = 'Notes';
@@ -69,39 +67,87 @@
   async function handleImagePaste(event) {
     const blob = event.detail?.blob;
     if (!blob) return;
-    await uploadAndInsert(blob, null);
+    await downscaleAndInline(blob, null);
   }
 
   async function handleImageDrop(event) {
     const { files, pos } = event.detail || {};
     if (!files?.length) return;
     for (const file of files) {
-      await uploadAndInsert(file, pos);
+      await downscaleAndInline(file, pos);
     }
   }
 
-  async function uploadAndInsert(file, pos) {
-    const form = new FormData();
-    // Backend (api/routes/blob.go) reads the multipart form field "image".
-    form.append('image', file);
-    const endpoint = get(apiEndpoint);
-    const res = await fetch(`${endpoint}/api/blob/upload`, {
-      method: 'POST',
-      body: form,
-      credentials: 'include',
-    });
-    if (!res.ok) return;
-    const data = await res.json();
-    const filename = Array.isArray(data?.fileNames) ? data.fileNames[0] : null;
-    if (!filename) return;
-    const alt = file.name || 'image';
-    const link = `![${alt}](/api/blob/${filename})`;
+  // Notes embed images as inline data: URIs so each image is structurally
+  // tied 1:1 to the note it lives in — no external blob endpoint, no
+  // orphanable rows, no ACL drift. Images are downscaled to 1080px on the
+  // long edge and encoded as WebP (JPEG fallback) to keep the autosave
+  // payload bounded.
+  async function downscaleAndInline(file, pos) {
+    if (!$selectedNoteId) return;
+    let dataUri;
+    try {
+      dataUri = await resizeToDataUri(file, 1080);
+    } catch (err) {
+      console.error('Failed to process image:', err);
+      return;
+    }
+    if (!dataUri) return;
+    const alt = (file.name || 'image').replace(/[\[\]]/g, '');
+    const link = `![${alt}](${dataUri})`;
     await tick();
     if (pos != null && editorRef?.insertImageAtPosition) {
       editorRef.insertImageAtPosition(link, pos);
     } else if (editorRef?.insertImageAtCursor) {
       editorRef.insertImageAtCursor(link);
     }
+  }
+
+  function resizeToDataUri(file, maxEdge) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const long = Math.max(img.naturalWidth, img.naturalHeight);
+          const ratio = long > maxEdge ? maxEdge / long : 1;
+          const w = Math.max(1, Math.round(img.naturalWidth * ratio));
+          const h = Math.max(1, Math.round(img.naturalHeight * ratio));
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          // Try WebP first; fall back to JPEG if the browser doesn't
+          // support toBlob('image/webp').
+          canvas.toBlob((blob) => {
+            URL.revokeObjectURL(url);
+            if (blob) { readAsDataUrl(blob).then(resolve, reject); return; }
+            canvas.toBlob((jpegBlob) => {
+              if (!jpegBlob) { reject(new Error('canvas.toBlob returned null')); return; }
+              readAsDataUrl(jpegBlob).then(resolve, reject);
+            }, 'image/jpeg', 0.85);
+          }, 'image/webp', 0.85);
+        } catch (err) {
+          URL.revokeObjectURL(url);
+          reject(err);
+        }
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Failed to decode image'));
+      };
+      img.src = url;
+    });
+  }
+
+  function readAsDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error || new Error('FileReader failed'));
+      reader.readAsDataURL(blob);
+    });
   }
 
   async function reloadCurrentNote() {
