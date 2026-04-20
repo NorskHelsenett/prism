@@ -175,6 +175,7 @@ func main() {
 		apiRoutes.GET("/slack/channels", routes.GetSlackChannels)
 
 		apiRoutes.GET("/blob/:filename", routes.GetBlob)
+		apiRoutes.GET("/blob/:filename/original", routes.GetBlobOriginal)
 		apiRoutes.POST("/blob/upload", routes.HandleBlobUpload)
 		apiRoutes.DELETE("/blob/:filename", routes.HandleBlobDelete)
 
@@ -222,6 +223,10 @@ func main() {
 	}
 
 	go event.PollEventQueue()
+
+	// Backfill owner metadata and generate proxies for legacy image blobs.
+	// Runs once per startup in the background so boot isn't blocked.
+	go database.BackfillImages()
 
 	// Run the main application in a separate goroutine
 	go func() {
