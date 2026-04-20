@@ -93,11 +93,21 @@ type AssessmentJSON struct {
 	Assessment datatypes.JSON
 }
 
-// ImageData is a model for storing image metadata and binary data
+// ImageData is a model for storing image metadata and binary data.
+// Data holds the original upload; ProxyData holds a downscaled copy
+// served to non-creators. OwnerType/OwnerID link the blob to the
+// resource it was uploaded for ("vulnerability" or "note"), which is
+// the basis for access control.
 type ImageData struct {
 	gorm.Model
-	Filename string
-	Data     []byte
+	Filename       string `gorm:"index"`
+	Data           []byte
+	Mime           string
+	ProxyData      []byte
+	ProxyMime      string
+	UploaderEmail  string `gorm:"index"`
+	OwnerType      string `gorm:"index"` // "vulnerability" | "note" | ""
+	OwnerID        uint   `gorm:"index"`
 }
 
 type SlackSettings struct {
@@ -2116,10 +2126,28 @@ func GetProjectVulnerabilities(projectID uint, dateFrom, dateTo string) ([]JSOND
 }
 
 func SaveImage(filename string, data []byte) error {
-	// Create an ImageData instance
 	img := ImageData{Filename: filename, Data: data}
-	// Save to database
 	return db.Create(&img).Error
+}
+
+// SaveImageFull persists both original + proxy along with ownership metadata.
+func SaveImageFull(img *ImageData) error {
+	return db.Create(img).Error
+}
+
+// UpdateImageMeta updates ownership/proxy fields on an existing ImageData
+// (used by the backfill goroutine).
+func UpdateImageMeta(filename string, fields map[string]interface{}) error {
+	return db.Model(&ImageData{}).Where("filename = ?", filename).Updates(fields).Error
+}
+
+// ListImagesMissingProxy returns image rows that still need a proxy generated
+// or owner metadata populated.
+func ListImagesMissingProxy() ([]ImageData, error) {
+	var rows []ImageData
+	err := db.Where("proxy_data IS NULL OR length(proxy_data) = 0 OR owner_type = '' OR owner_type IS NULL").
+		Find(&rows).Error
+	return rows, err
 }
 
 func DeleteImage(filename string) error {
