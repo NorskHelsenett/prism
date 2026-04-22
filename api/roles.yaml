@@ -65,6 +65,8 @@ roles:
         action: [""]
       - resource: "/profile"
         action: ["read"]
+      - resource: "/blob"
+        action: ["read"]
       - resource: "/notification"
         action: ["*"]
       - resource: "/notes"
@@ -85,6 +87,8 @@ roles:
       - resource: "/settings"
         action: [""]
       - resource: "/profile"
+        action: ["read"]
+      - resource: "/blob"
         action: ["read"]
       - resource: "/planning"
         action: ["*"]

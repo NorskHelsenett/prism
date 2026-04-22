@@ -4,8 +4,8 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -13,6 +13,16 @@ import (
 	"prism/config"
 	"prism/database"
 )
+
+// allowedImageMimes is the exhaustive set of MIME types accepted by the blob
+// upload endpoint. Anything else is rejected so the endpoint can't be used as
+// a same-origin HTML/SVG/JS host (pentest finding F-1/F-3).
+var allowedImageMimes = map[string]string{
+	"image/png":  ".png",
+	"image/jpeg": ".jpg",
+	"image/gif":  ".gif",
+	"image/webp": ".webp",
+}
 
 func GetBlob(c *gin.Context) {
 	filename := c.Param("filename")
@@ -29,23 +39,20 @@ func GetBlob(c *gin.Context) {
 		return
 	}
 
-	// Serve the proxy to non-creators, original to creators.
-	data := img.ProxyData
-	mime := img.ProxyMime
-	if len(data) == 0 {
-		// No proxy yet (pre-backfill row). Fall back to the original but only
-		// if the requester is the creator — otherwise refuse.
-		if !isBlobCreator(c, img) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
-			return
-		}
-		data = img.Data
-		mime = img.Mime
+	// Always serve the proxy. If none exists (legacy non-image row that
+	// couldn't be decoded during backfill), refuse — do NOT fall back to
+	// img.Data, which could be an arbitrary byte stream with an attacker-
+	// controlled MIME. Pentest finding F-1 was live XSS via this path.
+	if len(img.ProxyData) == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
 	}
+	mime := img.ProxyMime
 	if mime == "" {
 		mime = "application/octet-stream"
 	}
-	c.Data(http.StatusOK, mime, data)
+	c.Header("X-Content-Type-Options", "nosniff")
+	c.Data(http.StatusOK, mime, img.ProxyData)
 }
 
 // GetBlobOriginal serves the untouched original. Only the creator of the
@@ -63,9 +70,13 @@ func GetBlobOriginal(c *gin.Context) {
 		return
 	}
 	mime := img.Mime
-	if mime == "" {
+	if _, ok := allowedImageMimes[mime]; !ok {
+		// Defence-in-depth: a legacy row could have a MIME we no longer
+		// trust to render inline. Force download in that case.
 		mime = "application/octet-stream"
 	}
+	c.Header("X-Content-Type-Options", "nosniff")
+	c.Header("Content-Disposition", "attachment; filename=\""+filename+"\"")
 	c.Data(http.StatusOK, mime, img.Data)
 }
 
@@ -81,18 +92,7 @@ func canReadBlob(c *gin.Context, img *database.ImageData) bool {
 
 	switch img.OwnerType {
 	case "vulnerability":
-		// "Global viewer" = role has a broad /vulnerability/:id permission
-		// entry, mirroring the logic in auth.ACLMiddleware.
-		globalViewer := false
-		if r, ok := config.AppConfig.Roles[roleStr]; ok {
-			for _, p := range r.Permissions {
-				if p.Resource == "/vulnerability/:id" {
-					globalViewer = true
-					break
-				}
-			}
-		}
-		ok, err := database.CanAccessVulnerability(img.OwnerID, emailStr, roleStr, globalViewer)
+		ok, err := database.CanAccessVulnerability(img.OwnerID, emailStr, roleStr, roleHasGlobalVulnerability(roleStr))
 		if err != nil {
 			log.Printf("canReadBlob: CanAccessVulnerability: %v", err)
 			return false
@@ -100,7 +100,7 @@ func canReadBlob(c *gin.Context, img *database.ImageData) bool {
 		return ok
 	default:
 		// Orphan blobs (not yet bound to a vulnerability by the POST/PUT
-		// handler) — only the uploader or admin can see.
+		// handler) — only the uploader can see.
 		return emailStr != "" && img.UploaderEmail == emailStr
 	}
 }
@@ -125,6 +125,22 @@ func isBlobCreator(c *gin.Context, img *database.ImageData) bool {
 	return emailStr != "" && img.UploaderEmail == emailStr
 }
 
+// roleHasGlobalVulnerability mirrors auth.ACLMiddleware's check: if a role
+// declares /vulnerability/:id in its permissions, it gets the "global viewer"
+// flag for vulnerability ACL evaluation.
+func roleHasGlobalVulnerability(roleStr string) bool {
+	r, ok := config.AppConfig.Roles[roleStr]
+	if !ok {
+		return false
+	}
+	for _, p := range r.Permissions {
+		if p.Resource == "/vulnerability/:id" {
+			return true
+		}
+	}
+	return false
+}
+
 func HandleBlobUpload(c *gin.Context) {
 	form, err := c.MultipartForm()
 	if err != nil {
@@ -134,28 +150,49 @@ func HandleBlobUpload(c *gin.Context) {
 
 	email, _ := c.Get("email")
 	uploader, _ := email.(string)
+	role, _ := c.Get("role")
+	roleStr, _ := role.(string)
 
+	// context= binds the upload to a specific resource so the read-side ACL
+	// can be derived from the parent resource. Currently only "vulnerability"
+	// is supported; anything else falls through to orphan (uploader-only).
 	ownerType := c.PostForm("context")
 	ownerIDStr := c.PostForm("id")
 	var ownerID uint
-	if ownerIDStr != "" {
-		if v, err := strconv.ParseUint(ownerIDStr, 10, 64); err == nil {
-			ownerID = uint(v)
+	if ownerType == "vulnerability" {
+		if ownerIDStr == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "id is required when context=vulnerability"})
+			return
 		}
-	}
-	// Only "vulnerability" is a supported context today; anything else becomes
-	// an orphan (uploader-only) until the vulnerability create/update handler
-	// claims it via BindOrphanBlobs.
-	if ownerType != "vulnerability" {
+		v, err := strconv.ParseUint(ownerIDStr, 10, 64)
+		if err != nil || v == 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id"})
+			return
+		}
+		ownerID = uint(v)
+		// Pentest finding F-2: the uploader must actually have access to the
+		// vulnerability they're claiming to attach the blob to. Without this
+		// check, any /blob:write role can plant bytes in any vulnerability's
+		// namespace — and the vulnerability creator would download them via
+		// /original believing they were pristine.
+		canAccess, err := database.CanAccessVulnerability(ownerID, uploader, roleStr, roleHasGlobalVulnerability(roleStr))
+		if err != nil || !canAccess {
+			c.JSON(http.StatusForbidden, gin.H{"error": "not allowed to attach to this resource"})
+			return
+		}
+	} else {
 		ownerType = ""
 		ownerID = 0
 	}
 
 	files := form.File["image"]
+	if len(files) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no image file in request"})
+		return
+	}
+
 	var filenames []string
 	for _, file := range files {
-		filename := generateUniqueFilename(file.Filename)
-
 		fileData, err := file.Open()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -168,15 +205,25 @@ func HandleBlobUpload(c *gin.Context) {
 			return
 		}
 
+		// Pentest finding F-1/F-3: reject anything that isn't a known image
+		// MIME (sniffed from the bytes, not the attacker-controlled multipart
+		// header). The extension is derived from the sniffed MIME so the
+		// stored filename can't carry a surprise extension like .html.
 		mime := database.DetectMime(data)
-		proxyBytes, proxyMime, perr := database.GenerateProxy(data, mime)
-		if perr != nil {
-			// Non-image or unsupported format — skip proxy, but still store
-			// so existing flows (e.g. non-image attachments) don't break.
-			proxyBytes = nil
-			proxyMime = ""
+		ext, ok := allowedImageMimes[mime]
+		if !ok {
+			c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": "unsupported image type"})
+			return
 		}
 
+		proxyBytes, proxyMime, perr := database.GenerateProxy(data, mime)
+		if perr != nil {
+			// The MIME said image but the decoder disagreed. Refuse.
+			c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": "image could not be decoded"})
+			return
+		}
+
+		filename := uuid.New().String() + ext
 		img := &database.ImageData{
 			Filename:      filename,
 			Data:          data,
@@ -200,15 +247,15 @@ func HandleBlobUpload(c *gin.Context) {
 
 func HandleBlobDelete(c *gin.Context) {
 	filename := c.Param("filename")
+	// Guard against path-traversal in the filename param (Gin's :filename
+	// already limits the match but belt-and-suspenders).
+	if strings.ContainsAny(filename, "/\\") {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid filename"})
+		return
+	}
 	if err := database.DeleteImage(filename); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "File deleted successfully"})
-}
-
-func generateUniqueFilename(originalName string) string {
-	newUUID := uuid.New()
-	extension := filepath.Ext(originalName)
-	return newUUID.String() + extension
 }
