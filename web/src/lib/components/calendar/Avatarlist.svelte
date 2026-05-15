@@ -1,5 +1,4 @@
 <script>
-  import { untrack, stopPropagation } from 'svelte';
   import { createEventDispatcher, onDestroy, onMount } from 'svelte';
   import { Fetch } from '$lib/fetchUtil';
   import Avatar from '$lib/components/Avatar.svelte';
@@ -140,7 +139,7 @@
   {/each}
   <span class="avatar rounded-circle avatar-sm cursor-pointer"
         bind:this={addButtonElement}
-        onclick={stopPropagation(toggleHackersList)}>
+        onclick={(e) => { e.stopPropagation(); toggleHackersList(); }}>
     <i class="ti ti-plus"></i>
   </span>
   {#if showHackersList}

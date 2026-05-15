@@ -212,8 +212,9 @@
 		gfm: true,
 		renderer: {
 			list(body, ordered, start) {
-				if (body.includes('data-checked=')) {
-					return `<ul data-type="taskList">${body}</ul>`;
+				const bodyStr = typeof body === 'string' ? body : String(body);
+				if (bodyStr.includes('data-checked=')) {
+					return `<ul data-type="taskList">${bodyStr}</ul>`;
 				}
 				const type = ordered ? 'ol' : 'ul';
 				const startAttr = ordered && start !== 1 ? ` start="${start}"` : '';

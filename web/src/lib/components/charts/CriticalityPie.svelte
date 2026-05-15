@@ -2,7 +2,6 @@
   import { run } from 'svelte/legacy';
 
   import { Doughnut } from 'svelte-chartjs';
-  import { untracked } from 'svelte';
   import ChartDataLabels from 'chartjs-plugin-datalabels';
   import {
     Chart as ChartJS,
@@ -62,8 +61,8 @@
     }
   });
 
-  // Use untracked to prevent $state.snapshot from trying to clone the formatter functions
-  let options = untracked({
+  // Non-reactive options to prevent $state.snapshot from trying to clone formatter functions
+  const options = {
     responsive: true,
     maintainAspectRatio: false,
     cutout: 0,
@@ -95,7 +94,7 @@
         left: 30
       }
     }
-  })
+  };
 
   run(() => {
     if (vulnerabilities.length > 0) {

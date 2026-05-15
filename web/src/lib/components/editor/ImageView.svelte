@@ -1,6 +1,4 @@
 <script>
-	import { run, stopPropagation } from 'svelte/legacy';
-
 	import AnnotationEditor from './AnnotationEditor.svelte';
 
 	/**
@@ -19,18 +17,44 @@
 		editable = true
 	} = $props();
 
+	let localNode = $state(node);
+	let localSelected = $state(selected);
+	let localEditable = $state(editable);
 	let annotationOpen = $state(false);
-	let altText = $state(node.attrs.alt || '');
+	let altText = $state(localNode.attrs.alt || '');
 
-	let src = $derived(node.attrs.src || '');
-	run(() => {
-		altText = node.attrs.alt || '';
-	});
-	let renderedSrc = $derived(node.attrs.renderedSrc || '');
+	let src = $derived(localNode.attrs.src || '');
+	let renderedSrc = $derived(localNode.attrs.renderedSrc || '');
 	let displaySrc = $derived(renderedSrc || src);
 
+	$effect(() => {
+		altText = localNode.attrs.alt || '';
+	});
+
+	// Exported methods for TipTap node view integration (Svelte 5 replaces $$set)
+	export function update(newNode, newEditable) {
+		if (newNode) {
+			localNode = newNode;
+		}
+		if (newEditable !== undefined) {
+			localEditable = newEditable;
+		}
+	}
+
+	export function select() {
+		localSelected = true;
+	}
+
+	export function deselect() {
+		localSelected = false;
+	}
+
+	export function destroy() {
+		// Cleanup if needed
+	}
+
 	function handleImageClick(event) {
-		if (!editable) {
+		if (!localEditable) {
 			event.currentTarget?.dispatchEvent(new CustomEvent('rte-image-click', {
 				detail: {
 					src: displaySrc,
@@ -47,7 +71,7 @@
 	}
 
 	function saveAlt() {
-		if (altText !== (node.attrs.alt || '')) {
+		if (altText !== (localNode.attrs.alt || '')) {
 			updateAttributes({ alt: altText });
 		}
 	}
@@ -68,13 +92,13 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<figure class="image-node" class:selected>
+<figure class="image-node" class:localSelected>
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="image-wrapper" onclick={stopPropagation(handleImageClick)}>
-		<img src={displaySrc} alt={altText} draggable={editable} ondragstart={handleDragStart} />
+	<div class="image-wrapper" onclick={handleImageClick}>
+		<img src={displaySrc} alt={altText} draggable={localEditable} ondragstart={handleDragStart} />
 	</div>
 
-	{#if editable}
+	{#if localEditable}
 		<figcaption class="image-caption-row">
 			<input
 				type="text"
@@ -91,12 +115,12 @@
 	{/if}
 </figure>
 
-{#if editable}
+{#if localEditable}
 	<AnnotationEditor
 		bind:open={annotationOpen}
 		{src}
-		annotations={node.attrs.annotations || []}
-		crop={node.attrs.crop || null}
+		annotations={localNode.attrs.annotations || []}
+		crop={localNode.attrs.crop || null}
 		on:save={(e) => {
 			updateAttributes({
 				annotations: e.detail.annotations,
@@ -138,7 +162,6 @@
 
 	.image-node.selected .image-wrapper,
 	.image-node:hover .image-wrapper {
-		/* outline: 2px solid var(--rte-accent, #0054a6); */
 		outline-offset: 2px;
 		border-radius: 5px;
 	}
