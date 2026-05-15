@@ -1,18 +1,33 @@
 <script>
+	import { run, stopPropagation } from 'svelte/legacy';
+
 	import AnnotationEditor from './AnnotationEditor.svelte';
 
-	export let node;
-	export let updateAttributes;
-	export let selected = false;
-	export let editable = true;
+	/**
+	 * @typedef {Object} Props
+	 * @property {any} node
+	 * @property {any} updateAttributes
+	 * @property {boolean} [selected]
+	 * @property {boolean} [editable]
+	 */
 
-	let annotationOpen = false;
-	let altText = node.attrs.alt || '';
+	/** @type {Props} */
+	let {
+		node,
+		updateAttributes,
+		selected = false,
+		editable = true
+	} = $props();
 
-	$: src = node.attrs.src || '';
-	$: altText = node.attrs.alt || '';
-	$: renderedSrc = node.attrs.renderedSrc || '';
-	$: displaySrc = renderedSrc || src;
+	let annotationOpen = $state(false);
+	let altText = $state(node.attrs.alt || '');
+
+	let src = $derived(node.attrs.src || '');
+	run(() => {
+		altText = node.attrs.alt || '';
+	});
+	let renderedSrc = $derived(node.attrs.renderedSrc || '');
+	let displaySrc = $derived(renderedSrc || src);
 
 	function handleImageClick(event) {
 		if (!editable) {
@@ -51,12 +66,12 @@
 	}
 </script>
 
-<!-- svelte-ignore a11y-click-events-have-key-events -->
-<!-- svelte-ignore a11y-no-static-element-interactions -->
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <figure class="image-node" class:selected>
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
-	<div class="image-wrapper" on:click|stopPropagation={handleImageClick}>
-		<img src={displaySrc} alt={altText} draggable={editable} on:dragstart={handleDragStart} />
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="image-wrapper" onclick={stopPropagation(handleImageClick)}>
+		<img src={displaySrc} alt={altText} draggable={editable} ondragstart={handleDragStart} />
 	</div>
 
 	{#if editable}
@@ -66,8 +81,8 @@
 				class="caption-input"
 				class:has-text={!!altText}
 				bind:value={altText}
-				on:blur={saveAlt}
-				on:keydown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+				onblur={saveAlt}
+				onkeydown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
 				placeholder="Click to add image caption"
 			/>
 		</figcaption>

@@ -12,8 +12,8 @@
     warningAccepted = false
   }
 
-  let warningAccepted = false
-  export let settings = {}
+  let warningAccepted = $state(false)
+  let { settings = {} } = $props();
 
   export function formatSize(size) {
     const sizeInMB = size / 1024 / 1024;
@@ -78,7 +78,7 @@
         I accept the risk of my action.
       </span>
     </label>
-    <button disabled={!warningAccepted} class="btn btn-warning btn-ghost-warning d-none d-sm-inline-block" on:click={cleanup}>Perform Database Cleanup</button>
+    <button disabled={!warningAccepted} class="btn btn-warning btn-ghost-warning d-none d-sm-inline-block" onclick={cleanup}>Perform Database Cleanup</button>
   </div>
 </div>
 

@@ -3,8 +3,8 @@
 	import { onMount } from "svelte";
 	import Avatar from "../Avatar.svelte";
 
-  export let notification
-  let user
+  let { notification } = $props();
+  let user = $state()
 
   onMount(async () => {
     user = await fetchUserData(notification.who);

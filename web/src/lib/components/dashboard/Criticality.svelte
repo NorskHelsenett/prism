@@ -1,29 +1,32 @@
 <script>
-  export let severityData = { critical: 0, high: 0, medium: 0, low: 0, information: 0 };
-  export let vulnerabilities = []
-	let progressData = [];
+	import { run } from 'svelte/legacy';
 
-	$: if (severityData) {
-        const total = (severityData.information || 0) +
-                      (severityData.low || 0) +
-                      (severityData.medium || 0) +
-                      (severityData.high || 0) +
-                      (severityData.critical || 0);
+	let { severityData = $bindable({ critical: 0, high: 0, medium: 0, low: 0, information: 0 }), vulnerabilities = [] } = $props();
+	let progressData = $state([]);
 
-        const toPercentage = (value) => total > 0 ? (value / total * 100).toFixed(2) : 0;
+	run(() => {
+		if (severityData) {
+	        const total = (severityData.information || 0) +
+	                      (severityData.low || 0) +
+	                      (severityData.medium || 0) +
+	                      (severityData.high || 0) +
+	                      (severityData.critical || 0);
 
-        progressData = [
-            { label: 'Information', value: toPercentage(severityData.information || 0), class: 'bg-info' },
-            { label: 'Low', value: toPercentage(severityData.low || 0), class: 'bg-primary' },
-            { label: 'Medium', value: toPercentage(severityData.medium || 0), class: 'bg-yellow' },
-            { label: 'High', value: toPercentage(severityData.high || 0), class: 'bg-warning' },
-            { label: 'Critical', value: toPercentage(severityData.critical || 0), class: 'bg-danger' }
-        ];
-    }
+	        const toPercentage = (value) => total > 0 ? (value / total * 100).toFixed(2) : 0;
 
-	let tooltipVisible = false;
-	let tooltipX = 0;
-	let tooltipY = 0;
+	        progressData = [
+	            { label: 'Information', value: toPercentage(severityData.information || 0), class: 'bg-info' },
+	            { label: 'Low', value: toPercentage(severityData.low || 0), class: 'bg-primary' },
+	            { label: 'Medium', value: toPercentage(severityData.medium || 0), class: 'bg-yellow' },
+	            { label: 'High', value: toPercentage(severityData.high || 0), class: 'bg-warning' },
+	            { label: 'Critical', value: toPercentage(severityData.critical || 0), class: 'bg-danger' }
+	        ];
+	    }
+	});
+
+	let tooltipVisible = $state(false);
+	let tooltipX = $state(0);
+	let tooltipY = $state(0);
 
 	function showTooltip(event) {
 		tooltipVisible = true;
@@ -35,29 +38,31 @@
 		tooltipVisible = false;
 	}
 
-  $: if(vulnerabilities?.length > 0){
-    // Reset counts
-    severityData = { critical: 0, high: 0, medium: 0, low: 0, information: 0 };
+  run(() => {
+		if(vulnerabilities?.length > 0){
+	    // Reset counts
+	    severityData = { critical: 0, high: 0, medium: 0, low: 0, information: 0 };
 
-    vulnerabilities.forEach(vulnerability => {
-      const criticality = vulnerability.Vulnerability.criticality.toLowerCase();
+	    vulnerabilities.forEach(vulnerability => {
+	      const criticality = vulnerability.Vulnerability.criticality.toLowerCase();
 
-      if (criticality === 'critical') {
-        severityData.critical += 1;
-      } else if (criticality === 'high') {
-        severityData.high += 1;
-      } else if (criticality === 'medium') {
-        severityData.medium += 1;
-      } else if (criticality === 'low') {
-        severityData.low += 1;
-      } else if (criticality === 'information') {
-        severityData.information += 1;
-      }
-    });
-  }
+	      if (criticality === 'critical') {
+	        severityData.critical += 1;
+	      } else if (criticality === 'high') {
+	        severityData.high += 1;
+	      } else if (criticality === 'medium') {
+	        severityData.medium += 1;
+	      } else if (criticality === 'low') {
+	        severityData.low += 1;
+	      } else if (criticality === 'information') {
+	        severityData.information += 1;
+	      }
+	    });
+	  }
+	});
 </script>
 
-<div class="progress mb-2" role="presentation" on:mousemove={showTooltip} on:mouseleave={hideTooltip}>
+<div class="progress mb-2" role="presentation" onmousemove={showTooltip} onmouseleave={hideTooltip}>
     {#each progressData as segment}
         <div
             class="progress-bar {segment.class}"

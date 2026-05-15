@@ -2,8 +2,15 @@
   import { onMount, onDestroy } from 'svelte';
   import { slide } from 'svelte/transition';
 
-  export let show = false;
-  let dropdownElement;
+  /**
+   * @typedef {Object} Props
+   * @property {boolean} [show]
+   * @property {import('svelte').Snippet} [children]
+   */
+
+  /** @type {Props} */
+  let { show = $bindable(false), children } = $props();
+  let dropdownElement = $state();
 
   function handleClickOutside(event) {
     if (show && dropdownElement && !dropdownElement.contains(event.target)) {
@@ -23,7 +30,7 @@
 {#if show}
   <div class="dropdown" bind:this={dropdownElement}>
     <div class="dropdown-menu dropdown-menu-right show" transition:slide="{{ duration: 100, axis: 'y' }}">
-      <slot />
+      {@render children?.()}
     </div>
   </div>
 {/if}

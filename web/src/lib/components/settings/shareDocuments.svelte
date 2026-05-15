@@ -1,12 +1,14 @@
 <script>
+  import { preventDefault } from 'svelte/legacy';
+
   import { Fetch } from "$lib/fetchUtil";
   import { onMount } from 'svelte';
 	import { toast } from "svelte-sonner";
 	import DeleteModal from "../DeleteModal.svelte";
 	import { accessLevels } from "$lib/userStore";
 
-  let loading = true
-  let showDeleteModal = false
+  let loading = $state(true)
+  let showDeleteModal = $state(false)
   let deleteDialogButton ="Remove public link"
   const deleteDialogText = "Are you sure that you would like to remove this public link?"
   let deletePublicLinkID = -1
@@ -30,7 +32,7 @@
   }
 
 /** @type {import('$lib/models/shareDialog').ShareInput[]}*/
-  let publiclinks = [];
+  let publiclinks = $state([]);
 
   async function fetchEvents() {
     try {
@@ -90,9 +92,9 @@
         <td class="text-center">
           <a href="/s/{link.shareToken}" target="_blank" >{link.shareToken}</a>
         </td>
-        {#if $accessLevels["/vulnerability"]?.write }
+        {#if $accessLevels["/vulnerability"]?.write}
         <td class="text-center">
-          <a class="btn btn-sm btn-pill text-red" on:click|preventDefault={deleteEvent(link.documentId)}>delete</a>
+          <a class="btn btn-sm btn-pill text-red" onclick={preventDefault(deleteEvent(link.documentId))}>delete</a>
         </td>
         {/if}
       </tr>

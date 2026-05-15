@@ -1,4 +1,6 @@
 <script>
+  import { preventDefault, stopPropagation } from 'svelte/legacy';
+
 import { goto } from '$app/navigation';
 import { slide } from 'svelte/transition';
 import { quintOut } from 'svelte/easing';
@@ -19,12 +21,12 @@ import OwaspTable from '$lib/components/dashboard/OwaspTable.svelte';
 import CriticalityPie from '$lib/components/charts/CriticalityPie.svelte';
 	import EditAssessment from '$lib/components/calendar/EditAssessment.svelte';
 
-export let data;
-let assessment = null
-let showDropdown = false;
-let showDeleteModal = false;
-let editModus = false;
-let vulnerabilities = []
+  let { data } = $props();
+let assessment = $state(null)
+let showDropdown = $state(false);
+let showDeleteModal = $state(false);
+let editModus = $state(false);
+let vulnerabilities = $state([])
 
 onMount(async () => {
   assessment = await Fetch(`/api/planning/${data.id}`)
@@ -45,12 +47,13 @@ async function getUser(email) {
   responsibleHackerName = user.name
 }
 
-$: responsibleHackerName = ""
+let responsibleHackerName = $state("");
+  
 
-let showModalEdit = false
+let showModalEdit = $state(false)
 
-let modalEditProp = null
-let modalEditValue = ""
+let modalEditProp = $state(null)
+let modalEditValue = $state("")
 
 function editProp(prop, value){
   if(!editModus) { return }
@@ -91,7 +94,7 @@ function formatDate(dateStr){
   return new Intl.DateTimeFormat('en-GB', options).format(date).replace(/\s/g, '. ');
 }
 
-let showEditModal = false
+let showEditModal = $state(false)
 </script>
 
 {#if showEditModal}
@@ -104,12 +107,12 @@ let showEditModal = false
     <div class="modal-content">
       <div class="modal-body">
         <!-- Bind the input to modalEditValue instead of modalEditProp -->
-        <input autofocus bind:value={modalEditValue} class="form-control" on:keydown={handleKeydown}/>
+        <input autofocus bind:value={modalEditValue} class="form-control" onkeydown={handleKeydown}/>
       </div>
       <div class="modal-footer">
         <!-- Update showModalEdit and optionally save changes on Save button click -->
-        <button type="button" class="btn btn-link link-secondary me-auto" on:click="{() => showModalEdit = false}">Cancel</button>
-        <button type="button" class="btn btn-info" on:click="{() => { saveChanges(modalEditProp, modalEditValue); }}">Save</button>
+        <button type="button" class="btn btn-link link-secondary me-auto" onclick={() => showModalEdit = false}>Cancel</button>
+        <button type="button" class="btn btn-info" onclick={() => { saveChanges(modalEditProp, modalEditValue); }}>Save</button>
       </div>
     </div>
   </div>
@@ -119,7 +122,7 @@ let showEditModal = false
 <div class="row g-2 align-items-center mb-3">
   <div class="col">
     <div class="page-pretitle">Assessment</div>
-    <h2 class="page-title" on:click={() => editProp('title', assessment.title)}>
+    <h2 class="page-title" onclick={() => editProp('title', assessment.title)}>
       {assessment?.title}
     </h2>
   </div>
@@ -129,7 +132,7 @@ let showEditModal = false
       <a
         href="#"
         class="d-none d-sm-inline-block"
-        on:click|preventDefault|stopPropagation={() => showDropdown = !showDropdown}
+        onclick={stopPropagation(preventDefault(() => showDropdown = !showDropdown))}
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-dots-vertical" width="36" height="36" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M12 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M12 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>
           </a
@@ -137,10 +140,10 @@ let showEditModal = false
         </div>
 
         <Dropdown bind:show={showDropdown}>
-          <a class="dropdown-item" href="#" on:click={()=> {editModus = !editModus; showDropdown = false; goto(`/planning/${data.id}/edit`)}}>Edit</a>
+          <a class="dropdown-item" href="#" onclick={()=> {editModus = !editModus; showDropdown = false; goto(`/planning/${data.id}/edit`)}}>Edit</a>
           <!-- <a class="dropdown-item" href="#" on:click={()=> {showEditModal = !showEditModal; showDropdown = false}}>Edit</a> -->
           <div class="dropdown-divider"></div>
-          <a class="dropdown-item text-warning" href="#" on:click={() => showDeleteModal = true}>
+          <a class="dropdown-item text-warning" href="#" onclick={() => showDeleteModal = true}>
             <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-trash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
             Delete
           </a>
@@ -163,7 +166,7 @@ let showEditModal = false
       <div class="text-secondary">You've found the edit mode. Now you can make changes to your assessment.</div>
     </div>
   </div>
-  <a class="btn-close" data-bs-dismiss="alert" aria-label="close" on:click="{() => {saveChanges(null,null); editModus = false}}"></a>
+  <a class="btn-close" data-bs-dismiss="alert" aria-label="close" onclick={() => {saveChanges(null,null); editModus = false}}></a>
 </div>
 {/if}
 
@@ -263,7 +266,7 @@ let showEditModal = false
       <div class="card-body" style="min-height: 10rem">
         <div class="datagrid">
 
-          <div class="datagrid-item" on:click={() => editProp('workorder', assessment.workorder)}>
+          <div class="datagrid-item" onclick={() => editProp('workorder', assessment.workorder)}>
             <div class="datagrid-title">Work order</div>
             <div class="datagrid-content">
               {assessment?.workorder || ""}
@@ -338,7 +341,7 @@ let showEditModal = false
                 class="form-control"
                 placeholder="Notes..."
                 bind:value={assessment.note}
-              />
+></textarea>
             {:else}
               <Markdown markdown={assessment.note}/>
             {/if}

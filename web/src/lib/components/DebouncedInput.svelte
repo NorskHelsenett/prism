@@ -1,11 +1,23 @@
 <script>
     import { createEventDispatcher } from 'svelte';
 
-    export let value = '';
-    export let debounceInterval = 500; // default debounce interval
-    export let placeholder = '';
-    export let id = '';
-    export let persisting = false;
+    /**
+     * @typedef {Object} Props
+     * @property {string} [value]
+     * @property {number} [debounceInterval] - default debounce interval
+     * @property {string} [placeholder]
+     * @property {string} [id]
+     * @property {boolean} [persisting]
+     */
+
+    /** @type {Props} */
+    let {
+        value = '',
+        debounceInterval = 500,
+        placeholder = '',
+        id = '',
+        persisting = false
+    } = $props();
 
     const dispatch = createEventDispatcher();
 
@@ -39,7 +51,7 @@
         class="form-control"
         id={id}
         value={value}
-        on:input={handleInput}>
+        oninput={handleInput}>
     <label for={id}>{placeholder}</label>
     {#if persisting}
         <span class="input-icon-addon">

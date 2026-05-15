@@ -1,16 +1,27 @@
 <script>
-	/** Image src */
-	export let src = '';
-	/** Annotation elements array */
-	export let annotations = [];
-	/** Crop rect { x, y, width, height } or null */
-	export let crop = null;
-	/** Alt text / caption */
-	export let alt = '';
+	
+	
+	
+	
+	/**
+	 * @typedef {Object} Props
+	 * @property {string} [src] - Image src
+	 * @property {any} [annotations] - Annotation elements array
+	 * @property {any} [crop] - Crop rect { x, y, width, height } or null
+	 * @property {string} [alt] - Alt text / caption
+	 */
 
-	let imgWidth = 0;
-	let imgHeight = 0;
-	let sizeProbe;
+	/** @type {Props} */
+	let {
+		src = '',
+		annotations = [],
+		crop = null,
+		alt = ''
+	} = $props();
+
+	let imgWidth = $state(0);
+	let imgHeight = $state(0);
+	let sizeProbe = $state();
 
 	function onLoad() {
 		imgWidth = sizeProbe.naturalWidth;
@@ -18,13 +29,13 @@
 	}
 
 	// Compute viewBox for crop
-	$: viewBox = crop
+	let viewBox = $derived(crop
 		? `${crop.x} ${crop.y} ${crop.width} ${crop.height}`
-		: `0 0 ${imgWidth} ${imgHeight}`;
+		: `0 0 ${imgWidth} ${imgHeight}`);
 </script>
 
 <figure class="annotated-image">
-	<img bind:this={sizeProbe} {src} alt="" on:load={onLoad} class="size-probe" />
+	<img bind:this={sizeProbe} {src} alt="" onload={onLoad} class="size-probe" />
 	{#if annotations.length > 0 || crop}
 		<svg
 			viewBox={viewBox}

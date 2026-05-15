@@ -1,17 +1,21 @@
 
 <script>
+  import { run } from 'svelte/legacy';
+
   import CreateProject from '$lib/components/project/Create.svelte'
 	import List from '$lib/components/project/List.svelte';
 	import { accessLevels } from '$lib/userStore';
-  let listComponent;
+  let listComponent = $state();
   const title = "Project"
   const pretitle = "Project"
 
-  let showModal = false;
+  let showModal = $state(false);
 
-  $: if (!showModal) {
-    listComponent?.refreshList();
-  }
+  run(() => {
+    if (!showModal) {
+      listComponent?.refreshList();
+    }
+  });
 
   function createNewProject() {
       showModal = true;
@@ -36,7 +40,7 @@
       <a
         href="#"
         class="btn btn-primary d-none d-sm-inline-block"
-        on:click={createNewProject}
+        onclick={createNewProject}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"

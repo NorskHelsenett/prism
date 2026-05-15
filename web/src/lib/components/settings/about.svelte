@@ -4,14 +4,14 @@
   import DOMPurify from 'dompurify'
 	import formatNumber from '$lib/formatNumber';
 
-  let buildInfo = {
+  let buildInfo = $state({
     "user": "",
     "branch": "",
     "date": "",
     "digest": "",
     "totalLines": 0
-  }
-  let changelog = '';
+  })
+  let changelog = $state('');
 
   onMount(async () => {
     const response = await fetch(`/.well-known/buildinfo.json`)

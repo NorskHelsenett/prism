@@ -1,9 +1,23 @@
 <script>
-  export let showDeleteModal = false;
-  export let onDelete;
-  export let text = "If you proceed, vulnerability and attachments will be deleted. What you've done cannot be undone.";
-  export let deleteButtonText = "Yes, delete it";
-  export let accent = 'danger';
+  /**
+   * @typedef {Object} Props
+   * @property {boolean} [showDeleteModal]
+   * @property {any} onDelete
+   * @property {string} [text]
+   * @property {string} [deleteButtonText]
+   * @property {string} [accent]
+   * @property {import('svelte').Snippet} [children]
+   */
+
+  /** @type {Props} */
+  let {
+    showDeleteModal = $bindable(false),
+    onDelete,
+    text = "If you proceed, vulnerability and attachments will be deleted. What you've done cannot be undone.",
+    deleteButtonText = "Yes, delete it",
+    accent = 'danger',
+    children
+  } = $props();
 
   const accentColors = {
     danger: {
@@ -28,7 +42,7 @@
     }
   };
 
-  $: accentColor = accentColors[accent] || accentColors.danger;
+  let accentColor = $derived(accentColors[accent] || accentColors.danger);
 
   function handleDelete() {
     if (typeof onDelete === 'function') {
@@ -45,22 +59,22 @@
       class="modal-content"
       style={`border: 1px solid ${accentColor.border}; box-shadow: 0 12px 28px -12px ${accentColor.shadow}, 0 8px 16px -8px ${accentColor.shadow};`}
     >
-      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" on:click={() => showDeleteModal = false}></button>
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick={() => showDeleteModal = false}></button>
   <div class={"modal-status bg-" + accent}></div>
       <div class="modal-body text-center py-4">
   <svg xmlns="http://www.w3.org/2000/svg" class={"icon mb-2 icon-lg text-" + accent} width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M12 9v4"></path><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"></path><path d="M12 16h.01"></path></svg>
         <div class="modal-title">Are you sure?</div>
-        <slot>
+        {#if children}{@render children()}{:else}
           <div class="text-secondary">{text}</div>
-        </slot>
+        {/if}
       </div>
           <div class="modal-footer">
             <div class="w-100">
               <div class="row">
-                <div class="col"><a href="#" class="btn w-100" data-bs-dismiss="modal" on:click={() => showDeleteModal = false}>
+                <div class="col"><a href="#" class="btn w-100" data-bs-dismiss="modal" onclick={() => showDeleteModal = false}>
                     Cancel
                   </a></div>
-                <div class="col"><a href="#" class={"btn w-100 btn-" + accent} data-bs-dismiss="modal" on:click={handleDelete}>
+                <div class="col"><a href="#" class={"btn w-100 btn-" + accent} data-bs-dismiss="modal" onclick={handleDelete}>
                     {deleteButtonText}
                   </a></div>
               </div>

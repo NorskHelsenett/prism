@@ -1,5 +1,6 @@
 import Image from '@tiptap/extension-image';
 import ImageView from './ImageView.svelte';
+import { mount } from "svelte";
 
 export const ImageWithView = Image.extend({
 	draggable: true,
@@ -50,26 +51,26 @@ export const ImageWithView = Image.extend({
 			let component;
 
 			function mount() {
-				component = new ImageView({
-					target: dom,
-					props: {
-						node,
-						editable: editor.isEditable,
-						selected: false,
-						updateAttributes: (attrs) => {
-							if (typeof getPos !== 'function') return;
-							const pos = getPos();
-							const currentNode = editor.view.state.doc.nodeAt(pos);
-							if (!currentNode) return;
-							editor.view.dispatch(
-								editor.view.state.tr.setNodeMarkup(pos, undefined, {
-									...currentNode.attrs,
-									...attrs
-								})
-							);
-						}
-					}
-				});
+				component = mount(ImageView, {
+                					target: dom,
+                					props: {
+                						node,
+                						editable: editor.isEditable,
+                						selected: false,
+                						updateAttributes: (attrs) => {
+                							if (typeof getPos !== 'function') return;
+                							const pos = getPos();
+                							const currentNode = editor.view.state.doc.nodeAt(pos);
+                							if (!currentNode) return;
+                							editor.view.dispatch(
+                								editor.view.state.tr.setNodeMarkup(pos, undefined, {
+                									...currentNode.attrs,
+                									...attrs
+                								})
+                							);
+                						}
+                					}
+                				});
 			}
 
 			mount();

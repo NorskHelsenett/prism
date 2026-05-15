@@ -1,4 +1,6 @@
 <script>
+	import { run } from 'svelte/legacy';
+
 	import BugBounty from '$lib/components/dashboard/BugBounty.svelte';
 	import Criticality from '$lib/components/dashboard/Criticality.svelte';
 	import CriticalityPie from '$lib/components/charts/CriticalityPie.svelte';
@@ -11,11 +13,13 @@
 	// Read year from URL query param, e.g. ?year=2025
 	const currentYear = new Date().getFullYear();
 
-	$: yearParam = $page.url.searchParams.get('year');
-	$: selectedYear = yearParam ? parseInt(yearParam, 10) : currentYear;
-	$: dashboardStore.setYear(selectedYear);
+	let yearParam = $derived($page.url.searchParams.get('year'));
+	let selectedYear = $derived(yearParam ? parseInt(yearParam, 10) : currentYear);
+	run(() => {
+		dashboardStore.setYear(selectedYear);
+	});
 
-	$: availableYears = $dashboardStore.years?.length > 0 ? $dashboardStore.years : [String(currentYear)];
+	let availableYears = $derived($dashboardStore.years?.length > 0 ? $dashboardStore.years : [String(currentYear)]);
 
 	import { pageMeta } from '$lib/stores/pageMeta';
 	import { onMount } from 'svelte';
@@ -25,21 +29,23 @@
 	import { accessLevels } from '$lib/userStore';
 	import OwaspBarChart from '$lib/components/dashboard/OwaspBarChart.svelte';
 	import { goto } from '$app/navigation';
-	let severityData;
+	let severityData = $state();
 
 	onMount(() => {
 		pageMeta.set({ pretitle: 'Overview', title: 'Pentest Report Information Security Management' });
 	});
 
-	$: if ($dashboardStore && $dashboardStore.criticalities) {
-		severityData = {
-			critical: $dashboardStore.criticalities.critical || 0,
-			high: $dashboardStore.criticalities.high || 0,
-			medium: $dashboardStore.criticalities.medium || 0,
-			low: $dashboardStore.criticalities.low || 0,
-			information: $dashboardStore.criticalities.information || 0
-		};
-	}
+	run(() => {
+		if ($dashboardStore && $dashboardStore.criticalities) {
+			severityData = {
+				critical: $dashboardStore.criticalities.critical || 0,
+				high: $dashboardStore.criticalities.high || 0,
+				medium: $dashboardStore.criticalities.medium || 0,
+				low: $dashboardStore.criticalities.low || 0,
+				information: $dashboardStore.criticalities.information || 0
+			};
+		}
+	});
 </script>
 
 <div class="row g-2 align-items-center">
@@ -55,7 +61,7 @@
 				<select
 					class="form-select"
 					value={String(selectedYear)}
-					on:change={(e) => goto(`/?year=${e.target.value}`)}
+					onchange={(e) => goto(`/?year=${e.target.value}`)}
 				>
 					{#each availableYears as year}
 						<option value={year}>{year}</option>
@@ -75,18 +81,18 @@
 		<div class="col12">
 			<div class="row row-cards">
 				<div class="col-sm-6 col-lg-3">
-					<div class="card card-sm cursor-pointer" on:click={() => goto('/vulnerability')}>
+					<div class="card card-sm cursor-pointer" onclick={() => goto('/vulnerability')}>
 						<CountVulnerabilities data={$dashboardStore.total} />
 					</div>
 				</div>
 				<div class="col-sm-6 col-lg-3">
-					<div class="card card-sm cursor-pointer" on:click={() => goto('/project')}>
+					<div class="card card-sm cursor-pointer" onclick={() => goto('/project')}>
 						<Projects />
 					</div>
 				</div>
 				<div class="col-sm-6 col-lg-3">
 					<!-- TODO: fix this hardcoding-->
-					<div class="card card-sm cursor-pointer" on:click={() => goto('/project/20/view')}>
+					<div class="card card-sm cursor-pointer" onclick={() => goto('/project/20/view')}>
 						<BugBounty data={$dashboardStore.bugBounties} />
 					</div>
 				</div>

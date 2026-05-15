@@ -1,4 +1,6 @@
 <script>
+  import { run, preventDefault, stopPropagation } from 'svelte/legacy';
+
 import Avatar from '$lib/components/Avatar.svelte';
 import { goto } from '$app/navigation';
 import Dropdown from '$lib/components/Dropdown.svelte';
@@ -6,10 +8,16 @@ import Markdown from '$lib/components/Markdown.svelte';
 import { Fetch } from '$lib/fetchUtil';
 	import { toast } from 'svelte-sonner';
 
-let selectedRow = -1
-let calendarEvents = []
-let showDropdown = []
-export let reload = true
+let selectedRow = $state(-1)
+let calendarEvents = $state([])
+let showDropdown = $state([])
+  /**
+   * @typedef {Object} Props
+   * @property {boolean} [reload]
+   */
+
+  /** @type {Props} */
+  let { reload = true } = $props();
 
 let months =["Jan", "Feb","Mar", "Apr","May","Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
@@ -31,9 +39,11 @@ async function fetchCalendarEvents() {
   calendarEvents = await Fetch(`/api/planning?startDate=${startDate}&endDate=${endDate}&pageSize=${1000}`);
 }
 
-$: if (!reload) {
-  fetchCalendarEvents();
-}
+run(() => {
+    if (!reload) {
+    fetchCalendarEvents();
+  }
+  });
 
 function copyText(content){
   if (!navigator.clipboard) {
@@ -89,7 +99,7 @@ function calculateLineLength(dateTo, monthStr) {
     }
 }
 
-let formattedTotalHours; // Declare the variable outside the reactive block
+let formattedTotalHours = $state(); // Declare the variable outside the reactive block
 
 const numberFormatter = new Intl.NumberFormat('sv-SE', {
     style: 'decimal',
@@ -97,13 +107,15 @@ const numberFormatter = new Intl.NumberFormat('sv-SE', {
     minimumFractionDigits: 0
 });
 
-$: if (calendarEvents) {
-  const totalHours = calendarEvents.reduce((accumulator, event) => {
-    return accumulator + (event?.estimate || 0);
-  }, 0);
+run(() => {
+    if (calendarEvents) {
+    const totalHours = calendarEvents.reduce((accumulator, event) => {
+      return accumulator + (event?.estimate || 0);
+    }, 0);
 
-  formattedTotalHours = numberFormatter.format(totalHours);
-}
+    formattedTotalHours = numberFormatter.format(totalHours);
+  }
+  });
 
 </script>
 <div class="card">
@@ -127,14 +139,14 @@ $: if (calendarEvents) {
                   <tbody>
                     {#if calendarEvents?.length > 0}
                     {#each calendarEvents as event, index}
-                    <tr on:dblclick={() => goto(`/planning/${event.id}/view`)} on:click={() => selectedRow === index ? selectedRow = -1 : selectedRow = index} class:selected="{selectedRow === index}" >
+                    <tr ondblclick={() => goto(`/planning/${event.id}/view`)} onclick={() => selectedRow === index ? selectedRow = -1 : selectedRow = index} class:selected="{selectedRow === index}" >
                       <td class="sticky-col first-col" style="min-width:20em">
                         <h4 class="text-capitalize">
-                          <button class="link" on:click="{() => goto(`/planning/${event.id}/view`)}">{event?.title}</button>
+                          <button class="link" onclick={() => goto(`/planning/${event.id}/view`)}>{event?.title}</button>
                         </h4>
                         <div class="grid-container text-secondary">
                           <strong title="Work Order">AO:</strong>
-                          <button class="btn-none" on:click|preventDefault="{() => copyText(event?.workorder)}">{event?.workorder || ""}</button>
+                          <button class="btn-none" onclick={preventDefault(() => copyText(event?.workorder))}>{event?.workorder || ""}</button>
                           <!-- <strong title="Estimate">Est.:</strong> <span>4000 h</span> -->
                         </div>
                       </td>
@@ -174,7 +186,7 @@ $: if (calendarEvents) {
                       </td>
                       <td>
                         {#if event?.note}
-                          <i class="ti ti-notes cursor-pointer" on:click|preventDefault|stopPropagation="{() => showDropdown[index] = true}"></i>
+                          <i class="ti ti-notes cursor-pointer" onclick={stopPropagation(preventDefault(() => showDropdown[index] = true))}></i>
                           <Dropdown bind:show={showDropdown[index]}>
                               <div class="card-body">
                                 <Markdown markdown={event.note}/>

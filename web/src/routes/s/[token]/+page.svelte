@@ -1,4 +1,6 @@
 <script>
+  import { preventDefault } from 'svelte/legacy';
+
 	import SeverityBucket from '$lib/components/severityBucket.svelte';
 	import ImpactBucket from '$lib/components/ImpactBucket.svelte';
 	import Markdown from '$lib/components/Markdown.svelte';
@@ -13,24 +15,30 @@
    * @typedef {import('$lib/models/vulnerabilityDetail').VulnerabilityData} VulnerabilityData
    */
   /** @type {VulnerabilityData} */
-  let vulnerability
+  let vulnerability = $state()
 
-  /** @type {import('./$types').PageData} */
-  export let data;
+  
+  /**
+   * @typedef {Object} Props
+   * @property {import('./$types').PageData} data
+   */
+
+  /** @type {Props} */
+  let { data } = $props();
   let token = data.token
-  let showExploitationTooltip = false
+  let showExploitationTooltip = $state(false)
 
-  let requirePassphrase = false
-  let showExpiredMessage = false
-  let showUnauthorizedMessage = false
-  let showNotFoundMessage = false
-  let showRateLimitMessage = false
-  let showCaseClosed = false
+  let requirePassphrase = $state(false)
+  let showExpiredMessage = $state(false)
+  let showUnauthorizedMessage = $state(false)
+  let showNotFoundMessage = $state(false)
+  let showRateLimitMessage = $state(false)
+  let showCaseClosed = $state(false)
 
-  let foundBy = {
+  let foundBy = $state({
     avatar: "",
     name: ""
-  }
+  })
 
   onMount(async() => {
     localStorage.removeItem("redirectToAfterLogin")
@@ -58,15 +66,15 @@
     }
   }
 
-  let showModal = false;
-  let currentImageIndex = 0;
+  let showModal = $state(false);
+  let currentImageIndex = $state(0);
 
   function openModal(index) {
     currentImageIndex = index;
     showModal = true;
   }
 
-  let passphrase = ""
+  let passphrase = $state("")
   async function submitPassphrase() {
     const url = `/api/share/${token}`
     const result = await Fetch(url, {method: "POST", body: `{"passphrase":"${passphrase}"}`})
@@ -209,9 +217,9 @@
       <p class="empty-subtitle text-secondary">
         Enter the magic word.
       </p>
-      <input autofocus type="text" class="form-control w-100 text-teal display-3" bind:value={passphrase} on:keydown={handleKeydown}>
+      <input autofocus type="text" class="form-control w-100 text-teal display-3" bind:value={passphrase} onkeydown={handleKeydown}>
       <div class="empty-action">
-        <a class="btn btn-danger" on:click|preventDefault={submitPassphrase}>
+        <a class="btn btn-danger" onclick={preventDefault(submitPassphrase)}>
           <!-- Download SVG icon from http://tabler-icons.io/i/search -->
           <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-shield-lock" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
             <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
@@ -352,7 +360,7 @@
         <div class="datagrid-item">
           <div class="datagrid-title">
             Ease of Exploitation
-            <svg on:mouseover={() => showExploitationTooltip = true} on:mouseout={() => showExploitationTooltip = false}  xmlns="http://www.w3.org/2000/svg" class="stroke-normal cursor-pointer icon icon-tabler icon-tabler-info-circle" width="12" height="12" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M12 9h.01" /><path d="M11 12h1v4h1" /></svg>
+            <svg onmouseover={() => showExploitationTooltip = true} onmouseout={() => showExploitationTooltip = false}  xmlns="http://www.w3.org/2000/svg" class="stroke-normal cursor-pointer icon icon-tabler icon-tabler-info-circle" width="12" height="12" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M12 9h.01" /><path d="M11 12h1v4h1" /></svg>
           </div>
           <div class="datagrid-content" >
             {vulnerability?.Vulnerability.easeOfExploitation || 'N/A'}
@@ -398,7 +406,7 @@
             {#if vulnerability?.Vulnerability.images && vulnerability?.Vulnerability.images.length > 0}
               <div class="avatar-list avatar-list-stacked cursor-pointer">
                 {#each vulnerability?.Vulnerability.images as image, index}
-                  <img src={`data:image/png;base64,${image}`} alt={`Image ${index}`} on:click={() => openModal(index)} class="avatar avatar-xs rounded"/>
+                  <img src={`data:image/png;base64,${image}`} alt={`Image ${index}`} onclick={() => openModal(index)} class="avatar avatar-xs rounded"/>
                 {/each}
               </div>
             {:else}

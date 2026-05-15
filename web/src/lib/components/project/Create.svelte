@@ -1,27 +1,34 @@
 <script>
+  import { preventDefault } from 'svelte/legacy';
+
   import { onMount } from "svelte";
   import { toast } from 'svelte-sonner';
   import { Fetch } from '$lib/fetchUtil.js';
   import Modal from '../Modal.svelte';
   import UserSearch from '../UserSearch.svelte';
-  import { textAreaListHelper } from "$lib/textAreaListHelper";
+  import RichTextEditor from '../editor/RichTextEditor.svelte';
   import Avatarlist from "../calendar/Avatarlist.svelte";
-	import { json } from "@sveltejs/kit";
 
-  export let showModal = false;
-  export let model;
+  /**
+   * @typedef {Object} Props
+   * @property {boolean} [showModal]
+   * @property {any} model
+   */
+
+  /** @type {Props} */
+  let { showModal = $bindable(false), model } = $props();
 
   // Declare local state for form inputs
-  let projectName = '';
-  let slackChannel = '';
-  let description = '';
-  let clientEmailInitilized = [];
+  let projectName = $state('');
+  let slackChannel = $state('');
+  let description = $state('');
+  let clientEmailInitilized = $state([]);
   let clientEmail = [];
-  let hackerNameInitilized = [];
+  let hackerNameInitilized = $state([]);
   let hackerName = [];
-  let isBugBounty = false;
-  let isPersisting = false
-  let hackers = [];
+  let isBugBounty = $state(false);
+  let isPersisting = $state(false)
+  let hackers = $state([]);
 
   function closeModal() {
     showModal = false;
@@ -107,7 +114,9 @@
 </script>
 
 <Modal bind:showModal on:close={closeModal}>
-  <h5 class="modal-title" slot="title">Create new project</h5>
+  {#snippet title()}
+    <h5 class="modal-title" >Create new project</h5>
+  {/snippet}
   <div class="modal-body">
     <div class="row row-cards">
       <div class="col-12">
@@ -187,14 +196,11 @@
                   <label class="form-label"
                     >Description <span class="form-label-description">{description.length}</span></label
                   >
-                  <textarea
-                    class="form-control"
-                    name="example-textarea-input"
-                    rows="6"
+                  <RichTextEditor
                     bind:value={description}
-                    placeholder="Content.."
-                    use:textAreaListHelper
-                  ></textarea>
+                    placeholder="Content..."
+                    minHeight="160px"
+                  />
                 </div>
               </div>
             </div>
@@ -240,29 +246,31 @@
     </div>
   </div>
 
-  <div class="modal-footer" slot="footer">
-    <a href="#" class="btn btn-link link-secondary" on:click={closeModal}> Cancel </a>
-    <button disabled={isPersisting} href="#" class="btn btn-primary ms-auto" on:click|preventDefault={handleSubmit}>
-      <!-- Download SVG icon from http://tabler-icons.io/i/plus -->
-      {#if model == null}
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          class="icon"
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          stroke-width="2"
-          stroke="currentColor"
-          fill="none"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          ><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M12 5l0 14"
-          ></path><path d="M5 12l14 0"></path></svg
-        >
-        Create Project
-      {:else}
-        Update Project
-      {/if}
-    </button>
-  </div>
+  {#snippet footer()}
+    <div class="modal-footer" >
+      <a href="#" class="btn btn-link link-secondary" onclick={closeModal}> Cancel </a>
+      <button disabled={isPersisting} href="#" class="btn btn-primary ms-auto" onclick={preventDefault(handleSubmit)}>
+        <!-- Download SVG icon from http://tabler-icons.io/i/plus -->
+        {#if model == null}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="icon"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            stroke-width="2"
+            stroke="currentColor"
+            fill="none"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            ><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M12 5l0 14"
+            ></path><path d="M5 12l14 0"></path></svg
+          >
+          Create Project
+        {:else}
+          Update Project
+        {/if}
+      </button>
+    </div>
+  {/snippet}
 </Modal>

@@ -1,4 +1,6 @@
 <script>
+  import { run } from 'svelte/legacy';
+
   import { Doughnut } from 'svelte-chartjs';
   import ChartDataLabels from 'chartjs-plugin-datalabels';
   import {
@@ -12,10 +14,9 @@
 
   ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, ChartDataLabels);
 
-  export let severityData = { critical: 0, high: 0, medium: 0, low: 0, information: 0 };
-  export let vulnerabilities = []
+  let { severityData = $bindable({ critical: 0, high: 0, medium: 0, low: 0, information: 0 }), vulnerabilities = [] } = $props();
 
-  let data = {
+  let data = $state({
   labels: [
     'Critical',
     'High',
@@ -46,17 +47,19 @@
     hoverOffset: 15 // Distance the slice moves when hovered
     },
   ],
-};
+});
 
-  $: if (severityData) {
-    data.datasets[0].data = [
-      severityData.critical,
-      severityData.high,
-      severityData.medium,
-      severityData.low,
-      severityData.information,
-    ];
-  }
+  run(() => {
+    if (severityData) {
+      data.datasets[0].data = [
+        severityData.critical,
+        severityData.high,
+        severityData.medium,
+        severityData.low,
+        severityData.information,
+      ];
+    }
+  });
 
   let options = {
     responsive: true,
@@ -92,7 +95,7 @@
     }
   }
 
-  $: {
+  run(() => {
     if (vulnerabilities.length > 0) {
       // Reset counts
       severityData = { critical: 0, high: 0, medium: 0, low: 0, information: 0 };
@@ -113,7 +116,7 @@
         }
       });
     }
-  }
+  });
 
 </script>
 

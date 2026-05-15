@@ -1,5 +1,5 @@
 <script>
-  export let impact;
+  let { impact } = $props();
 
   function getSeverityClasses(localSeverity = "") {
       const baseClasses = {
@@ -16,12 +16,12 @@
       return classes;
   }
 
-  let showTooltip = false
+  let showTooltip = $state(false)
 
   let height = [12,16,20]
 </script>
 
-<div on:mouseover={() => showTooltip = true} on:mouseout={() => showTooltip = false} style="min-width: 9em !important;">
+<div onmouseover={() => showTooltip = true} onmouseout={() => showTooltip = false} style="min-width: 9em !important;">
   {#each getSeverityClasses(impact) as severityClass, index}
     <span class={severityClass + ' text-white avatar ml-03'} style="height: {height[index]}px; width: 16px;">&nbsp;</span>
   {/each}

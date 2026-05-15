@@ -1,9 +1,9 @@
 <script>
-  export let data
+  let { data, children } = $props();
 </script>
 
 {#key data.url}
   <div>
-      <slot />
+      {@render children?.()}
   </div>
 {/key}

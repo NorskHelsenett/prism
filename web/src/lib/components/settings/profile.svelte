@@ -7,13 +7,13 @@
 	import Passkeys from './Passkeys.svelte';
 
   let persisting = false
-  let sessions = []
+  let sessions = $state([])
 
-  let user = {
+  let user = $state({
       Picture: "",
       Title: "",
       Name: ""
-  }
+  })
 
   // Subscribe to the user store
   const unsubscribe = userStore.subscribe(storeUser => {
@@ -124,7 +124,7 @@
             {formatDate(session.ExpiresAt)}
           </td>
           <td>
-            <a href="#" class="position-relative" on:click={endSession(session.SessionID)}>Disconnect
+            <a href="#" class="position-relative" onclick={endSession(session.SessionID)}>Disconnect
               {#if session.IsCurrent == true}
                 <span class="badge bg-blue badge-notification badge-blink"></span>
               {/if}
@@ -146,7 +146,7 @@
   <p class="card-subtitle">When enabled your account is safeguarded by a One-Time Password (OTP) mechanism, an essential part of our multi-factor authentication process. This additional layer of security ensures that only you have access to your account, even if someone knows your password.</p>
   <p class="text-secondary">Remember, this will log you out, and you will be required to go through the OTP generation flow before being able to log in again.</p>
   <div class="btn-list justify-content-start">
-    <button class="btn btn-ghost-warning d-none d-sm-inline-block" on:click={resetMFA} disabled={sessions.every(session => !session.OTPVerified)}>Reset MFA</button>
+    <button class="btn btn-ghost-warning d-none d-sm-inline-block" onclick={resetMFA} disabled={sessions.every(session => !session.OTPVerified)}>Reset MFA</button>
   </div>
 
   <Passkeys />

@@ -1,4 +1,6 @@
 <script>
+  import { preventDefault } from 'svelte/legacy';
+
   import { createEventDispatcher, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { Fetch } from '$lib/fetchUtil.js';
@@ -7,8 +9,7 @@
 	import UserSearch from '$lib/components/UserSearch.svelte';
 	import Modal from '../Modal.svelte';
 
-  export let assessment
-  let localAssessment = assessment;
+  let localAssessment = $state(assessment);
   const dispatch = createEventDispatcher();
 
   function updateResponsibleHacker(event) {
@@ -18,8 +19,15 @@
     responsibleHackers = [lastOne]
   }
 
-  let responsibleHackers = []
-  export let showModal = false
+  let responsibleHackers = $state([])
+  /**
+   * @typedef {Object} Props
+   * @property {any} assessment
+   * @property {boolean} [showModal]
+   */
+
+  /** @type {Props} */
+  let { assessment, showModal = $bindable(false) } = $props();
 
   function closeModal() {
 		showModal = false;
@@ -35,17 +43,19 @@
 
 <div class="row align-items-center mb-3">
   <div class="col-auto">
-    <a href="#" class="btn btn-dark w-100" on:click="{() => goto(`/planning/${data.id}/view`)}">Back</a>
+    <a href="#" class="btn btn-dark w-100" onclick={() => goto(`/planning/${data.id}/view`)}>Back</a>
   </div>
   <div class="col-auto">
-    <a href="#" class="btn btn-primary w-100" on:click="{() => updateAssessment()}">Save</a>
+    <a href="#" class="btn btn-primary w-100" onclick={() => updateAssessment()}>Save</a>
   </div>
 </div>
 
 {#if localAssessment}
 
 <Modal bind:showModal on:close={closeModal}>
-	<h5 class="modal-title" slot="title">Edit Assessment</h5>
+	{#snippet title()}
+        <h5 class="modal-title" >Edit Assessment</h5>
+      {/snippet}
 
     <!-- Photo -->
     <!-- <div class="img-responsive img-responsive-21x9 card-img-top" style="background-image: url(/edit-banner.webp)"></div> -->
@@ -155,19 +165,21 @@
                     class="form-control"
                     rows=10
                     placeholder="Notes..."
-                    bind:value={localAssessment.note} />
+                    bind:value={localAssessment.note}></textarea>
           </div>
         </div>
 
       </div>
     </div>
-	<div class="modal-footer" slot="footer">
-		<a href="#" class="btn btn-link link-secondary" on:click={closeModal}> Cancel </a>
-		<button href="#" class="btn btn-primary ms-auto" on:click|preventDefault={handleSubmit}>
-			<!-- Download SVG icon from http://tabler-icons.io/i/plus -->
-				Save
-		</button>
-	</div>
+	{#snippet footer()}
+        <div class="modal-footer" >
+  		<a href="#" class="btn btn-link link-secondary" onclick={closeModal}> Cancel </a>
+  		<button href="#" class="btn btn-primary ms-auto" onclick={preventDefault(handleSubmit)}>
+  			<!-- Download SVG icon from http://tabler-icons.io/i/plus -->
+  				Save
+  		</button>
+  	</div>
+      {/snippet}
 
 </Modal>
 {/if}

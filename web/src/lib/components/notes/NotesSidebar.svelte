@@ -1,4 +1,6 @@
 <script>
+  import { stopPropagation } from 'svelte/legacy';
+
   import {
     notes,
     trashedNotes,
@@ -65,7 +67,7 @@
     }
   }
 
-  $: list = $showTrash ? $trashedNotes : $notes;
+  let list = $derived($showTrash ? $trashedNotes : $notes);
 </script>
 
 <aside class="notes-sidebar">
@@ -77,10 +79,10 @@
           class="form-control form-control-sm"
           placeholder={$showTrash ? 'Search trash…' : 'Search notes…'}
           bind:value={$searchQuery}
-          on:input={onSearchInput}
+          oninput={onSearchInput}
         />
         {#if $searchQuery}
-          <button type="button" class="search-clear" on:click={clearSearch} title="Clear search" aria-label="Clear search">
+          <button type="button" class="search-clear" onclick={clearSearch} title="Clear search" aria-label="Clear search">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18" /><path d="M6 6l12 12" /></svg>
           </button>
         {/if}
@@ -94,7 +96,7 @@
             type="button"
             class="tag-chip"
             class:active={$activeTag === tag}
-            on:click={() => pickTag(tag)}
+            onclick={() => pickTag(tag)}
           >
             #{tag}
           </button>
@@ -103,7 +105,7 @@
     {/if}
 
     {#if $showTrash && list.length > 0}
-      <button type="button" class="empty-trash-btn" on:click={confirmEmpty}>
+      <button type="button" class="empty-trash-btn" onclick={confirmEmpty}>
         Empty trash
       </button>
     {/if}
@@ -126,7 +128,7 @@
           type="button"
           class="note-card"
           class:active={$selectedNoteId === note.id}
-          on:click={() => $showTrash ? null : openNote(note.id)}
+          onclick={() => $showTrash ? null : openNote(note.id)}
         >
           <div class="note-title">{note.title || 'Untitled'}</div>
           <div class="note-meta">
@@ -142,14 +144,14 @@
           {/if}
           <div class="trash-actions">
             {#if $showTrash}
-              <button type="button" class="trash-btn" title="Restore" on:click|stopPropagation={() => restoreNote(note.id)}>
+              <button type="button" class="trash-btn" title="Restore" onclick={stopPropagation(() => restoreNote(note.id))}>
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4-4 4-4" /><path d="M5 10h11a4 4 0 1 1 0 8h-1" /></svg>
               </button>
-              <button type="button" class="trash-btn danger" title="Delete forever" on:click|stopPropagation={() => confirmPurge(note.id)}>
+              <button type="button" class="trash-btn danger" title="Delete forever" onclick={stopPropagation(() => confirmPurge(note.id))}>
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /></svg>
               </button>
             {:else}
-              <button type="button" class="trash-btn" title="Move to trash" on:click|stopPropagation={() => trashNote(note.id)}>
+              <button type="button" class="trash-btn" title="Move to trash" onclick={stopPropagation(() => trashNote(note.id))}>
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /></svg>
               </button>
             {/if}
@@ -160,7 +162,7 @@
   </div>
 
   <div class="sidebar-footer">
-    <button type="button" class="trash-toggle" class:active={$showTrash} on:click={toggleTrash}>
+    <button type="button" class="trash-toggle" class:active={$showTrash} onclick={toggleTrash}>
       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /></svg>
       <span>{$showTrash ? 'Back to notes' : 'Trash'}</span>
       {#if !$showTrash && $trashedNotes.length > 0}

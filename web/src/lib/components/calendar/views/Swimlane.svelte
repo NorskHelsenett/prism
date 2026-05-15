@@ -1,18 +1,18 @@
 <script>
+	import { run } from 'svelte/legacy';
+
 	import Avatar from '$lib/components/Avatar.svelte';
 	import TaskModal from './TaskModal.svelte';
 	import { Fetch } from '$lib/fetchUtil';
 	import { onMount } from 'svelte';
 
-	let teams = [];
+	let teams = $state([]);
 	let allUsers = [];
 	let allTeams = [];
-	let editMode = false;
+	let editMode = $state(false);
 	const { startDate, endDate } = calculateWeek();
-	let loading = true;
+	let loading = $state(true);
 
-	// Change the loading condition to only check if teams are loaded
-	$: loading = !teams?.length;
 
 	// Drag and drop state variables
 	let isDragging = false;
@@ -35,10 +35,10 @@
 	let isShiftPressed = false; // Track if shift key is pressed during drag
 
 	// Add state variables to track visible dates
-	let visibleStartDate = null;
-	let visibleEndDate = null;
-	let visibleDays = [];
-	let visibleStats = { count: 0, hours: 0 };
+	let visibleStartDate = $state(null);
+	let visibleEndDate = $state(null);
+	let visibleDays = $state([]);
+	let visibleStats = $state({ count: 0, hours: 0 });
 
 	onMount(async () => {
 		try {
@@ -169,18 +169,8 @@
 	}
 
 	// Check if user is filtered out (when searching)
-	let userFilter = '';
-	$: filteredAvailableUsers = getAvailableUsers().filter(
-		(user) =>
-			user.email.toLowerCase().includes(userFilter.toLowerCase()) ||
-			(user.name && user.name.toLowerCase().includes(userFilter.toLowerCase()))
-	);
+	let userFilter = $state('');
 
-	$: filteredAvailableTeams = getAvailableTeams().filter(
-		(team) =>
-			team.name.toLowerCase().includes(userFilter.toLowerCase()) ||
-			team.members.some((email) => email.toLowerCase().includes(userFilter.toLowerCase()))
-	);
 
 	async function updateHackers(task, event) {
 		if (!event) return;
@@ -340,8 +330,14 @@
 		return daysList;
 	}
 
-	let calendarEvents = [];
-	export let reload = false;
+	let calendarEvents = $state([]);
+	/**
+	 * @typedef {Object} Props
+	 * @property {boolean} [reload]
+	 */
+
+	/** @type {Props} */
+	let { reload = false } = $props();
 	let days = generateDays(startDate, endDate);
 
 	async function fetchCalendarEvents() {
@@ -406,12 +402,6 @@
 		return new Date(date).toISOString().split('T')[0];
 	}
 
-	$: if (!reload) {
-		fetchCalendarEvents().then(() => {
-			// Update visible days after calendar events are loaded
-			setTimeout(updateVisibleDays, 100);
-		});
-	}
 
 	function calculateTaskWidth(startDate, endDate) {
 		// Convert string dates to Date objects if needed
@@ -430,41 +420,13 @@
 		return totalWidth + 'px';
 	}
 
-	// Create a reactive declaration for visible stats that updates whenever
-	// visibleStartDate, visibleEndDate, or calendarEvents change
-	$: {
-		if (visibleStartDate && visibleEndDate && calendarEvents.length) {
-			const start = new Date(visibleStartDate);
-			const end = new Date(visibleEndDate);
-
-			// Filter events that overlap with visible date range AND have at least one hacker assigned
-			const visibleEvents = calendarEvents.filter((event) => {
-				const eventStart = new Date(event.dateFrom);
-				const eventEnd = new Date(event.dateTo);
-				// Check if event overlaps with visible range and has at least one hacker
-				return eventStart <= end && eventEnd >= start && event.hackers && event.hackers.length > 0;
-			});
-
-			// Calculate total hours for visible events
-			const totalHours = visibleEvents.reduce((total, event) => {
-				return total + (event.durationHours || 0);
-			}, 0);
-
-			visibleStats = {
-				count: visibleEvents.length,
-				hours: totalHours
-			};
-		} else {
-			visibleStats = { count: 0, hours: 0 };
-		}
-	}
 
 	// Modal properties
-	let showModal = false;
-	let selectedTask = null;
+	let showModal = $state(false);
+	let selectedTask = $state(null);
 	let selectedTaskElement = null;
 	let lastClickedTaskId = null;
-	let clickPosition = { x: 0, y: 0 };
+	let clickPosition = $state({ x: 0, y: 0 });
 
 	// Function to handle task click with improved positioning
 	function handleTaskClick(event, task) {
@@ -1322,15 +1284,6 @@
 		return { laneCount: Math.max(1, lanes.length), laneMap, hasOverlaps };
 	}
 
-	// Reactive lane computation per member (depends on both teams and calendarEvents)
-	$: memberLanes = (() => {
-		const _events = calendarEvents; // explicit dependency
-		const result = {};
-		for (const member of teams) {
-			result[member] = computeMemberLanes(member);
-		}
-		return result;
-	})();
 
 	function getEventForDayMemberLane(dayDate, memberEmail, laneIndex, laneMap) {
 		if (!calendarEvents?.length) return null;
@@ -1445,6 +1398,65 @@
 			}
 		}
 	}
+	// Change the loading condition to only check if teams are loaded
+	run(() => {
+		loading = !teams?.length;
+	});
+	let filteredAvailableUsers = $derived(getAvailableUsers().filter(
+		(user) =>
+			user.email.toLowerCase().includes(userFilter.toLowerCase()) ||
+			(user.name && user.name.toLowerCase().includes(userFilter.toLowerCase()))
+	));
+	let filteredAvailableTeams = $derived(getAvailableTeams().filter(
+		(team) =>
+			team.name.toLowerCase().includes(userFilter.toLowerCase()) ||
+			team.members.some((email) => email.toLowerCase().includes(userFilter.toLowerCase()))
+	));
+	run(() => {
+		if (!reload) {
+			fetchCalendarEvents().then(() => {
+				// Update visible days after calendar events are loaded
+				setTimeout(updateVisibleDays, 100);
+			});
+		}
+	});
+	// Create a reactive declaration for visible stats that updates whenever
+	// visibleStartDate, visibleEndDate, or calendarEvents change
+	run(() => {
+		if (visibleStartDate && visibleEndDate && calendarEvents.length) {
+			const start = new Date(visibleStartDate);
+			const end = new Date(visibleEndDate);
+
+			// Filter events that overlap with visible date range AND have at least one hacker assigned
+			const visibleEvents = calendarEvents.filter((event) => {
+				const eventStart = new Date(event.dateFrom);
+				const eventEnd = new Date(event.dateTo);
+				// Check if event overlaps with visible range and has at least one hacker
+				return eventStart <= end && eventEnd >= start && event.hackers && event.hackers.length > 0;
+			});
+
+			// Calculate total hours for visible events
+			const totalHours = visibleEvents.reduce((total, event) => {
+				return total + (event.durationHours || 0);
+			}, 0);
+
+			visibleStats = {
+				count: visibleEvents.length,
+				hours: totalHours
+			};
+		} else {
+			visibleStats = { count: 0, hours: 0 };
+		}
+	});
+	// Reactive lane computation per member (depends on both teams and calendarEvents)
+	let memberLanes = $derived((() => {
+		const _events = calendarEvents; // explicit dependency
+		const result = {};
+		for (const member of teams) {
+			result[member] = computeMemberLanes(member);
+		}
+		return result;
+	})());
 </script>
 
 {#if loading}
@@ -1461,7 +1473,7 @@
 			<h3 class="card-title">Swimlane View</h3>
 			<button
 				class="btn btn-sm {editMode ? 'btn-primary' : 'btn-outline-primary'}"
-				on:click={toggleEditMode}
+				onclick={toggleEditMode}
 			>
 				{editMode ? 'Save Layout' : 'Customize View'}
 			</button>
@@ -1485,7 +1497,7 @@
 											tooltipEnabled: false
 										}}
 									/>
-									<i class="overlay ti ti-x rounded-circle" on:click={() => removeUser(member)}></i>
+									<i class="overlay ti ti-x rounded-circle" onclick={() => removeUser(member)}></i>
 								</div>
 							{/each}
 						</div>
@@ -1510,7 +1522,7 @@
 											<span>{team.name}</span>
 											<button
 												class="btn btn-sm btn-outline-primary"
-												on:click={() => addTeam(getAddableTeamMembers(team))}
+												onclick={() => addTeam(getAddableTeamMembers(team))}
 											>
 												Add Available Members
 											</button>
@@ -1525,7 +1537,7 @@
 									{#each filteredAvailableUsers as user}
 										<li
 											class="list-group-item d-flex justify-content-between align-items-center cursor-pointer"
-											on:click={() => addUser(user.email)}
+											onclick={() => addUser(user.email)}
 										>
 											<Avatar
 												email={user.email}
@@ -1590,9 +1602,9 @@
 									class="cell"
 									class:weekend={day.isWeekend}
 									style="height: {rowHeight}px"
-									on:mousedown={(e) => handleMouseDown(e, day, member)}
-									on:mousemove={(e) => handleMouseMove(e, day, member)}
-									on:dragstart={(e) => e.preventDefault()}
+									onmousedown={(e) => handleMouseDown(e, day, member)}
+									onmousemove={(e) => handleMouseMove(e, day, member)}
+									ondragstart={(e) => e.preventDefault()}
 									data-date={day.date}
 									data-member={member}
 								>
@@ -1608,19 +1620,19 @@
 												{@const taskHasOverlap = lanes.hasOverlaps[calendar.id]}
 												{@const taskHeight = taskHasOverlap ? laneHeight - 2 : rowHeight - 12}
 												{@const taskTop = taskHasOverlap ? 5 + laneIdx * laneHeight : 5}
-												<!-- svelte-ignore a11y-click-events-have-key-events -->
-												<!-- svelte-ignore a11y-no-static-element-interactions -->
+												<!-- svelte-ignore a11y_click_events_have_key_events -->
+												<!-- svelte-ignore a11y_no_static_element_interactions -->
 												<div
 													class:task-done={calendar.status === 'done'}
 													class="task planningid-{calendar.id}"
 													class:task-compact={compact && taskHasOverlap}
-													on:click={(e) => handleTaskClick(e, calendar)}
-													on:mousedown={(e) => handleTaskDragStart(e, calendar, member)}
+													onclick={(e) => handleTaskClick(e, calendar)}
+													onmousedown={(e) => handleTaskDragStart(e, calendar, member)}
 													style="width: {calendar.width}; background-color: {calendar.color}; top: {taskTop}px; height: {taskHeight}px; display: flex; justify-content: flex-start; align-items: center; gap: 8px; padding: 0 8px; cursor: pointer; color: white;"
 												>
 													<div
 														class="resize-handle-left"
-														on:mousedown={(e) => handleResizeStart(e, calendar, member, 'left')}
+														onmousedown={(e) => handleResizeStart(e, calendar, member, 'left')}
 													></div>
 
 													<h4
@@ -1654,7 +1666,7 @@
 
 													<div
 														class="resize-handle-right"
-														on:mousedown={(e) => handleResizeStart(e, calendar, member, 'right')}
+														onmousedown={(e) => handleResizeStart(e, calendar, member, 'right')}
 													></div>
 												</div>
 											{/if}
@@ -1834,7 +1846,7 @@
 
 	/* When selection is active, show a horizontal resize cursor */
 	.cell-selecting,
-	tr:has(.cell-selecting) td:not(.first-col) {
+	tr:has(:global(.cell-selecting)) td:not(.first-col) {
 		cursor: ew-resize !important;
 	}
 

@@ -1,8 +1,14 @@
 <script>
 	import { accessLevels } from "$lib/userStore";
 
-	let hoveredItem = null;
-  export let activeItem = ''
+	let hoveredItem = $state(null);
+  /**
+   * @typedef {Object} Props
+   * @property {string} [activeItem]
+   */
+
+  /** @type {Props} */
+  let { activeItem = $bindable('') } = $props();
 
   const steps = [
     {
@@ -32,15 +38,15 @@
 <ul class="steps steps-vertical">
 	{#each steps as step, index}
 		<li class="step-item cursor-pointer"
-    on:click={() => activeItem = step.title}
+    onclick={() => activeItem = step.title}
     class:active={activeItem === step.title}
     >
 			<div
 				class="hover-border-effect padding"
 				class:bg-primary-lt={hoveredItem === index}
 				class:card-active={hoveredItem === index}
-				on:mouseover={() => (hoveredItem = index)}
-				on:mouseout={() => (hoveredItem = null)}
+				onmouseover={() => (hoveredItem = index)}
+				onmouseout={() => (hoveredItem = null)}
 			>
 				<div class="h4 m-0">{step.title}</div>
 				<div class="text-secondary">{step.description}</div>

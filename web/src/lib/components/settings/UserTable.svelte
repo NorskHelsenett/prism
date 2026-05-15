@@ -1,4 +1,6 @@
 <script>
+  import { preventDefault, stopPropagation } from 'svelte/legacy';
+
 	import { Fetch } from "$lib/fetchUtil";
 	import { onMount } from "svelte";
 	import Dropdown from "../Dropdown.svelte";
@@ -11,25 +13,25 @@
 	import Team from "./teams/Team.svelte";
 	import UserStats from "./UserStats.svelte";
 
-  let teamComponent;
-  let users = []
-  let roles = []
-  let showDeleteModal = false;
-  let showInfoModal = false;
-  let showToggleModal = false;
-  let userFilter = "active";
+  let teamComponent = $state();
+  let users = $state([])
+  let roles = $state([])
+  let showDeleteModal = $state(false);
+  let showInfoModal = $state(false);
+  let showToggleModal = $state(false);
+  let userFilter = $state("active");
 
   onMount(async () => {
     users = await Fetch("/api/settings/users/all")
     roles = await Fetch("/api/settings/roles-list")
   });
 
-  $: filteredUsers = users.filter(user => {
+  let filteredUsers = $derived(users.filter(user => {
     const isActive = user.active === undefined || user.active === null || user.active;
     if (userFilter === "active") return isActive;
     if (userFilter === "disabled") return !isActive;
     return true;
-  });
+  }));
 
   let desc = false
 
@@ -112,10 +114,10 @@ function formatDate(dateString) {
     return formattedDate.trim();
   }
 
-  let showDropdown = [false]
-  let userToResetMFA = null
-  let mfaStatus = null
-  let loadingMfaStatus = false
+  let showDropdown = $state([false])
+  let userToResetMFA = $state(null)
+  let mfaStatus = $state(null)
+  let loadingMfaStatus = $state(false)
 
   async function resetMFAok() {
     const response = await Fetch(`/api/settings/session/otp/reset/${userToResetMFA.email}`, {method: "DELETE"})
@@ -145,9 +147,9 @@ function formatDate(dateString) {
   }
 
 
-  let userMarkedForToggle = null;
+  let userMarkedForToggle = $state(null);
   let toggleDialogText = "";
-  let toggleDialogButton = "";
+  let toggleDialogButton = $state("");
 
   function toggleUserActive(user) {
     userMarkedForToggle = user;
@@ -177,9 +179,9 @@ function formatDate(dateString) {
     showToggleModal = false;
   }
 
-  let userMarkedForDeletion = null
+  let userMarkedForDeletion = $state(null)
   let deleteDialogText = ""
-  let deleteDialogButton= ""
+  let deleteDialogButton= $state("")
 
   function deleteUser(user){
     userMarkedForDeletion = user
@@ -230,10 +232,10 @@ function formatDate(dateString) {
     <table class="table table-vcenter table-mobile-md card-table">
       <thead>
         <tr>
-          <th on:click={orderBy("name", true)}><button class="table-sort" data-sort="sort-name">name</button></th>
+          <th onclick={orderBy("name", true)}><button class="table-sort" data-sort="sort-name">name</button></th>
           <th>Created</th>
           <th>Last seen</th>
-          <th><button on:click={orderBy("role", true)} class="table-sort" data-sort="sort-name">Role</button></th>
+          <th><button onclick={orderBy("role", true)} class="table-sort" data-sort="sort-name">Role</button></th>
           <th class="w-1"></th>
         </tr>
       </thead>
@@ -257,23 +259,23 @@ function formatDate(dateString) {
           <td class="text-secondary" title={formatDateText(user.CreatedAt)}><i class="ti ti-license"></i> {formatDate(user.CreatedAt)}</td>
           <td class="text-secondary" title={formatDateText(user.UpdatedAt)}>{formatDate(user.UpdatedAt)}</td>
           <td data-label="Role">
-            <select class="form-select" disabled={userIsAdmin(user.role)} on:change={updateUser(user)}>
+            <select class="form-select" disabled={userIsAdmin(user.role)} onchange={updateUser(user)}>
               {#each roles as role}
                 <option value="{role}" class="text-capitalize" selected={isRole(user.role, role)}>{role}</option>
               {/each}
             </select>
           </td>
           <td>
-            <i class="ti ti-dots cursor-pointer" on:click|preventDefault|stopPropagation={() => showDropdown[index] = !showDropdown[index]}></i>
+            <i class="ti ti-dots cursor-pointer" onclick={stopPropagation(preventDefault(() => showDropdown[index] = !showDropdown[index]))}></i>
             <Dropdown bind:show={showDropdown[index]}>
-              <a class="dropdown-item" href="#" on:click={()=> resetMFA(user)}>Reset MFA</a>
+              <a class="dropdown-item" href="#" onclick={()=> resetMFA(user)}>Reset MFA</a>
               {#if user.active === false}
-                <a class="dropdown-item text-green" href="#" on:click={()=> toggleUserActive(user)}>Activate User</a>
+                <a class="dropdown-item text-green" href="#" onclick={()=> toggleUserActive(user)}>Activate User</a>
               {:else}
-                <a class="dropdown-item text-orange" href="#" on:click={()=> toggleUserActive(user)}>Deactivate User</a>
+                <a class="dropdown-item text-orange" href="#" onclick={()=> toggleUserActive(user)}>Deactivate User</a>
               {/if}
               <div class="dropdown-divider"></div>
-              <a class="dropdown-item text-red" href="#" on:click={()=> deleteUser(user)}>Delete User</a>
+              <a class="dropdown-item text-red" href="#" onclick={()=> deleteUser(user)}>Delete User</a>
             </Dropdown>
           </td>
         </tr>

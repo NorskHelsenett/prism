@@ -1,10 +1,20 @@
 <script>
-  export let icon = ""
-  export let stroke = 1.5
-  export { className as class }; // Rename the prop externally to 'class'
-  let className = "";
+  import { run } from 'svelte/legacy';
 
-  $: document.documentElement.style.setProperty('--stroke-width', `${stroke}px`);
+   // Rename the prop externally to 'class'
+  /**
+   * @typedef {Object} Props
+   * @property {string} [icon]
+   * @property {number} [stroke]
+   * @property {string} [class]
+   */
+
+  /** @type {Props} */
+  let { icon = "", stroke = 1.5, class: className = "" } = $props();
+
+  run(() => {
+    document.documentElement.style.setProperty('--stroke-width', `${stroke}px`);
+  });
 </script>
 
 <style>

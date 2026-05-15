@@ -1,15 +1,25 @@
 <script>
-	export let statuses = {
+	import { run } from 'svelte/legacy';
+
+
+	/**
+	 * @typedef {Object} Props
+	 * @property {any} [statuses]
+	 * @property {number} [unresolvedCount]
+	 */
+
+	/** @type {Props} */
+	let { statuses = {
     "In Progress": 0,
     "Rejected": 0,
     "Reported": 0,
     "Resolved": 0
-  };
-
-	export let unresolvedCount = 0;
+  }, unresolvedCount = $bindable(0) } = $props();
 
     // Reactive declaration to compute unresolvedCount by excluding "Rejected" and "Resolved" statuses
-  $: unresolvedCount = Object.entries(statuses).filter(([status,]) => status !== "Resolved" && status !== "Rejected").reduce((total, [, count]) => total + count, 0);
+  run(() => {
+		unresolvedCount = Object.entries(statuses).filter(([status,]) => status !== "Resolved" && status !== "Rejected").reduce((total, [, count]) => total + count, 0);
+	});
 
 </script>
 

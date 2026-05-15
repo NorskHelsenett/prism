@@ -6,11 +6,11 @@
   import formatNumber from '$lib/formatNumber';
 
 
-  let auditLogs = [];
+  let auditLogs = $state([]);
   let intervalId; // Declare intervalId in the component scope
-  let newLogIds = new Set(); // Set to track new log IDs
-  let totalAudits = 0
-  let filterLogsBasedOnPath = false
+  let newLogIds = $state(new Set()); // Set to track new log IDs
+  let totalAudits = $state(0)
+  let filterLogsBasedOnPath = $state(false)
 
   async function fetchEvents() {
     try {
@@ -70,7 +70,7 @@
     <div class="row align-items-center">
       <div class="col">
         <label class="form-check">
-                <input class="form-check-input" type="checkbox" on:click={() => filterLogsBasedOnPath = !filterLogsBasedOnPath} value="{filterLogsBasedOnPath}">
+                <input class="form-check-input" type="checkbox" onclick={() => filterLogsBasedOnPath = !filterLogsBasedOnPath} value="{filterLogsBasedOnPath}">
                 <span class="form-check-label">
                   Filter current path
                 </span>

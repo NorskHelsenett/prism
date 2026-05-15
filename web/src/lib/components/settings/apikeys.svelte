@@ -1,4 +1,6 @@
 <script >
+  import { preventDefault } from 'svelte/legacy';
+
 	import { Fetch } from '$lib/fetchUtil';
 	import { onMount } from 'svelte';
   import { fade } from 'svelte/transition'
@@ -11,12 +13,12 @@
    */
 
   /** @type {APIKey[]} */
-  let apiKeys = [];
-	let showModal = false;
-  let isPersisting = false
-  let newApiKeyName = ""
-  let newApiKeySecret = ""
-  let loading = true
+  let apiKeys = $state([]);
+	let showModal = $state(false);
+  let isPersisting = $state(false)
+  let newApiKeyName = $state("")
+  let newApiKeySecret = $state("")
+  let loading = $state(true)
 
   async function closeModal() {
 		let success = true
@@ -71,7 +73,7 @@
     }
   }
 
-  let isHovering = false;
+  let isHovering = $state(false);
   function mouseOver() {
     isHovering = true;
   }
@@ -86,13 +88,13 @@
   <div class="text-secondary">
     <p>API keys are unique identifiers for authenticating users or applications to an API, meant to be kept secure and not exposed publicly. They help control API usage and prevent abuse. Keys should be monitored, rotated for security, and stored safely. Exposed or compromised keys must be revoked and replaced immediately. Audit API key usage regularly to ensure compliance with security policies.</p>
   </div>
-  {#if $accessLevels["/profile"]?.write }
+  {#if $accessLevels["/profile"]?.write}
 
   <div class="row">
     <div class="col-9"></div>
     <div class="col-3 d-flex flex-row justify-content-end">
-      <a class="btn btn-link text-azure bg-transparent mb-2 text-decoration-none" on:click={()=> {showModal = true}} on:mouseover={mouseOver}
-        on:mouseout={mouseOut}
+      <a class="btn btn-link text-azure bg-transparent mb-2 text-decoration-none" onclick={()=> {showModal = true}} onmouseover={mouseOver}
+        onmouseout={mouseOut}
         class:bg-azure-lt={isHovering}>
       Create new API Key</a></div>
   </div>
@@ -117,7 +119,7 @@
             <td>{formatDateToYYYYMMDD(apikey.UpdatedAt)}</td>
             <td>{formatDateToYYYYMMDD(apikey.expire)}</td>
             <td>
-              <a class="btn btn-sm btn-pill text-red s-oeZ2237gM52l" on:click={deleteAPIKey(apikey.ID)}>
+              <a class="btn btn-sm btn-pill text-red s-oeZ2237gM52l" onclick={deleteAPIKey(apikey.ID)}>
               delete</a>
             </td>
           </tr>
@@ -153,7 +155,7 @@
             <div class="input-group input-group-flat">
               <input type="text" bind:value={newApiKeySecret} class="form-control disabled text-truncate" autocomplete="off">
               <span class="input-group-text">
-                <a title="Copy apikey to clipboard" class="link-secondary cursor-pointer" data-bs-toggle="tooltip" aria-label="Copy api key" data-bs-original-title="Copy api key" on:click|preventDefault={handleCopyContent}>
+                <a title="Copy apikey to clipboard" class="link-secondary cursor-pointer" data-bs-toggle="tooltip" aria-label="Copy api key" data-bs-original-title="Copy api key" onclick={preventDefault(handleCopyContent)}>
                   <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-copy" width="44" height="44" viewBox="0 0 24 24" stroke-width="1.5" stroke="#ffffff" fill="none" stroke-linecap="round" stroke-linejoin="round">
                     <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                     <path d="M7 7m0 2.667a2.667 2.667 0 0 1 2.667 -2.667h8.666a2.667 2.667 0 0 1 2.667 2.667v8.666a2.667 2.667 0 0 1 -2.667 2.667h-8.666a2.667 2.667 0 0 1 -2.667 -2.667z" />
@@ -168,8 +170,8 @@
       </div>
       {#if newApiKeySecret == ""}
       <div class="modal-footer">
-        <button type="button" class="btn btn-link link-secondary me-auto" data-bs-dismiss="modal" on:click|preventDefault={() => showModal = false}>Cancel</button>
-        <button type="button" disabled={isPersisting} class="btn btn-primary" data-bs-dismiss="modal" on:click|preventDefault={handleSubmit}>Create API key</button>
+        <button type="button" class="btn btn-link link-secondary me-auto" data-bs-dismiss="modal" onclick={preventDefault(() => showModal = false)}>Cancel</button>
+        <button type="button" disabled={isPersisting} class="btn btn-primary" data-bs-dismiss="modal" onclick={preventDefault(handleSubmit)}>Create API key</button>
       </div>
       {/if}
     </div>

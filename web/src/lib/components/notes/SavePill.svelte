@@ -1,7 +1,7 @@
 <script>
   import { saveState } from '$lib/stores/notesStore';
 
-  $: state = $saveState;
+  let state = $derived($saveState);
 </script>
 
 {#if state !== 'idle'}

@@ -2,7 +2,7 @@
 	import { Fetch } from "$lib/fetchUtil";
 	import { toast } from "svelte-sonner";
 
-  export let settings = {
+  let { settings = $bindable({
     ID: 0,
     MFAEnabled: false,
     slack: {
@@ -13,7 +13,7 @@
     auditlog: {
       enabled: false
     }
-  }
+  }) } = $props();
 
   async function changeMultiFactor() {
     settings.MFAEnabled = !settings.MFAEnabled;
@@ -38,7 +38,7 @@
 
   <div>
     <label class="form-check form-switch form-switch-lg">
-      <input class="form-check-input" type="checkbox" on:change={changeMultiFactor} bind:checked={settings.MFAEnabled}>
+      <input class="form-check-input" type="checkbox" onchange={changeMultiFactor} bind:checked={settings.MFAEnabled}>
       <span class="form-check-label form-check-label-on">OTP is now turned on</span>
       <span class="form-check-label form-check-label-off">OTP is disabled</span>
     </label>

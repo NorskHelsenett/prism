@@ -7,7 +7,7 @@
 	import Multifactor from "./Multifactor.svelte";
   import ResetWebPush from "./resetWebPush.svelte";
 
-	let settings
+	let settings = $state()
 	onMount(async () => {
     settings = await Fetch("/api/settings")
   })
