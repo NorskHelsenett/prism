@@ -16,8 +16,6 @@
   }) } = $props();
 
   async function changeMultiFactor() {
-    settings.MFAEnabled = !settings.MFAEnabled;
-
     const response = await Fetch("/api/settings", { method: "POST", body: JSON.stringify(settings) });
     if(!response.error) {
       toast.success('Settings updated successfully');
