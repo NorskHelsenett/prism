@@ -599,7 +599,7 @@
 <style>
 	/* Dark theme variable mappings */
 	:global([data-bs-theme="dark"]) .editor-wrapper {
-		--rte-bg: var(--tblr-body-bg, #1a2234);
+		--rte-bg: transparent;
 		--rte-border: var(--tblr-border-color, #3a4658);
 		--rte-menu-bg: var(--tblr-bg-surface, #1e2a3a);
 		--rte-menu-color: var(--tblr-body-color, #dcdfe4);
@@ -677,6 +677,7 @@
 	.editor-readonly {
 		border: none;
 		background: transparent;
+		padding: 0 4em;
 	}
 
 	/* ProseMirror editor */
