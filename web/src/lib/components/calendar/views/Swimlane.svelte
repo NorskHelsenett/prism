@@ -347,7 +347,7 @@
 			);
 
 			// Process all events to add calculated properties
-			calendarEvents = events.map((event) => {
+			calendarEvents = (events || []).map((event) => {
 				return {
 					...event,
 					durationDays: calculateDurationDays(event),

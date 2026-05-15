@@ -77,6 +77,11 @@ let severityData = $state({
     information: 0
   });
 
+  let assessments = 0;
+  let showDropdown = $state(false)
+  let showDeleteModal = $state(false)
+  let unresolvedCount = $state(0);
+
   run(() => {
     // Reset counts
     severityData = { critical: 0, high: 0, medium: 0, low: 0, information: 0 };
@@ -105,11 +110,6 @@ let severityData = $state({
     await Fetch(`/api/project/${data.id}`, {method: "DELETE"})
     goto("/project")
   }
-
-  let assessments = 0;
-  let showDropdown = $state(false)
-  let showDeleteModal = $state(false)
-  let unresolvedCount = $state(0);
 
   async function handleeMarkdownChange(event) {
     project.Description = event.detail.updatedMarkdown

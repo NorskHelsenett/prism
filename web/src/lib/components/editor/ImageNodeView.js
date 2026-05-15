@@ -1,6 +1,6 @@
 import Image from '@tiptap/extension-image';
 import ImageView from './ImageView.svelte';
-import { mount } from "svelte";
+import { mount as mountSvelte } from "svelte";
 
 export const ImageWithView = Image.extend({
 	draggable: true,
@@ -50,8 +50,8 @@ export const ImageWithView = Image.extend({
 
 			let component;
 
-			function mount() {
-				component = mount(ImageView, {
+			function mountImageView() {
+				component = mountSvelte(ImageView, {
                 					target: dom,
                 					props: {
                 						node,
@@ -73,7 +73,7 @@ export const ImageWithView = Image.extend({
                 				});
 			}
 
-			mount();
+			mountImageView();
 
 			return {
 				dom,

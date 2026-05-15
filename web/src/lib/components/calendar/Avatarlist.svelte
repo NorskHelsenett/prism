@@ -1,6 +1,5 @@
 <script>
-  import { run, stopPropagation } from 'svelte/legacy';
-
+  import { untrack, stopPropagation } from 'svelte';
   import { createEventDispatcher, onDestroy, onMount } from 'svelte';
   import { Fetch } from '$lib/fetchUtil';
   import Avatar from '$lib/components/Avatar.svelte';
@@ -35,11 +34,14 @@
       availableUsers = allUsers.filter(user => !hackers.some(hacker => hacker.email === user.email));
   }
 
-  run(() => {
+  $effect(() => {
     if (hackers) {
-      hackers = hackers.filter((hacker, index, self) => 
+      const deduplicated = hackers.filter((hacker, index, self) => 
         index === self.findIndex(h => h.email === hacker.email)
       );
+      if (deduplicated.length !== hackers.length) {
+        hackers = deduplicated;
+      }
       updateAvailableUsers();
     }
   });

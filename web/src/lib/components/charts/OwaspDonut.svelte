@@ -2,6 +2,7 @@
   import { run } from 'svelte/legacy';
 
   import { Doughnut } from 'svelte-chartjs';
+  import { untracked } from 'svelte';
   import ChartDataLabels from 'chartjs-plugin-datalabels';
   import {
     Chart as ChartJS,
@@ -17,7 +18,9 @@
   let { severityData = {"A01:Broken Access Control":0,"A02:Cryptographic Failures":0,"A03:Injection":0,"A05:Security Misconfiguration":0,"A08:Software and Data Integrity Failures":0,"uncategorized":0} } = $props();
   let data = $state({})
 
-  let options = {
+  // options with uncloneable formatter functions — wrap in untracked
+  // to prevent $state.snapshot from trying to clone them
+  const options = untracked({
     responsive: true,
     maintainAspectRatio: false,
     cutout: 75,

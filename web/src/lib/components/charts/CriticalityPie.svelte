@@ -2,6 +2,7 @@
   import { run } from 'svelte/legacy';
 
   import { Doughnut } from 'svelte-chartjs';
+  import { untracked } from 'svelte';
   import ChartDataLabels from 'chartjs-plugin-datalabels';
   import {
     Chart as ChartJS,
@@ -61,7 +62,8 @@
     }
   });
 
-  let options = {
+  // Use untracked to prevent $state.snapshot from trying to clone the formatter functions
+  let options = untracked({
     responsive: true,
     maintainAspectRatio: false,
     cutout: 0,
@@ -72,7 +74,7 @@
         anchor: 'end',
         clamp: true,
         formatter: (value, context) => {
-          return value > 0 ? context.chart.data.labels[context.dataIndex] : ""; // Display the label text instead of the value
+          return value > 0 ? context.chart.data.labels[context.dataIndex] : "";
         },
         color: '#4399E1',
         font: {
@@ -87,13 +89,13 @@
     },
     layout: {
       padding: {
-        top: 40,    // Replace with desired padding value
-        right: 30,  // Replace with desired padding value
-        bottom: 50, // Replace with desired padding value
-        left: 30    // Replace with desired padding value
+        top: 40,
+        right: 30,
+        bottom: 50,
+        left: 30
       }
     }
-  }
+  })
 
   run(() => {
     if (vulnerabilities.length > 0) {
