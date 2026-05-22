@@ -1,4 +1,6 @@
 <script>
+  import { run, preventDefault } from 'svelte/legacy';
+
 	import Modal from '$lib/components/Modal.svelte';
   import { pageMeta } from '$lib/stores/pageMeta';
   import { onMount } from 'svelte';
@@ -9,7 +11,7 @@
   import { page } from '$app/stores';
   import { goto } from '$app/navigation';
   
-  let activeComponent = List;
+  let activeComponent = $state(List);
 
   function show(component) {
     activeComponent = component;
@@ -21,14 +23,14 @@
     goto(path, { replaceState: true });
   }
 
-  let showModal = false
+  let showModal = $state(false)
 
   onMount(async () => {
       pageMeta.set({ pretitle: 'Planning', title: 'Plan future world domination' });
   });
 
   // Reactive statement to update active component based on URL
-  $: {
+  run(() => {
     const path = $page.url.pathname;
     console.log("Current path:", path); // Debug logging
     if (path.includes('/planning/calendar')) {
@@ -38,17 +40,19 @@
     } else if (path === '/planning') {
       activeComponent = List;
     }
-  }
+  });
 
-$: componentsToShow = [{ id: 1, component: activeComponent }];
+let componentsToShow = $derived([{ id: 1, component: activeComponent }]);
 </script>
 
-<!-- svelte-ignore missing-declaration -->
+<!-- svelte-ignore missing_declaration -->
 <Modal bind:showModal on:close={() => showModal = false} large={false}>
-    <div class="card-header" slot="title">
-      <div class="card-title">New Assessment
+    {#snippet title()}
+    <div class="card-header" >
+        <div class="card-title">New Assessment
+        </div>
       </div>
-    </div>
+  {/snippet}
   <NewAssessment bind:showModal on:close={() => showModal = false}/>
 </Modal>
 
@@ -65,7 +69,7 @@ $: componentsToShow = [{ id: 1, component: activeComponent }];
       </div>
       <!-- Page title actions -->
       <div class="col-auto ms-auto d-print-none">
-        <a href="#" class="btn btn-primary" on:click={() => showModal = !showModal} >
+        <a href="#" class="btn btn-primary" onclick={() => showModal = !showModal} >
           <!-- Download SVG icon from http://tabler-icons.io/i/plus -->
           <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M12 5l0 14"></path><path d="M5 12l14 0"></path></svg>
           Add
@@ -78,21 +82,22 @@ $: componentsToShow = [{ id: 1, component: activeComponent }];
 <div class="page-body" style="margin-top: 37px;">
     <ul class="nav nav-bordered mb-4">
       <li class="nav-item">
-        <a class="nav-link" class:active="{activeComponent === Calendar}" on:click|preventDefault={() => show(Calendar)} aria-current="page" href="#">Calendar</a>
+        <a class="nav-link" class:active="{activeComponent === Calendar}" onclick={preventDefault(() => show(Calendar))} aria-current="page" href="#">Calendar</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" class:active="{activeComponent === List}" on:click|preventDefault={() => show(List)} href="#">List</a>
+        <a class="nav-link" class:active="{activeComponent === List}" onclick={preventDefault(() => show(List))} href="#">List</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" class:active="{activeComponent === Swimlane}" on:click|preventDefault={() => show(Swimlane)} href="#">Board</a>
+        <a class="nav-link" class:active="{activeComponent === Swimlane}" onclick={preventDefault(() => show(Swimlane))} href="#">Board</a>
       </li>
     </ul>
 
     <!-- Only the component content is animated now -->
     <div class="component-container">
       {#each componentsToShow as { component } (component)}
+          {@const SvelteComponent = component}
           <div>
-            <svelte:component this={component} reload={showModal} />
+            <SvelteComponent reload={showModal} />
           </div>
       {/each}
     </div>

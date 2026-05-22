@@ -7,14 +7,14 @@
 	import Multifactor from "./Multifactor.svelte";
   import ResetWebPush from "./resetWebPush.svelte";
 
-	let settings
+	let settings = $state({ slack: { channelID: "", enabled: false, workspace: "" }, auditlog: { enabled: false } });
 	onMount(async () => {
     settings = await Fetch("/api/settings")
   })
 </script>
 
-<Slack {settings} />
-<Multifactor {settings} />
+<Slack bind:settings />
+<Multifactor bind:settings />
 <ResetWebPush />
-<DatabaseCleanup {settings}/>
+<DatabaseCleanup bind:settings/>
 <Export />

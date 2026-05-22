@@ -1,8 +1,9 @@
 <script>
+  import { run } from 'svelte/legacy';
+
 	import { onMount } from "svelte";
 
-  export let owaspData = {};
-  export let vulnerabilities = []
+  let { owaspData = $bindable({}), vulnerabilities = [] } = $props();
 
   function textColor(value){
     return value > 0 ? "text-info" : "text-secondary"
@@ -33,11 +34,11 @@
     return results;
   }
 
-  $: {
+  run(() => {
     if (vulnerabilities.length > 0){
       owaspData = categorizeData(vulnerabilities);
     }
-  }
+  });
 </script>
 
 <table class="table table-vcenter card-table">

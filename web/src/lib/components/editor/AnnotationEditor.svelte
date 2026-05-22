@@ -1,31 +1,45 @@
 <script>
+	import { run, createBubbler, stopPropagation, preventDefault } from 'svelte/legacy';
+
+	const bubble = createBubbler();
 	import { createEventDispatcher } from 'svelte';
 
 	const dispatch = createEventDispatcher();
 
-	/** The image src to annotate */
-	export let src = '';
-	/** Existing annotations to load */
-	export let annotations = [];
-	/** Existing crop to load */
-	export let crop = null;
-	/** Whether the modal is open */
-	export let open = false;
+	
+	
+	
+	
+	/**
+	 * @typedef {Object} Props
+	 * @property {string} [src] - The image src to annotate
+	 * @property {any} [annotations] - Existing annotations to load
+	 * @property {any} [crop] - Existing crop to load
+	 * @property {boolean} [open] - Whether the modal is open
+	 */
 
-	let canvas;
-	let ctx;
-	let imgEl;
-	let canvasWidth = 0;
-	let canvasHeight = 0;
+	/** @type {Props} */
+	let {
+		src = '',
+		annotations = [],
+		crop = null,
+		open = $bindable(false)
+	} = $props();
+
+	let canvas = $state();
+	let ctx = $state();
+	let imgEl = $state();
+	let canvasWidth = $state(0);
+	let canvasHeight = $state(0);
 	let naturalWidth = 0;
 	let naturalHeight = 0;
-	let scale = 1;
+	let scale = $state(1);
 
 	// Tool state
-	let activeTool = 'pointer'; // pointer | arrow | rect | filled-rect | solid-filled-rect | text | freehand | eraser-dot | eraser-all | crop
-	let activeColor = '#ff0000';
-	let strokeWidth = 12;
-	let elements = [...annotations];
+	let activeTool = $state('pointer'); // pointer | arrow | rect | filled-rect | solid-filled-rect | text | freehand | eraser-dot | eraser-all | crop
+	let activeColor = $state('#ff0000');
+	let strokeWidth = $state(12);
+	let elements = $state([...annotations]);
 	let currentElement = null;
 	let isDrawing = false;
 	let dragTarget = null;
@@ -34,19 +48,19 @@
 	let hoverPos = null;
 
 	// Crop state
-	let cropRect = crop ? { ...crop } : null;
+	let cropRect = $state(crop ? { ...crop } : null);
 	let isCropping = false;
 	let cropStart = null;
 
 	// Text input state
-	let textInputVisible = false;
-	let textInputX = 0;
-	let textInputY = 0;
-	let textInputValue = '';
-	let textInput;
+	let textInputVisible = $state(false);
+	let textInputX = $state(0);
+	let textInputY = $state(0);
+	let textInputValue = $state('');
+	let textInput = $state();
 	let editingTextIndex = -1; // index of text element being edited, -1 = new
-	let strokeMenuOpen = false;
-	let shapeMenuOpen = false;
+	let strokeMenuOpen = $state(false);
+	let shapeMenuOpen = $state(false);
 	const MIN_TEXT_SIZE = 12;
 
 	const colors = ['#ff0000', '#ff6600', '#ffcc00', '#00cc00', '#0066ff', '#9933ff', '#000000', '#ffffff'];
@@ -65,12 +79,14 @@
 		{ id: 'solid-filled-rect', label: 'Solid filled square', filled: true, solid: true }
 	];
 
-	let canvasContainer;
+	let canvasContainer = $state();
 
 	// Set canvas context whenever the canvas element becomes available (after {#if open} renders)
-	$: if (canvas) {
-		ctx = canvas.getContext('2d');
-	}
+	run(() => {
+		if (canvas) {
+			ctx = canvas.getContext('2d');
+		}
+	});
 
 	function onImageLoad() {
 		naturalWidth = imgEl.naturalWidth;
@@ -707,10 +723,12 @@
 		save();
 	}
 
-	$: if (open) {
-		elements = [...annotations];
-		cropRect = crop ? { ...crop } : null;
-	}
+	run(() => {
+		if (open) {
+			elements = [...annotations];
+			cropRect = crop ? { ...crop } : null;
+		}
+	});
 
 	let backdropMouseDown = false;
 
@@ -758,24 +776,26 @@
 		return toolId === 'solid-filled-rect';
 	}
 
-	$: selectedShapeTool = shapeOptions.some((shape) => shape.id === activeTool) ? activeTool : 'rect';
+	let selectedShapeTool = $derived(shapeOptions.some((shape) => shape.id === activeTool) ? activeTool : 'rect');
 
-	$: if (canvas && canvasWidth && canvasHeight) {
-		requestAnimationFrame(redraw);
-	}
+	run(() => {
+		if (canvas && canvasWidth && canvasHeight) {
+			requestAnimationFrame(redraw);
+		}
+	});
 </script>
 
 {#if open}
-<!-- svelte-ignore a11y-click-events-have-key-events -->
-<!-- svelte-ignore a11y-no-static-element-interactions -->
-<div class="annotation-backdrop" on:mousedown={onBackdropMouseDown} on:mouseup={onBackdropMouseUp}>
-	<div class="annotation-modal" on:mousedown|stopPropagation on:dragstart|preventDefault>
-		<div class="annotation-toolbar" on:pointerdown|stopPropagation>
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<div class="annotation-backdrop" onmousedown={onBackdropMouseDown} onmouseup={onBackdropMouseUp}>
+	<div class="annotation-modal" onmousedown={stopPropagation(bubble('mousedown'))} ondragstart={preventDefault(bubble('dragstart'))}>
+		<div class="annotation-toolbar" onpointerdown={stopPropagation(bubble('pointerdown'))}>
 			{#each tools as tool}
 				<button
 					class="tool-btn"
 					class:active={activeTool === tool.id}
-					on:click={() => { if (textInputVisible) commitText(); activeTool = tool.id; shapeMenuOpen = false; }}
+					onclick={() => { if (textInputVisible) commitText(); activeTool = tool.id; shapeMenuOpen = false; }}
 					title={tool.label}
 				>
 					<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
@@ -785,11 +805,11 @@
 				</button>
 
 				{#if tool.id === 'freehand'}
-					<div class="shape-control" on:pointerdown|stopPropagation>
+					<div class="shape-control" onpointerdown={stopPropagation(bubble('pointerdown'))}>
 						<button
 							class="shape-trigger"
 							class:active={activeTool === 'rect' || activeTool === 'filled-rect' || activeTool === 'solid-filled-rect' || shapeMenuOpen}
-							on:click={toggleShapeMenu}
+							onclick={toggleShapeMenu}
 							title="Shapes"
 							type="button"
 						>
@@ -807,7 +827,7 @@
 									<button
 										class="shape-option"
 										class:active={activeTool === shape.id}
-										on:click={() => selectShapeTool(shape.id)}
+										onclick={() => selectShapeTool(shape.id)}
 										title={shape.label}
 										type="button"
 									>
@@ -832,18 +852,18 @@
 					class="color-btn"
 					class:active={activeColor === c}
 					style="background: {c}; {c === '#ffffff' ? 'border: 1px solid #ccc;' : ''}"
-					on:click={() => activeColor = c}
+					onclick={() => activeColor = c}
 					title={c}
 				></button>
 			{/each}
 
 			<div class="toolbar-divider"></div>
 
-			<div class="stroke-control" on:pointerdown|stopPropagation>
+			<div class="stroke-control" onpointerdown={stopPropagation(bubble('pointerdown'))}>
 				<button
 					class="stroke-trigger"
 					class:active={strokeMenuOpen}
-					on:click={() => strokeMenuOpen = !strokeMenuOpen}
+					onclick={() => strokeMenuOpen = !strokeMenuOpen}
 					title="Stroke width"
 					type="button"
 				>
@@ -857,7 +877,7 @@
 							<button
 								class="stroke-option"
 								class:active={strokeWidth === option}
-								on:click={() => setStrokeWidth(option)}
+								onclick={() => setStrokeWidth(option)}
 								title={`Stroke width ${option}`}
 								type="button"
 							>
@@ -870,7 +890,7 @@
 
 			<div class="toolbar-spacer"></div>
 
-			<button class="tool-btn save-btn" on:click={close} title="Save & Close">
+			<button class="tool-btn save-btn" onclick={close} title="Save & Close">
 				<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
 					stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
 					<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
@@ -881,7 +901,7 @@
 		</div>
 
 		<div class="annotation-canvas-container" bind:this={canvasContainer}>
-			<img bind:this={imgEl} {src} alt="" on:load={onImageLoad} class="hidden-img" />
+			<img bind:this={imgEl} {src} alt="" onload={onImageLoad} class="hidden-img" />
 			<canvas
 				bind:this={canvas}
 				width={canvasWidth}
@@ -890,11 +910,11 @@
 				class:cursor-crosshair={activeTool !== 'pointer' && activeTool !== 'eraser-dot' && activeTool !== 'freehand'}
 				class:cursor-pointer={activeTool === 'pointer'}
 				class:cursor-eraser={activeTool === 'eraser-dot' || activeTool === 'freehand'}
-				on:mousedown={handleMouseDown}
-				on:mouseenter={handleMouseEnter}
-				on:mousemove={handleMouseMove}
-				on:mouseup={handleMouseUp}
-				on:mouseleave={handleMouseLeave}
+				onmousedown={handleMouseDown}
+				onmouseenter={handleMouseEnter}
+				onmousemove={handleMouseMove}
+				onmouseup={handleMouseUp}
+				onmouseleave={handleMouseLeave}
 			></canvas>
 
 			{#if textInputVisible}
@@ -904,8 +924,8 @@
 					class="text-overlay-input"
 					style="left: {textInputX * scale}px; top: {textInputY * scale}px; color: {activeColor}; font-size: {getScreenTextSize()}px;"
 					bind:value={textInputValue}
-					on:keydown={handleTextKeydown}
-					on:blur={commitText}
+					onkeydown={handleTextKeydown}
+					onblur={commitText}
 					placeholder="Type text..."
 				/>
 			{/if}

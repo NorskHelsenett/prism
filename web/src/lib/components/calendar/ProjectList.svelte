@@ -1,13 +1,15 @@
 <script>
+  import { run } from 'svelte/legacy';
+
 	import { Fetch } from '$lib/fetchUtil';
   import { onMount, createEventDispatcher } from 'svelte';
   import TomSelect from 'tom-select';
   import 'tom-select/dist/css/tom-select.bootstrap5.min.css';
 
-  export let projects = [];
+  let { projects = $bindable([]) } = $props();
   const dispatch = createEventDispatcher();
-  let projectSelectElement;
-  let tomSelect;
+  let projectSelectElement = $state();
+  let tomSelect = $state();
 
 onMount(async () => {
     const allProjects = await Fetch('/api/project/all');
@@ -40,20 +42,22 @@ onMount(async () => {
     tomSelect.refreshOptions(false);
 });
 
-$: if (tomSelect && projects) {
-      const selectedValues = projects.map(p => p.id);
-      // Get current values from TomSelect to compare
-      const currentValues = tomSelect.getValue();
+run(() => {
+    if (tomSelect && projects) {
+        const selectedValues = projects.map(p => p.id);
+        // Get current values from TomSelect to compare
+        const currentValues = tomSelect.getValue();
 
-      // Convert both arrays to strings for easy comparison
-      const selectedValuesStr = selectedValues.sort().join(",");
-      const currentValuesStr = currentValues.sort().join(",");
+        // Convert both arrays to strings for easy comparison
+        const selectedValuesStr = selectedValues.sort().join(",");
+        const currentValuesStr = currentValues.sort().join(",");
 
-      // Update TomSelect values only if there are changes
-      if (selectedValuesStr !== currentValuesStr) {
-          tomSelect.setValue(selectedValues);
-      }
-  }
+        // Update TomSelect values only if there are changes
+        if (selectedValuesStr !== currentValuesStr) {
+            tomSelect.setValue(selectedValues);
+        }
+    }
+  });
 
 function updateProjects(value, allProjects, add = true) {
     if (add) {

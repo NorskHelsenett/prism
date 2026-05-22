@@ -1,4 +1,6 @@
 <script>
+  import { run } from 'svelte/legacy';
+
 import DOMPurify from 'dompurify'
 import { marked } from 'marked';
 import { createEventDispatcher } from 'svelte';
@@ -6,14 +8,20 @@ import { onMount } from 'svelte';
 
 const dispatch = createEventDispatcher();
 
-let container;
-export let markdown = ""
+let container = $state();
 
-const renderer = new marked.Renderer();
-let todo = 0
-let checked = 0
+const renderer = $state(new marked.Renderer());
+let todo = $state(0)
+let checked = $state(0)
 
-export let writeAccess = false
+  /**
+   * @typedef {Object} Props
+   * @property {string} [markdown]
+   * @property {boolean} [writeAccess]
+   */
+
+  /** @type {Props} */
+  let { markdown = $bindable(""), writeAccess = false } = $props();
 
 // Add a custom renderer for tables
 renderer.table = function(header, body) {
@@ -69,13 +77,13 @@ const domPurifyConfig = {
   ]
 };
 
-let renderedMarkdown = ""
+let renderedMarkdown = $state("")
 
- $: {
+ run(() => {
     checked = 0;
     todo = 0; // Reset todo before each rendering
     renderedMarkdown = DOMPurify.sanitize(marked.parse(markdown, { renderer }), domPurifyConfig);
-  }
+  });
 
 onMount(() => {
   if (!writeAccess) { return }

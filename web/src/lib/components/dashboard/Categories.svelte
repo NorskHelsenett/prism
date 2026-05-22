@@ -2,14 +2,14 @@
     import { dashboardStore } from '$lib/stores/dashboardStore';
     import { OWASPCategories } from '$lib/OWASP/OWASPCategories';
 
-    $: owaspCounts = Object.entries(OWASPCategories).map(([key, value]) => {
+    let owaspCounts = $derived(Object.entries(OWASPCategories).map(([key, value]) => {
         return {
             category: value,
             count: $dashboardStore.owasp[value] || 0
         };
-    });
+    }));
 
-    $: uncategorizedCount = $dashboardStore.owasp['uncategorized'] || 0;
+    let uncategorizedCount = $derived($dashboardStore.owasp['uncategorized'] || 0);
 </script>
 
 <div class="table-responsive">

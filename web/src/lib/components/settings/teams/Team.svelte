@@ -1,4 +1,6 @@
 <script>
+  import { preventDefault, stopPropagation } from 'svelte/legacy';
+
   import Avatarlist from "$lib/components/calendar/Avatarlist.svelte";
   import Dropdown from "$lib/components/Dropdown.svelte";
   import Icon from "$lib/components/Icon.svelte";
@@ -6,16 +8,16 @@
   import { Fetch } from "$lib/fetchUtil";
   import { onMount } from "svelte";
 
-  let teams = [];
-  let roles = [];
-  let showModal = false;
-  let selectedTeam = {
+  let teams = $state([]);
+  let roles = $state([]);
+  let showModal = $state(false);
+  let selectedTeam = $state({
     id: null,
     name: "",
     role: "visitor",
     archived: false,
     members: []
-  };
+  });
   let newMemberEmail = "";
 
   onMount(async () => {
@@ -117,7 +119,7 @@
           Add a new team
         </p>
         <div class="empty-action">
-          <button class="btn btn-primary" on:click={openNewTeamModal}>
+          <button class="btn btn-primary" onclick={openNewTeamModal}>
             <Icon icon="new"/>
             New team
           </button>
@@ -132,21 +134,21 @@
           <h3 class="card-title">{team.name} <span class="card-subtitle">{team.role}</span></h3>
           <ul class="nav nav-pills card-header-pills">
             <li class="nav-item ms-auto">
-              <button class="nav-link" on:click|preventDefault|stopPropagation={(event) => toggleDropdown(event, index)}>
+              <button class="nav-link" onclick={stopPropagation(preventDefault((event) => toggleDropdown(event, index)))}>
                 <Icon icon="cog" />
               </button>
             </li>
           </ul>
           <Dropdown bind:show={team.showDropdown}>
-            <a class="dropdown-item" href="#" on:click|preventDefault={() => editTeam(team)}>
+            <a class="dropdown-item" href="#" onclick={preventDefault(() => editTeam(team))}>
               <Icon icon="edit" stroke="1" class="dropdown-item-icon"/>
               Edit
             </a>
-            <a class="dropdown-item" href="#" on:click|preventDefault={() => archiveTeam(team)}>
+            <a class="dropdown-item" href="#" onclick={preventDefault(() => archiveTeam(team))}>
               <Icon icon="archive" stroke="1" class="dropdown-item-icon"/>
               Archive
             </a>
-            <a class="dropdown-item" href="#" on:click|preventDefault={() => deleteTeam(team)}>
+            <a class="dropdown-item" href="#" onclick={preventDefault(() => deleteTeam(team))}>
               <Icon icon="delete" stroke="1" class="dropdown-item-icon"/>
               Delete
             </a>
@@ -178,10 +180,12 @@
     </div>
   </div>
 
-  <div class="modal-footer" slot="footer">
-    <button type="button" class="btn me-auto" on:click={() => showModal = false}>Close</button>
-    <button type="button" class="btn btn-primary" on:click={storeTeam}>Save</button>
-  </div>
+  {#snippet footer()}
+    <div class="modal-footer" >
+      <button type="button" class="btn me-auto" onclick={() => showModal = false}>Close</button>
+      <button type="button" class="btn btn-primary" onclick={storeTeam}>Save</button>
+    </div>
+  {/snippet}
 </Modal>
 
 <style>

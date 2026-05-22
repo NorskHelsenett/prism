@@ -3,8 +3,8 @@
 	import DebouncedInput from "../DebouncedInput.svelte";
 	import { toast } from "svelte-sonner";
 
-  let persisting = false;
-  export let settings = {
+  let persisting = $state(false);
+  let { settings = $bindable({
     ID: 0,
     slack: {
       channelID: "",
@@ -14,7 +14,7 @@
     auditlog: {
       enabled: false
     }
-  }
+  }) } = $props();
 
   function debounce(func, wait) {
       let timeout;
@@ -58,19 +58,15 @@
   }
 
   async function changeAuditlog() {
-    settings.auditlog.enabled = !settings.auditlog.enabled;
-
     const response = await Fetch("/api/settings", { method: "POST", body: JSON.stringify(settings) });
-        if(!response.error) {
-          toast.success('Settings updated successfully');
+    if(!response.error) {
+      toast.success('Settings updated successfully');
     } else {
       toast.error('Failure to update settings');
     }
   }
 
   async function persistSlackStatus() {
-    settings.slack.enabled = !settings.slack.enabled; // Toggle the value (you can modify this logic as needed)
-
     const response = await Fetch("/api/settings", { method: "POST", body: JSON.stringify(settings) });
     if(!response.error) {
       toast.success('Settings updated successfully');
@@ -99,7 +95,7 @@
   </p>
   <div>
     <label class="form-check form-switch form-switch-lg">
-      <input class="form-check-input" type="checkbox" on:change={persistSlackStatus} bind:checked={settings.slack.enabled}>
+      <input class="form-check-input" type="checkbox" onchange={persistSlackStatus} bind:checked={settings.slack.enabled}>
       <span class="form-check-label form-check-label-on">Slack integration is now turned on</span>
       <span class="form-check-label form-check-label-off">Slack integration disabled</span>
     </label>
@@ -146,7 +142,7 @@
 
   <div>
     <label class="form-check form-switch form-switch-lg">
-      <input class="form-check-input" type="checkbox" on:change={changeAuditlog} bind:checked={settings.auditlog.enabled}>
+      <input class="form-check-input" type="checkbox" onchange={changeAuditlog} bind:checked={settings.auditlog.enabled}>
       <span class="form-check-label form-check-label-on">Audit log is now turned on</span>
       <span class="form-check-label form-check-label-off">Audit log is disabled</span>
     </label>

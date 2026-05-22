@@ -1,4 +1,6 @@
 <script>
+  import { run } from 'svelte/legacy';
+
   import { Doughnut } from 'svelte-chartjs';
   import ChartDataLabels from 'chartjs-plugin-datalabels';
   import {
@@ -12,10 +14,9 @@
 
   ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, ChartDataLabels);
 
-  export let severityData = { critical: 0, high: 0, medium: 0, low: 0, information: 0 };
-  export let vulnerabilities = []
+  let { severityData = $bindable({ critical: 0, high: 0, medium: 0, low: 0, information: 0 }), vulnerabilities = [] } = $props();
 
-  let data = {
+  let data = $state({
   labels: [
     'Critical',
     'High',
@@ -46,19 +47,22 @@
     hoverOffset: 15 // Distance the slice moves when hovered
     },
   ],
-};
+});
 
-  $: if (severityData) {
-    data.datasets[0].data = [
-      severityData.critical,
-      severityData.high,
-      severityData.medium,
-      severityData.low,
-      severityData.information,
-    ];
-  }
+  run(() => {
+    if (severityData) {
+      data.datasets[0].data = [
+        severityData.critical,
+        severityData.high,
+        severityData.medium,
+        severityData.low,
+        severityData.information,
+      ];
+    }
+  });
 
-  let options = {
+  // Non-reactive options to prevent $state.snapshot from trying to clone formatter functions
+  const options = {
     responsive: true,
     maintainAspectRatio: false,
     cutout: 0,
@@ -69,7 +73,7 @@
         anchor: 'end',
         clamp: true,
         formatter: (value, context) => {
-          return value > 0 ? context.chart.data.labels[context.dataIndex] : ""; // Display the label text instead of the value
+          return value > 0 ? context.chart.data.labels[context.dataIndex] : "";
         },
         color: '#4399E1',
         font: {
@@ -84,15 +88,15 @@
     },
     layout: {
       padding: {
-        top: 40,    // Replace with desired padding value
-        right: 30,  // Replace with desired padding value
-        bottom: 50, // Replace with desired padding value
-        left: 30    // Replace with desired padding value
+        top: 40,
+        right: 30,
+        bottom: 50,
+        left: 30
       }
     }
-  }
+  };
 
-  $: {
+  run(() => {
     if (vulnerabilities.length > 0) {
       // Reset counts
       severityData = { critical: 0, high: 0, medium: 0, low: 0, information: 0 };
@@ -113,7 +117,7 @@
         }
       });
     }
-  }
+  });
 
 </script>
 

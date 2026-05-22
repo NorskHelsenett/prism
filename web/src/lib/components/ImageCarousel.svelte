@@ -1,9 +1,18 @@
 <script>
+  import { createBubbler, stopPropagation } from 'svelte/legacy';
+
+  const bubble = createBubbler();
   import { baseUrl } from '$lib/stores';
 
-  export let images = []; // Prop for the list of images
-  export let showModal = false; // Prop to control the visibility of the modal
-  export let currentImageIndex = 0; // Current image index (bindable from parent)
+  /**
+   * @typedef {Object} Props
+   * @property {any} [images] - Prop for the list of images
+   * @property {boolean} [showModal] - Prop to control the visibility of the modal
+   * @property {number} [currentImageIndex] - Current image index (bindable from parent)
+   */
+
+  /** @type {Props} */
+  let { images = [], showModal = $bindable(false), currentImageIndex = $bindable(0) } = $props();
 
   function resolveImageSrc(image) {
     if (!image) return '';
@@ -45,14 +54,14 @@
 </script>
 
 {#if showModal}
-  <!-- svelte-ignore a11y-click-events-have-key-events -->
-  <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <div class="modal modal-blur" on:click={closeModal}>
-    <!-- svelte-ignore a11y-click-events-have-key-events -->
-    <div class="modal-content" on:click|stopPropagation>
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="modal modal-blur" onclick={closeModal}>
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <div class="modal-content" onclick={stopPropagation(bubble('click'))}>
       <div class="">
-        <button class="close-button" on:click={closeModal}>×</button>
+        <button class="close-button" onclick={closeModal}>×</button>
       </div>
       <div class="">
         <!-- Carousel Implementation -->
@@ -62,7 +71,7 @@
               <button
                 type="button"
                 class:active={index === currentImageIndex}
-                on:click={() => currentImageIndex = index}
+                onclick={() => currentImageIndex = index}
                 aria-current={index === currentImageIndex ? 'true' : 'false'}
                 aria-label={`Go to slide ${index + 1}`}
               ></button>
@@ -71,16 +80,16 @@
           <div class="carousel-inner">
             {#each images as image, index}
               <div class={`carousel-item ${index === currentImageIndex ? 'active' : ''}`}>
-                <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
-                <img src={resolveImageSrc(image)} class="d-block cursor-zoom-out" alt={`Image ${index}`} on:click={closeModal}>
+                <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+                <img src={resolveImageSrc(image)} class="d-block cursor-zoom-out" alt={`Image ${index}`} onclick={closeModal}>
               </div>
             {/each}
           </div>
-          <button class="btn-carousel carousel-control-prev" type="button" on:click={() => changeImage(-1)}>
+          <button class="btn-carousel carousel-control-prev" type="button" onclick={() => changeImage(-1)}>
             <span class="carousel-control-prev-icon" aria-hidden="true"></span>
             <span class="visually-hidden">Previous</span>
           </button>
-          <button class="btn-carousel carousel-control-next" type="button" on:click={() => changeImage(1)}>
+          <button class="btn-carousel carousel-control-next" type="button" onclick={() => changeImage(1)}>
             <span class="carousel-control-next-icon" aria-hidden="true"></span>
             <span class="visually-hidden">Next</span>
           </button>

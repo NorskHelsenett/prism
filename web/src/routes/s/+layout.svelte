@@ -3,18 +3,25 @@
   import '@tabler/core/dist/css/tabler.min.css';
   import { initializeApiEndpoint, isLoading } from '$lib/stores/configStore';
 	import { onMount } from 'svelte';
+  /**
+   * @typedef {Object} Props
+   * @property {import('svelte').Snippet} [children]
+   */
+
+  /** @type {Props} */
+  let { children } = $props();
 
   onMount(async () => {
     const anon = true
     await initializeApiEndpoint(anon);
   });
 
-  $: isInitialized = !$isLoading;
+  let isInitialized = $derived(!$isLoading);
 </script>
 
 {#if isInitialized}
-  <slot/>
+  {@render children?.()}
 {/if}
 <style>
-  @import url("@tabler/icons-webfont/tabler-icons.min.css");
+  @import url("@tabler/icons-webfont/dist/tabler-icons.min.css");
 </style>

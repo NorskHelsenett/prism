@@ -1,5 +1,6 @@
 import Image from '@tiptap/extension-image';
 import ImageView from './ImageView.svelte';
+import { mount as mountSvelte } from 'svelte';
 
 export const ImageWithView = Image.extend({
 	draggable: true,
@@ -49,8 +50,8 @@ export const ImageWithView = Image.extend({
 
 			let component;
 
-			function mount() {
-				component = new ImageView({
+			function mountImageView() {
+				component = mountSvelte(ImageView, {
 					target: dom,
 					props: {
 						node,
@@ -72,13 +73,11 @@ export const ImageWithView = Image.extend({
 				});
 			}
 
-			mount();
+			mountImageView();
 
 			return {
 				dom,
-				// stopEvent: return true = Svelte handles it, false = TipTap handles it
 				stopEvent(event) {
-					// All events inside figcaption or inputs belong to Svelte
 					const target = event.target;
 					if (
 						target.closest('figcaption') ||
@@ -88,35 +87,28 @@ export const ImageWithView = Image.extend({
 					) {
 						return true;
 					}
-					// Keyboard events: if an input is focused, Svelte handles it
 					if (event instanceof KeyboardEvent) {
 						const active = document.activeElement;
 						if (active && (active.tagName === 'INPUT' || active.closest('.annotation-backdrop'))) {
 							return true;
 						}
-						// Otherwise TipTap handles (undo, delete, etc.)
 						return false;
 					}
-					// Everything else (clicks on img, drags) -> TipTap
 					return false;
 				},
 				update(updatedNode) {
 					if (updatedNode.type.name !== 'image') return false;
-					node = updatedNode;
-					component.$set({
-						node: updatedNode,
-						editable: editor.isEditable
-					});
+					component.update(updatedNode, editor.isEditable);
 					return true;
 				},
 				selectNode() {
-					component.$set({ selected: true });
+					component.select();
 				},
 				deselectNode() {
-					component.$set({ selected: false });
+					component.deselect();
 				},
 				destroy() {
-					component.$destroy();
+					component.destroy();
 				}
 			};
 		};

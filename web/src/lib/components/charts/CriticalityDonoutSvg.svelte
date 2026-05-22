@@ -1,10 +1,18 @@
 <script>
+  import { run } from 'svelte/legacy';
+
 
   const cricitality = ["information", "low", "medium", "high", "critical"]
-  export let severity = ""
-  let index = -1
+  /**
+   * @typedef {Object} Props
+   * @property {string} [severity]
+   */
 
-  $: {index = cricitality.indexOf(severity)}
+  /** @type {Props} */
+  let { severity = "" } = $props();
+  let index = $state(-1)
+
+  run(() => {index = cricitality.indexOf(severity)});
 </script>
 
 {#if index >= 0}

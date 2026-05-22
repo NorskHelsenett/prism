@@ -1,4 +1,6 @@
 <script>
+  import { run } from 'svelte/legacy';
+
   import { Fetch } from "$lib/fetchUtil";
   import { onMount } from "svelte";
   import TomSelect from 'tom-select';
@@ -7,15 +9,15 @@
 
   const dispatch = createEventDispatcher();
 
-  let selectElement;
-  export let selectedValues = [];
+  let selectElement = $state();
+  let { selectedValues = [] } = $props();
 
   let users = {
     teams: [],
     users: []
   };
 
-  let tomSelect;
+  let tomSelect = $state();
 
   onMount(async () => {
     users = await Fetch(`/api/profile/all`);
@@ -45,18 +47,20 @@
     }
   });
 
-  $: if(tomSelect && Array.isArray(selectedValues)){
-    let selectedEmails = selectedValues.filter(email => email.trim() !== "");
-    selectedEmails.forEach(email => {
-      if (email && !tomSelect.options[email]) {
-        tomSelect.addOption({ value: email, text: email });
-      }
-    });
+  run(() => {
+    if(tomSelect && Array.isArray(selectedValues)){
+      let selectedEmails = selectedValues.filter(email => email.trim() !== "");
+      selectedEmails.forEach(email => {
+        if (email && !tomSelect.options[email]) {
+          tomSelect.addOption({ value: email, text: email });
+        }
+      });
 
-    if (selectedEmails.length > 0) {
-      tomSelect.setValue(selectedEmails);
+      if (selectedEmails.length > 0) {
+        tomSelect.setValue(selectedEmails);
+      }
     }
-  }
+  });
 
   function handleSelectChange(event) {
     const selectedValues = tomSelect.getValue();
@@ -69,7 +73,7 @@
   class="form-select"
   multiple
   id="select-states"
-  on:change={handleSelectChange}>
+  onchange={handleSelectChange}>
 </select>
 
 <style>

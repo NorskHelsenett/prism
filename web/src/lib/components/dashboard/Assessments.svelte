@@ -1,5 +1,11 @@
 <script>
-export let data = 0
+	/**
+	 * @typedef {Object} Props
+	 * @property {number} [data]
+	 */
+
+	/** @type {Props} */
+	let { data = 0 } = $props();
 </script>
 
 <div class="card-body">

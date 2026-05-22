@@ -2,9 +2,9 @@
     import { Fetch } from '$lib/fetchUtil';
     import { slide } from 'svelte/transition';
 
-    let authenticating = false;
-    let errorMessage = '';
-    let supported = false;
+    let authenticating = $state(false);
+    let errorMessage = $state('');
+    let supported = $state(false);
 
     // Check if WebAuthn is supported
     if (typeof window !== 'undefined' && window.PublicKeyCredential) {
@@ -113,7 +113,7 @@
     <div class="card-body mb-3 text-center">
         <button
             class="btn btn-outline-teal w-100 passkey-btn"
-            on:click={authenticateWithPasskey}
+            onclick={authenticateWithPasskey}
             disabled={authenticating}
         >
             <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-fingerprint me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">

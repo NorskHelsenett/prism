@@ -2,7 +2,7 @@
   import { Fetch } from '$lib/fetchUtil.js';
   import { toast } from 'svelte-sonner';
 
-  let warningAccepted = false
+  let warningAccepted = $state(false)
 
   async function resetVAAPI() {
     if (!warningAccepted){
@@ -35,6 +35,6 @@
         I accept the risk of my action.
       </span>
     </label>
-    <button disabled={!warningAccepted} class="btn btn-warning btn-ghost-warning d-none d-sm-inline-block" on:click={resetVAAPI}>Reset Web Push</button>
+    <button disabled={!warningAccepted} class="btn btn-warning btn-ghost-warning d-none d-sm-inline-block" onclick={resetVAAPI}>Reset Web Push</button>
   </div>
 </div>

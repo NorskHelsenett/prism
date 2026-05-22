@@ -1,8 +1,9 @@
 <script>
+  import { run } from 'svelte/legacy';
+
 	import { onMount } from "svelte";
 
-  export let owaspData = {};
-  export let vulnerabilities = []
+  let { owaspData = $bindable({}), vulnerabilities = [] } = $props();
 
   function textColor(value){
     return value > 0 ? "text-info" : "text-secondary"
@@ -33,7 +34,16 @@
     return results;
   }
 
-  $: {
+
+  let totalFinding = $state(0);
+  let categoryTotals = $state();
+
+  function calculateWidth(value) {
+    const total = categoryTotals.filter(item => item.category === value)[0].total;
+    return `${Math.round((total / totalFinding) * 100)}%`;
+  }
+
+  run(() => {
     if (vulnerabilities.length > 0){
       owaspData = categorizeData(vulnerabilities);
     }
@@ -45,16 +55,7 @@
       totalFinding += total; // Find the max for scaling the bars
       return { category, total };
     });
-  }
-
-  let totalFinding = 0;
-  let categoryTotals;
-
-  function calculateWidth(value) {
-    const total = categoryTotals.filter(item => item.category === value)[0].total;
-    return `${Math.round((total / totalFinding) * 100)}%`;
-  }
-
+  });
 </script>
 
 <table class="table table-vcenter card-table table-fixed">

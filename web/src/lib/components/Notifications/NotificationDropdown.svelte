@@ -1,4 +1,6 @@
 <script>
+  import { run, preventDefault } from 'svelte/legacy';
+
   import { onDestroy, onMount } from 'svelte';
   import { clickOutside } from '../clickOutside.js';
   import { userStore } from '$lib/userStore.js';
@@ -19,16 +21,16 @@
  * @property {string} when - The timestamp of when the notification was created.
  */
 
-/**
- * Global array to store notifications.
- * @type {Notification[]}
- */
-  export let notifications = [];
-  let notificationPermission = "default";
 
-  $: if (notifications) {
-    sortNotifications()
-  }
+  /**
+   * @typedef {Object} Props
+   * @property {Notification[]} [notifications] - Global array to store notifications.
+   */
+
+  /** @type {Props} */
+  let { notifications = $bindable([]) } = $props();
+  let notificationPermission = $state("default");
+
 
   // Function to sort notifications by 'when' in descending order
   function sortNotifications() {
@@ -59,7 +61,7 @@
     }
   });
 
-  let isHidden = true;
+  let isHidden = $state(true);
 
   function toggleHidden() {
       isHidden = !isHidden;
@@ -105,11 +107,16 @@
       closeDropdown();
     }, 1000);
   }
+  run(() => {
+    if (notifications) {
+      sortNotifications()
+    }
+  });
 </script>
 
   <a
   href="#"
-  on:click|preventDefault={toggleHidden}
+  onclick={preventDefault(toggleHidden)}
   class="nav-link px-0  d-flex lh-1 text-reset"
   data-bs-toggle="dropdown"
   tabindex="-1"
@@ -137,7 +144,7 @@
 </a>
 {#if !isHidden}
 <div
-    use:clickOutside on:outsideClick={closeDropdown}
+    use:clickOutside onoutsideClick={closeDropdown}
     class="dropdown-menu dropdown-menu-end dropdown-menu-arrow show mw-400 z-1"
     data-bs-popper="static"
     transition:slide
@@ -152,7 +159,7 @@
         <label class="form-label text-azure">Notifications</label>
       </div>
       <div class="col-auto">
-        <a href="#" on:click={markAllRead}>Clear all</a>
+        <a href="#" onclick={markAllRead}>Clear all</a>
       </div>
       </div>
     </div>
@@ -160,9 +167,9 @@
   <div class="d-flex justify-content-center flex-wrap">
     {#if notifications?.length > 0}
         {#each notifications as notification}
-        <!-- svelte-ignore a11y-no-static-element-interactions -->
-        <!-- svelte-ignore a11y-click-events-have-key-events -->
-        <div class="dropdown-item w-100 cursor-pointer" class:bg-secondary-lt={notification.read == false} on:click={() => openAction(notification)} >
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <div class="dropdown-item w-100 cursor-pointer" class:bg-secondary-lt={notification.read == false} onclick={() => openAction(notification)} >
           <div class="d-flex align-items-center w-100">
             <NotificationsListItem notification={notification}/>
           </div>

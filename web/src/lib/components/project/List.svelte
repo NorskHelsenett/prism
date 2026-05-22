@@ -3,7 +3,7 @@
   import { Fetch } from '$lib/fetchUtil.js';
 	import Avatar from '../Avatar.svelte';
 
-  let projects = []; // Reactive variable to store projects
+  let projects = $state([]); // Reactive variable to store projects
 
   function formatDate(dateString) {
     const date = new Date(dateString);
@@ -31,7 +31,7 @@ export function refreshList() {
     fetchData();
   }
 
-  let selectedRow = -1
+  let selectedRow = $state(-1)
 </script>
 
 <div class="card mt-4">
@@ -40,11 +40,11 @@ export function refreshList() {
       <table class="table table-vcenter card-table">
         <tbody>
       {#each projects as project, index}
-          <tr on:dblclick={() => goto(`/project/${project.ID}/view`)} on:click={() => selectedRow === index ? selectedRow = -1 : selectedRow = index} class:selected="{selectedRow === index}">
+          <tr ondblclick={() => goto(`/project/${project.ID}/view`)} onclick={() => selectedRow === index ? selectedRow = -1 : selectedRow = index} class:selected="{selectedRow === index}">
               <td>
                 <div class="flex-fill">
                   <div class="font-weight-medium">
-                    <button class="link" on:click={() => goto(`/project/${project?.ID}/view`)}>
+                    <button class="link" onclick={() => goto(`/project/${project?.ID}/view`)}>
                       {project.ProjectName}
                     </button>
                   </div>

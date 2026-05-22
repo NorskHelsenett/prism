@@ -1,4 +1,6 @@
 <script>
+	import { run } from 'svelte/legacy';
+
 	import { onMount, onDestroy, createEventDispatcher, tick } from 'svelte';
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
@@ -15,20 +17,32 @@
 	import { ImageWithView } from './ImageNodeView.js';
 	import BubbleMenu from '@tiptap/extension-bubble-menu';
 
-	/** Markdown string (two-way bindable) */
-	export let value = '';
-	export let placeholder = 'Start writing...';
-	export let editable = true;
-	export let minHeight = '200px';
-	/** Additional Tiptap extensions to plug in (e.g., tag highlighting for notes). */
-	export let extraExtensions = [];
+	
+	
+	/**
+	 * @typedef {Object} Props
+	 * @property {string} [value] - Markdown string (two-way bindable)
+	 * @property {string} [placeholder]
+	 * @property {boolean} [editable]
+	 * @property {string} [minHeight]
+	 * @property {any} [extraExtensions] - Additional Tiptap extensions to plug in (e.g., tag highlighting for notes).
+	 */
+
+	/** @type {Props} */
+	let {
+		value = $bindable(''),
+		placeholder = 'Start writing...',
+		editable = true,
+		minHeight = '200px',
+		extraExtensions = []
+	} = $props();
 
 	const dispatch = createEventDispatcher();
 
-	let element;
-	let editor;
-	let internalUpdate = false;
-	let bubbleMenuElement;
+	let element = $state();
+	let editor = $state();
+	let internalUpdate = $state(false);
+	let bubbleMenuElement = $state();
 
 	function handleReadonlyImageClick(event) {
 		const detail = event.detail || {};
@@ -197,18 +211,23 @@
 		breaks: true,
 		gfm: true,
 		renderer: {
-			list(body, ordered, start) {
-				if (body.includes('data-checked=')) {
+			list(token) {
+				let body = '';
+				for (const item of token.items) {
+					body += this.listitem(item);
+				}
+				if (token.items.some((it) => it.task)) {
 					return `<ul data-type="taskList">${body}</ul>`;
 				}
-				const type = ordered ? 'ol' : 'ul';
-				const startAttr = ordered && start !== 1 ? ` start="${start}"` : '';
+				const type = token.ordered ? 'ol' : 'ul';
+				const startAttr = token.ordered && token.start !== 1 ? ` start="${token.start}"` : '';
 				return `<${type}${startAttr}>${body}</${type}>`;
 			},
-			listitem(text, task, checked) {
-				if (task) {
+			listitem(token) {
+				let text = this.parser.parse(token.tokens, !!token.loose);
+				if (token.task) {
 					text = text.replace(/<input[^>]*type="checkbox"[^>]*>\s*/i, '');
-					return `<li data-type="taskItem" data-checked="${checked ? 'true' : 'false'}">${text}</li>`;
+					return `<li data-type="taskItem" data-checked="${token.checked ? 'true' : 'false'}">${text}</li>`;
 				}
 				return `<li>${text}</li>`;
 			}
@@ -469,17 +488,21 @@
 			.trim();
 	}
 
-	$: if (editor && !internalUpdate && value !== undefined) {
-		const currentMd = htmlToMarkdown(editor.getHTML());
-		if (normalizeMd(value) !== normalizeMd(currentMd)) {
-			const html = markdownToHtml(value);
-			editor.commands.setContent(html, false);
+	run(() => {
+		if (editor && !internalUpdate && value !== undefined) {
+			const currentMd = htmlToMarkdown(editor.getHTML());
+			if (normalizeMd(value) !== normalizeMd(currentMd)) {
+				const html = markdownToHtml(value);
+				editor.commands.setContent(html, false);
+			}
 		}
-	}
+	});
 
-	$: if (editor) {
-		editor.setEditable(editable);
-	}
+	run(() => {
+		if (editor) {
+			editor.setEditable(editable);
+		}
+	});
 </script>
 
 <!-- Text selection bubble menu -->
@@ -491,47 +514,47 @@
 >
 	<div class="menu-buttons">
 		<button type="button" class:active={editor?.isActive('heading', { level: 1 })}
-			on:click={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} title="Heading 1">
+			onclick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} title="Heading 1">
 			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" class="menu-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M2.243 4.493v7.5m0 0v7.502m0-7.501h10.5m0-7.5v7.5m0 0v7.501m4.501-8.627 2.25-1.5v10.126m0 0h-2.25m2.25 0h2.25" /></svg>
 		</button>
 		<button type="button" class:active={editor?.isActive('heading', { level: 2 })}
-			on:click={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} title="Heading 2">
+			onclick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} title="Heading 2">
 			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" class="menu-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 19.5H16.5v-1.609a2.25 2.25 0 0 1 1.244-2.012l2.89-1.445c.651-.326 1.116-.955 1.116-1.683 0-.498-.04-.987-.118-1.463-.135-.825-.835-1.422-1.668-1.489a15.202 15.202 0 0 0-3.464.12M2.243 4.492v7.5m0 0v7.502m0-7.501h10.5m0-7.5v7.5m0 0v7.501" /></svg>
 		</button>
 		<button type="button" class:active={editor?.isActive('heading', { level: 3 })}
-			on:click={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} title="Heading 3">
+			onclick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()} title="Heading 3">
 			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" class="menu-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M20.905 14.626a4.52 4.52 0 0 1 .738 3.603c-.154.695-.794 1.143-1.504 1.208a15.194 15.194 0 0 1-3.639-.104m4.405-4.707a4.52 4.52 0 0 0 .738-3.603c-.154-.696-.794-1.144-1.504-1.209a15.19 15.19 0 0 0-3.639.104m4.405 4.708H18M2.243 4.493v7.5m0 0v7.502m0-7.501h10.5m0-7.5v7.5m0 0v7.501" /></svg>
 		</button>
 		<button type="button" class:active={editor?.isActive('bulletList')}
-			on:click={() => editor?.chain().focus().toggleBulletList().run()} title="Bullet List">
+			onclick={() => editor?.chain().focus().toggleBulletList().run()} title="Bullet List">
 			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" class="menu-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" /></svg>
 		</button>
 		<button type="button" class:active={editor?.isActive('orderedList')}
-			on:click={() => editor?.chain().focus().toggleOrderedList().run()} title="Numbered List">
+			onclick={() => editor?.chain().focus().toggleOrderedList().run()} title="Numbered List">
 			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" class="menu-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M8.242 5.992h12m-12 6.003H20.24m-12 5.999h12M4.117 7.495v-3.75H2.99m1.125 3.75H2.99m1.125 0H5.24m-1.92 2.577a1.125 1.125 0 1 1 1.591 1.59l-1.83 1.83h2.16M2.99 15.745h1.125a1.125 1.125 0 0 1 0 2.25H3.74m0-.002h.375a1.125 1.125 0 0 1 0 2.25H2.99" /></svg>
 		</button>
 		<button type="button" class:active={editor?.isActive('taskList')}
-			on:click={() => editor?.chain().focus().toggleTaskList().run()} title="Task List">
+			onclick={() => editor?.chain().focus().toggleTaskList().run()} title="Task List">
 			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" class="menu-icon"><path d="M3 20.4V3.6C3 3.26863 3.26863 3 3.6 3H20.4C20.7314 3 21 3.26863 21 3.6V20.4C21 20.7314 20.7314 21 20.4 21H3.6C3.26863 21 3 20.7314 3 20.4Z" stroke-width="1.5" /><path d="M7 12.5L10 15.5L17 8.5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
 		</button>
 		<button type="button" class:active={editor?.isActive('bold')}
-			on:click={() => editor?.chain().focus().toggleBold().run()} title="Bold">
+			onclick={() => editor?.chain().focus().toggleBold().run()} title="Bold">
 			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" class="menu-icon"><path stroke-linejoin="round" d="M6.75 3.744h-.753v8.25h7.125a4.125 4.125 0 0 0 0-8.25H6.75Zm0 0v.38m0 16.122h6.747a4.5 4.5 0 0 0 0-9.001h-7.5v9h.753Zm0 0v-.37m0-15.751h6a3.75 3.75 0 1 1 0 7.5h-6m0-7.5v7.5m0 0v8.25m0-8.25h6.375a4.125 4.125 0 0 1 0 8.25H6.75m.747-15.38h4.875a3.375 3.375 0 0 1 0 6.75H7.497v-6.75Zm0 7.5h5.25a3.75 3.75 0 0 1 0 7.5h-5.25v-7.5Z" /></svg>
 		</button>
 		<button type="button" class:active={editor?.isActive('italic')}
-			on:click={() => editor?.chain().focus().toggleItalic().run()} title="Italic">
+			onclick={() => editor?.chain().focus().toggleItalic().run()} title="Italic">
 			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" class="menu-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M5.248 20.246H9.05m0 0h3.696m-3.696 0 5.893-16.502m0 0h-3.697m3.697 0h3.803" /></svg>
 		</button>
 		<button type="button" class:active={editor?.isActive('underline')}
-			on:click={() => editor?.chain().focus().toggleUnderline().run()} title="Underline">
+			onclick={() => editor?.chain().focus().toggleUnderline().run()} title="Underline">
 			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" class="menu-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M17.995 3.744v7.5a6 6 0 1 1-12 0v-7.5m-2.25 16.502h16.5" /></svg>
 		</button>
 		<button type="button" class:active={editor?.isActive('strike')}
-			on:click={() => editor?.chain().focus().toggleStrike().run()} title="Strikethrough">
+			onclick={() => editor?.chain().focus().toggleStrike().run()} title="Strikethrough">
 			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" class="menu-icon"><path stroke-linecap="round" stroke-linejoin="round" d="M12 12a8.912 8.912 0 0 1-.318-.079c-1.585-.424-2.904-1.247-3.76-2.236-.873-1.009-1.265-2.19-.968-3.301.59-2.2 3.663-3.29 6.863-2.432A8.186 8.186 0 0 1 16.5 5.21M6.42 17.81c.857.99 2.176 1.812 3.761 2.237 3.2.858 6.274-.23 6.863-2.431.233-.868.044-1.779-.465-2.617M3.75 12h16.5" /></svg>
 		</button>
 		<button type="button" class:active={editor?.isActive('code') || editor?.isActive('codeBlock')}
-			on:click={() => {
+			onclick={() => {
 				if (!editor) return;
 				// If already in either code or codeBlock, toggle it off.
 				if (editor.isActive('codeBlock')) {
@@ -562,9 +585,9 @@
 						.command(({ tr, dispatch }) => {
 							// Move cursor to the position just after the inserted code block.
 							const insertedEnd = from + selected.length + 2; // +2 = codeBlock open/close
-							const $after = tr.doc.resolve(Math.min(insertedEnd + 1, tr.doc.content.size));
+							const afterPosition = tr.doc.resolve(Math.min(insertedEnd + 1, tr.doc.content.size));
 							if (dispatch) {
-								dispatch(tr.setSelection(tr.selection.constructor.near($after, 1)));
+								dispatch(tr.setSelection(tr.selection.constructor.near(afterPosition, 1)));
 							}
 							return true;
 						})
@@ -599,7 +622,7 @@
 <style>
 	/* Dark theme variable mappings */
 	:global([data-bs-theme="dark"]) .editor-wrapper {
-		--rte-bg: var(--tblr-body-bg, #1a2234);
+		--rte-bg: transparent;
 		--rte-border: var(--tblr-border-color, #3a4658);
 		--rte-menu-bg: var(--tblr-bg-surface, #1e2a3a);
 		--rte-menu-color: var(--tblr-body-color, #dcdfe4);
@@ -677,6 +700,7 @@
 	.editor-readonly {
 		border: none;
 		background: transparent;
+		padding: 0 4em;
 	}
 
 	/* ProseMirror editor */

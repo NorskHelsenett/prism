@@ -1,4 +1,6 @@
 <script>
+  import { run } from 'svelte/legacy';
+
 	import { goto } from '$app/navigation';
 	import { Fetch } from '$lib/fetchUtil.js';
   import AvatarList from '$lib/components/calendar/Avatarlist.svelte';
@@ -10,9 +12,8 @@
 	import Avatar from '$lib/components/Avatar.svelte';
 	import { toast } from 'svelte-sonner';
 
-  export let data;
-  export let assessment
-  let requestedBy
+  let { data, assessment = $bindable() } = $props();
+  let requestedBy = $state()
 
   onMount(async () => {
     assessment = await Fetch(`/api/planning/${data.id}`)
@@ -41,13 +42,8 @@
     responsibleHackers = [lastOne]
   }
 
-let responsibleHackers = []
-let busyHackers = []
-$: teamSize = calculateTeamSize();
-$: assessment && findAvailableUsers();
-$: if(assessment){
-  teamSize = calculateTeamSize();
-}
+let responsibleHackers = $state([])
+let busyHackers = $state([])
 
 async function findAvailableUsers() {
   busyHackers = await Fetch(`/api/planning/${assessment.id}/assignedHackers?from=${assessment.dateFrom}&to=${assessment.dateTo}`)
@@ -78,14 +74,23 @@ function calculateTeamSize() {
 
   return Math.floor(assessment.estimate / (numberOfDays * workingHours)) || 1;
 }
+let teamSize = $derived(calculateTeamSize());
+run(() => {
+    assessment && findAvailableUsers();
+  });
+run(() => {
+    if(assessment){
+    teamSize = calculateTeamSize();
+  }
+  });
 </script>
 
 <div class="row align-items-center mb-3">
   <div class="col-auto">
-    <button href="#" class="btn btn-dark w-100 link" on:click="{() => goto(`/planning/${data.id}/view`)}">Back</button>
+    <button href="#" class="btn btn-dark w-100 link" onclick={() => goto(`/planning/${data.id}/view`)}>Back</button>
   </div>
   <div class="col-auto">
-    <a href="#" class="btn btn-primary w-100" on:click="{() => updateAssessment()}">Save</a>
+    <a href="#" class="btn btn-primary w-100" onclick={() => updateAssessment()}>Save</a>
   </div>
 </div>
 
@@ -233,7 +238,7 @@ function calculateTeamSize() {
                     class="form-control"
                     rows=10
                     placeholder="Notes..."
-                    bind:value={assessment.note} />
+                    bind:value={assessment.note}></textarea>
           </div>
         </div>
 

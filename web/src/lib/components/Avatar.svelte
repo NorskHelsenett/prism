@@ -1,9 +1,17 @@
 <script>
+  import { run } from 'svelte/legacy';
+
   import { onMount } from 'svelte';
   import { userStore } from '$lib/stores/userStore';
 
-  export let email = '';
-  export let option = {};
+  /**
+   * @typedef {Object} Props
+   * @property {string} [email]
+   * @property {any} [option]
+   */
+
+  /** @type {Props} */
+  let { email = '', option = $bindable({}) } = $props();
 
   const defaultOption = {
     showName: true,
@@ -17,16 +25,18 @@
     option = { ...defaultOption, ...option };
   });
 
-  let user = null;
+  let user = $state(null);
 
-  $: if (email) {
-    userStore.getUser(email);
-    userStore.subscribe(store => {
-      user = store[email];
-    });
-  }
+  run(() => {
+    if (email) {
+      userStore.getUser(email);
+      userStore.subscribe(store => {
+        user = store[email];
+      });
+    }
+  });
 
-  let tooltipVisible = false;
+  let tooltipVisible = $state(false);
 
   function showTooltip(event) {
     if (option.tooltipEnabled) {
@@ -58,19 +68,19 @@
 </script>
 
 {#if email}
-<!-- svelte-ignore a11y-no-static-element-interactions -->
-<span on:mouseleave={hideTooltip} class="flex items-center">
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<span onmouseleave={hideTooltip} class="flex items-center">
   {#if user}
     {#if user.picture}
-      <img src={user.picture} alt={user.name} class:rounded-circle="{option.circle}" class="avatar {getSize()} me-2 rounded" on:mousemove={showTooltip} />
+      <img src={user.picture} alt={user.name} class:rounded-circle="{option.circle}" class="avatar {getSize()} me-2 rounded" onmousemove={showTooltip} />
     {:else}
-      <span class="avatar text-uppercase {getSize()}" class:rounded-circle="{option.circle}" on:mousemove={showTooltip}>{calculateInitials(user.name)}</span>
+      <span class="avatar text-uppercase {getSize()}" class:rounded-circle="{option.circle}" onmousemove={showTooltip}>{calculateInitials(user.name)}</span>
     {/if}
     {#if option.showName}
       <span class="align-middle">{user.name}</span>
     {/if}
   {:else}
-    <span class="avatar text-uppercase {getSize()}" class:rounded-circle="{option.circle}" on:mousemove={showTooltip}>{calculateInitialsFromEmail(email)}</span>
+    <span class="avatar text-uppercase {getSize()}" class:rounded-circle="{option.circle}" onmousemove={showTooltip}>{calculateInitialsFromEmail(email)}</span>
   {/if}
 
   {#if tooltipVisible}

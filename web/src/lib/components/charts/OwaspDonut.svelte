@@ -1,4 +1,6 @@
 <script>
+  import { run } from 'svelte/legacy';
+
   import { Doughnut } from 'svelte-chartjs';
   import ChartDataLabels from 'chartjs-plugin-datalabels';
   import {
@@ -12,10 +14,11 @@
 
   ChartJS.register(Title, Tooltip, Legend, ArcElement, CategoryScale, ChartDataLabels);
 
-  export let severityData = {"A01:Broken Access Control":0,"A02:Cryptographic Failures":0,"A03:Injection":0,"A05:Security Misconfiguration":0,"A08:Software and Data Integrity Failures":0,"uncategorized":0};
-  let data = {}
+  let { severityData = {"A01:Broken Access Control":0,"A02:Cryptographic Failures":0,"A03:Injection":0,"A05:Security Misconfiguration":0,"A08:Software and Data Integrity Failures":0,"uncategorized":0} } = $props();
+  let data = $state({})
 
-  let options = {
+  // Non-reactive options to prevent $state.snapshot from trying to clone formatter functions
+  const options = {
     responsive: true,
     maintainAspectRatio: false,
     cutout: 75,
@@ -65,38 +68,40 @@
     }
   };
 
-  $: if (severityData) {
-    let topOwaspCategories = Object.entries(severityData).sort((a,b) => b[1] - a[1]).slice(0,3)
+  run(() => {
+    if (severityData) {
+      let topOwaspCategories = Object.entries(severityData).sort((a,b) => b[1] - a[1]).slice(0,3)
 
-    const labels = topOwaspCategories.map(item => item[0]);
-    const dataPoints = topOwaspCategories.map(item => item[1]);
-    data = {
-      labels: labels, // Adjust the slice as needed based on your data
-      datasets: [{
-        data: dataPoints, // Map severity data to dataset
-        backgroundColor: [
-          '#D63939', // Greyish Blue
-          '#F76706', // Soft Teal
-          '#F59F01', // Light Grey-Blue
-          '#0054A6', // Dark Slate Blue
-          '#4399E1', // Muted Blue
-        ],
-        hoverBackgroundColor: [
-          '#BF3030', // More saturated Greyish Blue
-          '#E65C00', // More saturated Soft Teal
-          '#E08C00', // More saturated Light Grey-Blue
-          '#00458C', // More saturated Dark Slate Blue
-          '#3A87D1', // More saturated Muted Blue
-        ],
-        // Add border color and width here if needed
-        borderWidth: 10,
-        spacing: 25,
-        borderColor: 'transparent',
-        hoverOffset: 15 // Distance the slice moves when hovered
+      const labels = topOwaspCategories.map(item => item[0]);
+      const dataPoints = topOwaspCategories.map(item => item[1]);
+      data = {
+        labels: labels, // Adjust the slice as needed based on your data
+        datasets: [{
+          data: dataPoints, // Map severity data to dataset
+          backgroundColor: [
+            '#D63939', // Greyish Blue
+            '#F76706', // Soft Teal
+            '#F59F01', // Light Grey-Blue
+            '#0054A6', // Dark Slate Blue
+            '#4399E1', // Muted Blue
+          ],
+          hoverBackgroundColor: [
+            '#BF3030', // More saturated Greyish Blue
+            '#E65C00', // More saturated Soft Teal
+            '#E08C00', // More saturated Light Grey-Blue
+            '#00458C', // More saturated Dark Slate Blue
+            '#3A87D1', // More saturated Muted Blue
+          ],
+          // Add border color and width here if needed
+          borderWidth: 10,
+          spacing: 25,
+          borderColor: 'transparent',
+          hoverOffset: 15 // Distance the slice moves when hovered
 
-      }],
-    };
-    }
+        }],
+      };
+      }
+  });
 </script>
 
 {#if data.datasets[0].data.length}

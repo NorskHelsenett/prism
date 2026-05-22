@@ -1,9 +1,17 @@
 <script>
+  import { run } from 'svelte/legacy';
+
 	import { Fetch } from "$lib/fetchUtil";
 	import { onMount } from "svelte";
 
-  export let reload = true
-  let calendarEvents = []
+  /**
+   * @typedef {Object} Props
+   * @property {boolean} [reload]
+   */
+
+  /** @type {Props} */
+  let { reload = true } = $props();
+  let calendarEvents = $state([])
 
 onMount(async () => {fetchCalendarEvents})
 
@@ -11,9 +19,11 @@ async function fetchCalendarEvents() {
   calendarEvents = await Fetch("/api/planning?pageSize=${1000}")
 }
 
-$: if (!reload) {
-  fetchCalendarEvents();
-}
+run(() => {
+    if (!reload) {
+    fetchCalendarEvents();
+  }
+  });
 
 // Example: February 2024
 let year = 2024;

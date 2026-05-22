@@ -1,29 +1,42 @@
 <script>
+  import { run } from 'svelte/legacy';
+
   import Icon from '$lib/components/Icon.svelte';
 	import Markdown from '../../Markdown.svelte';
 	import Avatarlist from '../Avatarlist.svelte';
   import { createEventDispatcher, onMount, onDestroy } from 'svelte';
   const dispatch = createEventDispatcher();
 
-  // Props
-  export let task; // The task to display
-  export let clickPosition = { x: 0, y: 0 }; // Only need click coordinates, not final position
-  export let onClose; // Function to close the modal
-  export let onOpenFullView; // Function to open task in full view
+  
+  /**
+   * @typedef {Object} Props
+   * @property {any} task - Props - The task to display
+   * @property {any} [clickPosition] - Only need click coordinates, not final position
+   * @property {any} onClose - Function to close the modal
+   * @property {any} onOpenFullView - Function to open task in full view
+   */
+
+  /** @type {Props} */
+  let {
+    task = $bindable(),
+    clickPosition = { x: 0, y: 0 },
+    onClose,
+    onOpenFullView
+  } = $props();
   
   // Editable title state
-  let editableTitle = task.title || '';
+  let editableTitle = $state(task.title || '');
   let titleDebounceTimer;
-  let titleInputRef;
-  let isEditingTitle = false;
+  let titleInputRef = $state();
+  let isEditingTitle = $state(false);
   
-  let modalRef;
-  let modalPosition = { top: '0px', left: '0px' };
-  let showColorPicker = false;
-  let selectedColor = task.color || '#206bc4'; // Default color or from task
+  let modalRef = $state();
+  let modalPosition = $state({ top: '0px', left: '0px' });
+  let showColorPicker = $state(false);
+  let selectedColor = $state(task.color || '#206bc4'); // Default color or from task
   
   // Drag state
-  let isDragging = false;
+  let isDragging = $state(false);
   let dragOffset = { x: 0, y: 0 };
   
   const colors = [
@@ -82,10 +95,6 @@
     dispatch('colorchange', { color, task }); // Notify parent
   }
   
-  // Calculate position on mount and when clickPosition changes
-  $: if (clickPosition && modalRef) {
-    calculatePosition();
-  }
   
   function calculatePosition() {
     const mousePosition = { x: clickPosition.x, y: clickPosition.y };
@@ -208,11 +217,11 @@
   });
 
   // Project selection state
-  let projects = [];
-  let showProjectDropdown = false;
-  let isLoadingProjects = false;
-  let projectError = null;
-  let selectedProject = task.projects?.length > 0 ? task.projects[0] : null;
+  let projects = $state([]);
+  let showProjectDropdown = $state(false);
+  let isLoadingProjects = $state(false);
+  let projectError = $state(null);
+  let selectedProject = $state(task.projects?.length > 0 ? task.projects[0] : null);
 
   // Fetch projects from API
   async function fetchProjects() {
@@ -319,10 +328,6 @@
     return Math.floor(workdayCount * hoursPerDay * hackerCount);
   }
 
-  // Reactive statement to update estimate when relevant data changes
-  $: if (task && task.dateFrom && task.dateTo && task.hackers) {
-    task.estimate = calculateEstimate(task.hackers, task.dateFrom, task.dateTo);
-  }
 
   // Define Kanban statuses
   const kanbanStatuses = [
@@ -381,14 +386,26 @@
     // Return formatted date: "Fri, 3rd May"
     return `${dayOfWeek}, ${day}${suffix} ${month}`;
   }
+  // Calculate position on mount and when clickPosition changes
+  run(() => {
+    if (clickPosition && modalRef) {
+      calculatePosition();
+    }
+  });
+  // Reactive statement to update estimate when relevant data changes
+  run(() => {
+    if (task && task.dateFrom && task.dateTo && task.hackers) {
+      task.estimate = calculateEstimate(task.hackers, task.dateFrom, task.dateTo);
+    }
+  });
 </script>
 
-<svelte:window on:click={(e) => { closeColorPicker(e); closeProjectDropdown(e); }} />
+<svelte:window onclick={(e) => { closeColorPicker(e); closeProjectDropdown(e); }} />
 
 <div class="task-modal {isDragging ? 'dragging' : ''}" 
      bind:this={modalRef}
      style="top: {modalPosition.top}; left: {modalPosition.left};"
-     use:clickOutside on:outclick={onClose}>
+     use:clickOutside onoutclick={onClose}>
   <a class="btn-expand" href="/planning/{task.id}/view" target="_blank" rel="noopener" title="Open in new tab">
     <Icon icon="external-link" />
   </a>
@@ -397,7 +414,7 @@
     <div class="title-container">
       <div class="color-selector" 
            style="background-color: {selectedColor};" 
-           on:click={() => showColorPicker = !showColorPicker}></div>
+           onclick={() => showColorPicker = !showColorPicker}></div>
       
       {#if isEditingTitle}
         <input 
@@ -405,17 +422,17 @@
           class="title-input"
           bind:this={titleInputRef}
           bind:value={editableTitle}
-          on:input={updateTitle}
-          on:blur={handleTitleFocusOut}
-          on:keydown={(e) => e.key === 'Enter' && handleTitleFocusOut()}
+          oninput={updateTitle}
+          onblur={handleTitleFocusOut}
+          onkeydown={(e) => e.key === 'Enter' && handleTitleFocusOut()}
           autofocus
         />
       {:else}
-        <h3 on:click={() => { isEditingTitle = true; setTimeout(() => titleInputRef?.focus(), 0); }}>{task.title}</h3>
+        <h3 onclick={() => { isEditingTitle = true; setTimeout(() => titleInputRef?.focus(), 0); }}>{task.title}</h3>
       {/if}
     </div>
     
-    <div class="drag-handle" on:mousedown={startDrag}>
+    <div class="drag-handle" onmousedown={startDrag}>
       <Icon icon="arrows-move" />
     </div>
   </div>
@@ -426,7 +443,7 @@
         {#each colors as color}
           <div class="color-option" 
                style="background-color: {color};" 
-               on:click={() => selectColor(color)}></div>
+               onclick={() => selectColor(color)}></div>
         {/each}
       </div>
     </div>
@@ -440,7 +457,7 @@
              id="status-{status.id}" 
              autocomplete="off"
              checked={task.status === status.id}
-             on:change={() => changeStatus(status.id)}>
+             onchange={() => changeStatus(status.id)}>
       <label for="status-{status.id}" 
              class="btn {status.color} {task.status !== status.id ? 'text-muted' : ''}">
         {status.label}
@@ -466,7 +483,7 @@
       <div class="mb-2 project-container">
         <strong>Project:</strong>
         <div class="project-select-container">
-          <div class="form-select" on:click={toggleProjectDropdown}>
+          <div class="form-select" onclick={toggleProjectDropdown}>
             {#if selectedProject?.name}
               <div class="selected-project">{selectedProject.name}</div>
             {:else}
@@ -486,7 +503,7 @@
                 {#each projects as project}
                   <div 
                     class="project-option {isProjectSelected(project.ID) ? 'selected' : ''}"
-                    on:click={() => selectProject(project)}
+                    onclick={() => selectProject(project)}
                   >
                     {project.ProjectName}
                   </div>

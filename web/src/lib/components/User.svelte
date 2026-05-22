@@ -1,4 +1,6 @@
 <script>
+  import { preventDefault } from 'svelte/legacy';
+
   import { onDestroy, onMount } from 'svelte';
   import { clickOutside } from './clickOutside.js';
   import { userStore } from '$lib/userStore.js';
@@ -13,7 +15,7 @@
     };
   }
 
-  let isHidden = true;
+  let isHidden = $state(true);
 
   function toggleHidden() {
       isHidden = !isHidden;
@@ -23,11 +25,11 @@
       isHidden = true;
   }
 
-  let user = {
+  let user = $state({
       image: "",
       role: "visitor",
       name: ""
-  }
+  })
 
   // Subscribe to the user store
   const unsubscribe = userStore.subscribe(storeUser => {
@@ -42,7 +44,7 @@
   onDestroy(unsubscribe);
 </script>
 
-<a href="#" on:click|preventDefault={toggleHidden} class="nav-link d-flex lh-1 text-reset p-0">
+<a href="#" onclick={preventDefault(toggleHidden)} class="nav-link d-flex lh-1 text-reset p-0">
     <span class="avatar avatar-sm" style="background-image: url({user.image})"></span>
     <div class="d-none d-xl-block ps-2">
         <div>{user.name}</div>
@@ -51,14 +53,14 @@
 </a>
 {#if !isHidden}
 <div
-    use:clickOutside on:outsideClick={closeDropdown}
+    use:clickOutside onoutsideClick={closeDropdown}
     class="dropdown-menu dropdown-menu-end dropdown-menu-arrow show"
     data-bs-popper="static"
     transition:slide
 >
-    <a href="/" class="dropdown-item" on:click={navigate("/")}>Status</a>
-    <a href="/settings" class="dropdown-item" on:click={navigate("/settings")}>Settings</a>
+    <a href="/" class="dropdown-item" onclick={navigate("/")}>Status</a>
+    <a href="/settings" class="dropdown-item" onclick={navigate("/settings")}>Settings</a>
     <div class="dropdown-divider"></div>
-    <a href="/api/logout" class="dropdown-item" on:click={navigate("/api/logout")}>Logout</a>
+    <a href="/api/logout" class="dropdown-item" onclick={navigate("/api/logout")}>Logout</a>
 </div>
 {/if}

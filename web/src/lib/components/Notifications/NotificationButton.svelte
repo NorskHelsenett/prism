@@ -5,7 +5,13 @@
 	import { onMount } from "svelte";
   import { createEventDispatcher } from 'svelte';
 
-  export let notificationPermission = 'default';
+  /**
+   * @typedef {Object} Props
+   * @property {string} [notificationPermission]
+   */
+
+  /** @type {Props} */
+  let { notificationPermission = $bindable('default') } = $props();
   const dispatch = createEventDispatcher();
   let applicationServerKey = ""
 
@@ -57,7 +63,7 @@
 }
 </script>
 
-<button class="btn btn-primary btn-pill w-70" on:click={askNotificationPermission}>Enable</button>
+<button class="btn btn-primary btn-pill w-70" onclick={askNotificationPermission}>Enable</button>
 
 <!-- <div>
   <label class="row">

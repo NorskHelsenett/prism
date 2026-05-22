@@ -2,7 +2,7 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/go
 {
 	"name": "Go",
-	"image": "mcr.microsoft.com/devcontainers/go:1.25",
+	"image": "mcr.microsoft.com/devcontainers/go:1.26",
 	"features": {
 		"ghcr.io/devcontainers/features/node:1": {},
 		"ghcr.io/jonasbg/mocc/mocc:1": {

@@ -1,4 +1,6 @@
 <script>
+  import { run } from 'svelte/legacy';
+
 	import { onDestroy, onMount } from 'svelte';
 	import TomSelect from 'tom-select';
   import 'tom-select/dist/css/tom-select.bootstrap5.min.css';
@@ -7,12 +9,18 @@
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
 
-  let usersOriginal = []
-  let users = []
-  let projectSelectElement;
-  export let showModal = false
+  let usersOriginal = $state([])
+  let users = $state([])
+  let projectSelectElement = $state();
+  /**
+   * @typedef {Object} Props
+   * @property {boolean} [showModal]
+   */
 
-  let assessment = resetData()
+  /** @type {Props} */
+  let { showModal = $bindable(false) } = $props();
+
+  let assessment = $state(resetData())
 
   function resetData() {
     return {
@@ -25,9 +33,11 @@
     }
   }
 
-  $: if(showModal) { assessment = resetData() }
+  run(() => {
+    if(showModal) { assessment = resetData() }
+  });
 
-  let error
+  let error = $state()
 
   async function postassessment() {
     const result = await Fetch("/api/planning/new", {method: "POST", body: JSON.stringify(assessment)})
@@ -89,7 +99,7 @@
   });
 
   let showRemoveHacker = []
-  let showHackersList = false
+  let showHackersList = $state(false)
 
   function addHacker(user){
   // Add the user to the hackers list if not already included
@@ -113,7 +123,7 @@ function removeHacker(user) {
   }
 }
 
-let filterText = ""
+let filterText = $state("")
 
 function filterUsers(event){
   filterText = event.target.value.toLowerCase()
@@ -126,12 +136,14 @@ function filterUsers(event){
   }
 }
 
-$: if(showHackersList){
-  document.getElementById("filterQuery")?.focus()
-} else {
-  filterText = ""
-  users = usersOriginal?.filter(u => !assessment.hackers.includes(u));
-}
+run(() => {
+    if(showHackersList){
+    document.getElementById("filterQuery")?.focus()
+  } else {
+    filterText = ""
+    users = usersOriginal?.filter(u => !assessment.hackers.includes(u));
+  }
+  });
 </script>
 
   <div class="card">
@@ -142,7 +154,7 @@ $: if(showHackersList){
         </div>
       {/if}
     <div class="mb-3">
-			<!-- svelte-ignore a11y-autofocus -->
+			<!-- svelte-ignore a11y_autofocus -->
 			<input
 				type="text"
 				class="form-control"
@@ -178,18 +190,18 @@ $: if(showHackersList){
 
 <div class="row">
       <div class="mt-3">
-			<!-- svelte-ignore a11y-autofocus -->
+			<!-- svelte-ignore a11y_autofocus -->
 			<textarea
 				class="form-control"
 				placeholder="Notes..."
 				bind:value={assessment.note}
-			/>
+			></textarea>
 		</div>
 </div>
 
     </div>
     <div class="card-footer text-end">
-      <a href="#" class="btn btn-primary" on:click="{postassessment}">Save</a>
+      <a href="#" class="btn btn-primary" onclick={postassessment}>Save</a>
     </div>
   </div>
 

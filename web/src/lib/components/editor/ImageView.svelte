@@ -1,21 +1,60 @@
 <script>
 	import AnnotationEditor from './AnnotationEditor.svelte';
 
-	export let node;
-	export let updateAttributes;
-	export let selected = false;
-	export let editable = true;
+	/**
+	 * @typedef {Object} Props
+	 * @property {any} node
+	 * @property {any} updateAttributes
+	 * @property {boolean} [selected]
+	 * @property {boolean} [editable]
+	 */
 
-	let annotationOpen = false;
-	let altText = node.attrs.alt || '';
+	/** @type {Props} */
+	let {
+		node,
+		updateAttributes,
+		selected = false,
+		editable = true
+	} = $props();
 
-	$: src = node.attrs.src || '';
-	$: altText = node.attrs.alt || '';
-	$: renderedSrc = node.attrs.renderedSrc || '';
-	$: displaySrc = renderedSrc || src;
+	let localNode = $state(node);
+	let localSelected = $state(selected);
+	let localEditable = $state(editable);
+	let annotationOpen = $state(false);
+	let altText = $state(localNode.attrs.alt || '');
+
+	let src = $derived(localNode.attrs.src || '');
+	let renderedSrc = $derived(localNode.attrs.renderedSrc || '');
+	let displaySrc = $derived(renderedSrc || src);
+
+	$effect(() => {
+		altText = localNode.attrs.alt || '';
+	});
+
+	// Exported methods for TipTap node view integration (Svelte 5 replaces $$set)
+	export function update(newNode, newEditable) {
+		if (newNode) {
+			localNode = newNode;
+		}
+		if (newEditable !== undefined) {
+			localEditable = newEditable;
+		}
+	}
+
+	export function select() {
+		localSelected = true;
+	}
+
+	export function deselect() {
+		localSelected = false;
+	}
+
+	export function destroy() {
+		// Cleanup if needed
+	}
 
 	function handleImageClick(event) {
-		if (!editable) {
+		if (!localEditable) {
 			event.currentTarget?.dispatchEvent(new CustomEvent('rte-image-click', {
 				detail: {
 					src: displaySrc,
@@ -32,7 +71,7 @@
 	}
 
 	function saveAlt() {
-		if (altText !== (node.attrs.alt || '')) {
+		if (altText !== (localNode.attrs.alt || '')) {
 			updateAttributes({ alt: altText });
 		}
 	}
@@ -51,23 +90,23 @@
 	}
 </script>
 
-<!-- svelte-ignore a11y-click-events-have-key-events -->
-<!-- svelte-ignore a11y-no-static-element-interactions -->
-<figure class="image-node" class:selected>
-	<!-- svelte-ignore a11y-no-static-element-interactions -->
-	<div class="image-wrapper" on:click|stopPropagation={handleImageClick}>
-		<img src={displaySrc} alt={altText} draggable={editable} on:dragstart={handleDragStart} />
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
+<figure class="image-node" class:localSelected>
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div class="image-wrapper" onclick={handleImageClick}>
+		<img src={displaySrc} alt={altText} draggable={localEditable} ondragstart={handleDragStart} />
 	</div>
 
-	{#if editable}
+	{#if localEditable}
 		<figcaption class="image-caption-row">
 			<input
 				type="text"
 				class="caption-input"
 				class:has-text={!!altText}
 				bind:value={altText}
-				on:blur={saveAlt}
-				on:keydown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+				onblur={saveAlt}
+				onkeydown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
 				placeholder="Click to add image caption"
 			/>
 		</figcaption>
@@ -76,12 +115,12 @@
 	{/if}
 </figure>
 
-{#if editable}
+{#if localEditable}
 	<AnnotationEditor
 		bind:open={annotationOpen}
 		{src}
-		annotations={node.attrs.annotations || []}
-		crop={node.attrs.crop || null}
+		annotations={localNode.attrs.annotations || []}
+		crop={localNode.attrs.crop || null}
 		on:save={(e) => {
 			updateAttributes({
 				annotations: e.detail.annotations,
@@ -123,7 +162,6 @@
 
 	.image-node.selected .image-wrapper,
 	.image-node:hover .image-wrapper {
-		/* outline: 2px solid var(--rte-accent, #0054a6); */
 		outline-offset: 2px;
 		border-radius: 5px;
 	}

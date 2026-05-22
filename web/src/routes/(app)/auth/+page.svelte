@@ -4,10 +4,10 @@
 	import { Fetch } from '$lib/fetchUtil';
 	import OtpField from '$lib/components/otp-field.svelte';
 	import PasskeyAuth from '$lib/components/PasskeyAuth.svelte';
-  let otpData;
-  let showOtpEntry = false;
-  let canGoBackToQr = false;
-  let hasPasskeys = false;
+  let otpData = $state();
+  let showOtpEntry = $state(false);
+  let canGoBackToQr = $state(false);
+  let hasPasskeys = $state(false);
 
   onMount(async () => {
     const redirectShare = localStorage.getItem('redirectToAfterLogin');
@@ -33,7 +33,7 @@
   const logo = "/img/favicon.png"
   let warningAccepted = true
 
-  let showSecret = false
+  let showSecret = $state(false)
 
   function addSpacesToText(text){
     return text.replace(/(.{4})/g, '$1 ').trim()
@@ -55,7 +55,7 @@
           </div>
           <div class="hr-text hr-text-center hr-text-spaceless">QR Code</div>
           <div class="card-body mb-3">
-            <div class="mb-3 d-flex justify-content-center mh-20 cursor-pointer" on:click={() => showSecret =!showSecret}>
+            <div class="mb-3 d-flex justify-content-center mh-20 cursor-pointer" onclick={() => showSecret =!showSecret}>
                 <SvgQR class="text-teal bg-transparent" data={otpData.url} {logo} shape="circle"/>
                 {#if showSecret}
                 <div id="secret-box" class="card card-body text-teal">
@@ -78,7 +78,7 @@
           </div>
           <div class="col-12">
             <div class="btn-list justify-content-end">
-                <button disabled={!warningAccepted} class="btn btn-teal btn-ghost-teal d-none d-sm-inline-block" on:click={() => {
+                <button disabled={!warningAccepted} class="btn btn-teal btn-ghost-teal d-none d-sm-inline-block" onclick={() => {
                   showOtpEntry = true;
                   canGoBackToQr = true;
                 }}>Continue</button>
@@ -101,7 +101,7 @@
           {/if}
           {#if canGoBackToQr}
             <div class="card-footer d-flex justify-content-start">
-              <button class="btn btn-outline-secondary" on:click={() => {
+              <button class="btn btn-outline-secondary" onclick={() => {
                 showSecret = false;
                 showOtpEntry = false;
               }}>Back to QR</button>

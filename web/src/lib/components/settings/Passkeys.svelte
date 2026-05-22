@@ -3,11 +3,11 @@
     import { Fetch } from '$lib/fetchUtil';
     import { toast } from 'svelte-sonner';
 
-    let credentials = [];
-    let registering = false;
-    let loading = true;
+    let credentials = $state([]);
+    let registering = $state(false);
+    let loading = $state(true);
 
-    let supported = false;
+    let supported = $state(false);
     if (typeof window !== 'undefined' && window.PublicKeyCredential) {
         supported = true;
     }
@@ -165,7 +165,7 @@
     <div class="d-flex justify-content-end mb-2">
         <button
             class="btn btn-primary btn-sm"
-            on:click={registerPasskey}
+            onclick={registerPasskey}
             disabled={registering}
         >
             <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-plus me-1" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -208,7 +208,7 @@
                     </td>
                     <td class="text-secondary">{formatDate(cred.createdAt)}</td>
                     <td>
-                        <button class="btn btn-ghost-danger btn-sm" on:click={() => deleteCredential(cred.id)}>Remove</button>
+                        <button class="btn btn-ghost-danger btn-sm" onclick={() => deleteCredential(cred.id)}>Remove</button>
                     </td>
                 </tr>
                 {/each}

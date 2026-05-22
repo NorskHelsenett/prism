@@ -3,13 +3,19 @@
     import { onMount } from 'svelte';
     import { slide } from 'svelte/transition';
 
-    export let requiresActivation = false;
+  /**
+   * @typedef {Object} Props
+   * @property {boolean} [requiresActivation]
+   */
 
-  let otpInputs = [];
+  /** @type {Props} */
+  let { requiresActivation = false } = $props();
+
+  let otpInputs = $state([]);
   const otpLength = 6;
-  let otpCode = Array(otpLength).fill('');
-  let submitting = false;
-  let errorMessage = '';
+  let otpCode = $state(Array(otpLength).fill(''));
+  let submitting = $state(false);
+  let errorMessage = $state('');
 
   const focusNextInput = (index, event) => {
       if (event.key === 'Backspace' && !otpCode[index]) {
@@ -121,7 +127,7 @@
   };
 </script>
 
-<div class="row row-cards d-flex justify-content-center" on:paste={handlePaste}>
+<div class="row row-cards d-flex justify-content-center" onpaste={handlePaste}>
   {#each otpCode as _, index (index)}
       <input
           bind:this={otpInputs[index]}
@@ -134,8 +140,8 @@
           autocomplete="one-time-code"
           disabled={submitting}
           bind:value={otpCode[index]}
-          on:keyup={event => focusNextInput(index, event)}
-          on:input={event => handleInput(index, event)}
+          onkeyup={event => focusNextInput(index, event)}
+          oninput={event => handleInput(index, event)}
       />
   {/each}
 </div>

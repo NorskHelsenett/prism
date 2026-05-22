@@ -1,4 +1,6 @@
 <script>
+  import { run } from 'svelte/legacy';
+
   import { onMount, onDestroy, tick } from 'svelte';
   import RichTextEditor from '$lib/components/editor/RichTextEditor.svelte';
   import NotesSidebar from '$lib/components/notes/NotesSidebar.svelte';
@@ -23,13 +25,13 @@
   const pretitle = 'Personal';
   const title = 'Notes';
 
-  let editorRef;
-  let editorContent = '';
-  let lastLoadedId = null;
+  let editorRef = $state();
+  let editorContent = $state('');
+  let lastLoadedId = $state(null);
   // Snapshot of the content we last loaded from the server, used to suppress
   // "saving…" pill flashes when the editor roundtrips markdown->html->markdown
   // on open without any real user edit.
-  let lastLoadedContent = '';
+  let lastLoadedContent = $state('');
 
   function normalizeForCompare(s) {
     return (s || '')
@@ -38,16 +40,18 @@
       .trim();
   }
 
-  $: if ($selectedNote && $selectedNote.id !== lastLoadedId) {
-    lastLoadedId = $selectedNote.id;
-    lastLoadedContent = $selectedNote.content || '';
-    editorContent = lastLoadedContent;
-    tick().then(() => editorRef?.focusEditor(lastLoadedContent ? 'end' : 'start'));
-  } else if (!$selectedNote && lastLoadedId !== null) {
-    lastLoadedId = null;
-    lastLoadedContent = '';
-    editorContent = '';
-  }
+  run(() => {
+    if ($selectedNote && $selectedNote.id !== lastLoadedId) {
+      lastLoadedId = $selectedNote.id;
+      lastLoadedContent = $selectedNote.content || '';
+      editorContent = lastLoadedContent;
+      tick().then(() => editorRef?.focusEditor(lastLoadedContent ? 'end' : 'start'));
+    } else if (!$selectedNote && lastLoadedId !== null) {
+      lastLoadedId = null;
+      lastLoadedContent = '';
+      editorContent = '';
+    }
+  });
 
   // Clicking anywhere in the editor pane (including the empty padding area
   // outside the ProseMirror element) should focus the editor so the user
@@ -142,7 +146,7 @@
   </div>
   <div class="col-auto ms-auto d-print-non">
     <div class="btn-list">
-      <button type="button" class="btn btn-primary d-none d-sm-inline-block" on:click={createNote}>
+      <button type="button" class="btn btn-primary d-none d-sm-inline-block" onclick={createNote}>
         <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
           <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
           <path d="M12 5l0 14" />
@@ -156,13 +160,13 @@
 
 <div class="page-body">
   <div class="notes-app card">
-    <div class="editor-pane" on:click={handlePaneClick} role="presentation">
+    <div class="editor-pane" onclick={handlePaneClick} role="presentation">
       {#if $selectedNote}
         {#if $remoteUpdatedConflict && $remoteUpdatedConflict.id === $selectedNoteId}
           <div class="conflict-banner">
             This note was updated on another device.
-            <button type="button" class="link-btn" on:click={reloadCurrentNote}>Reload</button>
-            <button type="button" class="link-btn dismiss" on:click={dismissConflict}>Dismiss</button>
+            <button type="button" class="link-btn" onclick={reloadCurrentNote}>Reload</button>
+            <button type="button" class="link-btn dismiss" onclick={dismissConflict}>Dismiss</button>
           </div>
         {/if}
 
@@ -181,7 +185,7 @@
       {:else}
         <div class="empty-editor">
           <p>Select a note on the right, or create a new one.</p>
-          <button type="button" class="btn btn-primary" on:click={createNote}>New note</button>
+          <button type="button" class="btn btn-primary" onclick={createNote}>New note</button>
         </div>
       {/if}
     </div>

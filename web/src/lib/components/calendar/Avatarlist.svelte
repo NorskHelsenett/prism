@@ -9,13 +9,13 @@
   const dispatch = createEventDispatcher();
 
   let allUsers = [];
-  let availableUsers = [];
-  export let hackers = [];
-  let allTeams = [];
-  let filterText = '';
+  let availableUsers = $state([]);
+  let { hackers = $bindable([]) } = $props();
+  let allTeams = $state([]);
+  let filterText = $state('');
 
-  let dropdownPosition = { top: 0, left: 0 };
-  let addButtonElement;
+  let dropdownPosition = $state({ top: 0, left: 0 });
+  let addButtonElement = $state();
 
   onMount(async () => {
     try {
@@ -33,22 +33,27 @@
       availableUsers = allUsers.filter(user => !hackers.some(hacker => hacker.email === user.email));
   }
 
-  $: if (hackers) {
-    hackers = hackers.filter((hacker, index, self) => 
-      index === self.findIndex(h => h.email === hacker.email)
-    );
-    updateAvailableUsers();
-  }
+  $effect(() => {
+    if (hackers) {
+      const deduplicated = hackers.filter((hacker, index, self) => 
+        index === self.findIndex(h => h.email === hacker.email)
+      );
+      if (deduplicated.length !== hackers.length) {
+        hackers = deduplicated;
+      }
+      updateAvailableUsers();
+    }
+  });
 
-  $: filteredUsers = availableUsers.filter(user =>
+  let filteredUsers = $derived(availableUsers.filter(user =>
     user.email.toLowerCase().includes(filterText.toLowerCase()) ||
     (user.name && user.name.toLowerCase().includes(filterText.toLowerCase()))
-  );
+  ));
 
-  $: filteredTeams = allTeams.filter(team =>
+  let filteredTeams = $derived(allTeams.filter(team =>
     team.name.toLowerCase().includes(filterText.toLowerCase()) ||
     team.members.some(email => email.toLowerCase().includes(filterText.toLowerCase()))
-  );
+  ));
 
   function handleClickOutside(event) {
     const cardElement = document.getElementById('hackersDropdownList');
@@ -61,8 +66,8 @@
     window.removeEventListener('click', handleClickOutside);
   });
 
-  let showRemoveHacker = [];
-  let showHackersList = false;
+  let showRemoveHacker = $state([]);
+  let showHackersList = $state(false);
 
   function addHacker(userOrEmail) {
     let email;
@@ -120,21 +125,21 @@
   {#each hackers as hacker, index (hacker.email)}
     {#if hacker && hacker.email}
       <div class="avatar-container"
-           on:mouseenter={() => showRemoveHacker[index] = true}
-           on:mouseleave={() => showRemoveHacker[index] = false}
+           onmouseenter={() => showRemoveHacker[index] = true}
+           onmouseleave={() => showRemoveHacker[index] = false}
            transition:scale={{ duration: 300, delay: 0, opacity: 0.5, start: 0.0, easing: quintOut }}>
         <Avatar email="{hacker.email}" option={{ showName: false, size: "sm", emptyFields: false, circle: true, tooltipEnabled: false}}/>
         {#if showRemoveHacker[index]}
           <i class="overlay ti ti-x rounded-circle"
              transition:fade={{ delay: 50, duration: 500 }}
-             on:click="{() => removeHacker(hacker)}"></i>
+             onclick={() => removeHacker(hacker)}></i>
         {/if}
       </div>
     {/if}
   {/each}
   <span class="avatar rounded-circle avatar-sm cursor-pointer"
         bind:this={addButtonElement}
-        on:click|stopPropagation="{toggleHackersList}">
+        onclick={(e) => { e.stopPropagation(); toggleHackersList(); }}>
     <i class="ti ti-plus"></i>
   </span>
   {#if showHackersList}
@@ -152,7 +157,7 @@
             <ul class="team-list">
               {#each team.members as email}
                 {#if isUserAvailable(email) && email.toLowerCase().includes(filterText.toLowerCase())}
-                  <li class="option selected p-2" on:click="{() => addHacker(email)}">
+                  <li class="option selected p-2" onclick={() => addHacker(email)}>
                     <Avatar email={email} option={{ showName: true, emptyFields: false, circle: true, tooltipEnabled: false}}/>
                   </li>
                 {/if}
@@ -163,7 +168,7 @@
         {/each}
         <ul>
           {#each filteredUsers as user (user.email)}
-            <li class="option selected p-2" on:click="{() => addHacker(user)}">
+            <li class="option selected p-2" onclick={() => addHacker(user)}>
               <Avatar email={user.email} option={{ showName: true, emptyFields: false, circle: true, tooltipEnabled: false}}/>
             </li>
           {/each}

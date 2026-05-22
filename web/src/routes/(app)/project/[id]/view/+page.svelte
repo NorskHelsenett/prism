@@ -1,4 +1,6 @@
 <script>
+  import { run, preventDefault, stopPropagation } from 'svelte/legacy';
+
   import { Fetch } from '$lib/fetchUtil'
 	import CriticalityPie from '$lib/components/charts/CriticalityPie.svelte';
 	import Criticality from '$lib/components/dashboard/Criticality.svelte';
@@ -16,14 +18,14 @@
 	import { goto } from '$app/navigation';
 	import DeleteModal from '$lib/components/DeleteModal.svelte';
 
-  export let data;
+  let { data } = $props();
 
-  let showEditModal = false
+  let showEditModal = $state(false)
 
-  let project
-  let vulnerabilitiesTotal
-  let vulnerabilities = []
-  let owaspData = {};
+  let project = $state()
+  let vulnerabilitiesTotal = $state()
+  let vulnerabilities = $state([])
+  let owaspData = $state({});
 
   function categorizeData(apiResponse) {
     const results = {};
@@ -61,19 +63,26 @@
     }
   }
 
-  $: if (showEditModal === false) {
-    fetchProjectData();
-  }
+  run(() => {
+    if (showEditModal === false) {
+      fetchProjectData();
+    }
+  });
 
-let severityData = {
+let severityData = $state({
     critical: 0,
     high: 0,
     medium: 0,
     low: 0,
     information: 0
-  };
+  });
 
-  $: {
+  let assessments = 0;
+  let showDropdown = $state(false)
+  let showDeleteModal = $state(false)
+  let unresolvedCount = $state(0);
+
+  run(() => {
     // Reset counts
     severityData = { critical: 0, high: 0, medium: 0, low: 0, information: 0 };
 
@@ -94,18 +103,13 @@ let severityData = {
     });
 
     unresolvedCount = vulnerabilities.filter(vulnerability => vulnerability.Status !== "Resolved" && vulnerability.Status !== "Rejected").length;
-  }
+  });
 
   async function deleteProject(){
     showDeleteModal = true
     await Fetch(`/api/project/${data.id}`, {method: "DELETE"})
     goto("/project")
   }
-
-  let assessments = 0;
-  let showDropdown = false
-  let showDeleteModal = false
-  let unresolvedCount = 0;
 
   async function handleeMarkdownChange(event) {
     project.Description = event.detail.updatedMarkdown
@@ -131,7 +135,7 @@ let severityData = {
       <a
         href="#"
         class="d-none d-sm-inline-block"
-        on:click|preventDefault|stopPropagation={() => showDropdown = !showDropdown}
+        onclick={stopPropagation(preventDefault(() => showDropdown = !showDropdown))}
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-dots-vertical" width="36" height="36" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M12 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M12 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>
           </a
@@ -139,9 +143,9 @@ let severityData = {
         </div>
 
         <Dropdown bind:show={showDropdown}>
-          <a class="dropdown-item" href="#" on:click={()=> showEditModal = !showEditModal}>Edit</a>
+          <a class="dropdown-item" href="#" onclick={()=> showEditModal = !showEditModal}>Edit</a>
           <div class="dropdown-divider"></div>
-          <a class="dropdown-item text-warning" href="#" on:click={() => showDeleteModal = true}>
+          <a class="dropdown-item text-warning" href="#" onclick={() => showDeleteModal = true}>
             <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-trash" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
             Delete
           </a>
