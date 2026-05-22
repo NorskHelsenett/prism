@@ -211,19 +211,23 @@
 		breaks: true,
 		gfm: true,
 		renderer: {
-			list(body, ordered, start) {
-				const bodyStr = typeof body === 'string' ? body : String(body);
-				if (bodyStr.includes('data-checked=')) {
-					return `<ul data-type="taskList">${bodyStr}</ul>`;
+			list(token) {
+				let body = '';
+				for (const item of token.items) {
+					body += this.listitem(item);
 				}
-				const type = ordered ? 'ol' : 'ul';
-				const startAttr = ordered && start !== 1 ? ` start="${start}"` : '';
+				if (token.items.some((it) => it.task)) {
+					return `<ul data-type="taskList">${body}</ul>`;
+				}
+				const type = token.ordered ? 'ol' : 'ul';
+				const startAttr = token.ordered && token.start !== 1 ? ` start="${token.start}"` : '';
 				return `<${type}${startAttr}>${body}</${type}>`;
 			},
-			listitem(text, task, checked) {
-				if (task) {
+			listitem(token) {
+				let text = this.parser.parse(token.tokens, !!token.loose);
+				if (token.task) {
 					text = text.replace(/<input[^>]*type="checkbox"[^>]*>\s*/i, '');
-					return `<li data-type="taskItem" data-checked="${checked ? 'true' : 'false'}">${text}</li>`;
+					return `<li data-type="taskItem" data-checked="${token.checked ? 'true' : 'false'}">${text}</li>`;
 				}
 				return `<li>${text}</li>`;
 			}
