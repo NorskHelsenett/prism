@@ -236,6 +236,8 @@ func InitDB() {
 	db.AutoMigrate(&AssessmentJSON{})
 	db.AutoMigrate(&Subscriber{})
 	db.AutoMigrate(&models.APIKey{})
+	db.AutoMigrate(&models.Report{})
+	db.AutoMigrate(&models.ReportVersion{})
 	db.AutoMigrate(&models.SharedDocument{})
 	db.AutoMigrate(&models.Team{})
 	db.AutoMigrate(&WebAuthnCredential{})
@@ -959,6 +961,50 @@ func HasAccessToProject(email string, projectID string, role string) (bool, erro
 		return false, err
 	}
 	return count > 0, nil
+}
+
+// HasWriteOnAllProjects reports whether the user has write access to *every*
+// project in projectIDs. Used to gate Report create/edit/publish/delete:
+// the author must have write on each linked project, mirroring the existing
+// HasAccessToProject email-match rule (client_email / hacker_name).
+//
+// Admin and any role with "*" on /project bypasses the check.
+func HasWriteOnAllProjects(email string, role string, projectIDs []uint, globalProject bool) (bool, error) {
+	if role == "admin" || globalProject {
+		return true, nil
+	}
+	if len(projectIDs) == 0 {
+		return false, nil
+	}
+	for _, pid := range projectIDs {
+		ok, err := HasAccessToProject(email, strconv.FormatUint(uint64(pid), 10), role)
+		if err != nil {
+			return false, err
+		}
+		if !ok {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+// HasReadOnAnyProject reports whether the user can read at least one of the
+// listed projects. Used to gate Report internal read: anyone with read on
+// any linked project sees published versions.
+func HasReadOnAnyProject(email string, role string, projectIDs []uint, globalProject bool) (bool, error) {
+	if role == "admin" || globalProject {
+		return true, nil
+	}
+	for _, pid := range projectIDs {
+		ok, err := HasAccessToProject(email, strconv.FormatUint(uint64(pid), 10), role)
+		if err != nil {
+			return false, err
+		}
+		if ok {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func GetProjectIdFromVulnerabilityID(findingsID uint) (uint, error) {

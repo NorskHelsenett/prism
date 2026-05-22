@@ -79,6 +79,8 @@ func main() {
 	{
 		shareGroup.Use(middleware.RateLimiter())
 		shareGroup.POST("/share/:token", func(c *gin.Context) { share.GetPublicVulnerability(c, sessionStore) })
+		shareGroup.GET("/share/report/:token", func(c *gin.Context) { share.GetPublicReport(c, sessionStore) })
+		shareGroup.GET("/share/report/:token/pdf", func(c *gin.Context) { share.GetPublicReportPDF(c, sessionStore) })
 	}
 
 	// Authenticated users (API only)
@@ -123,6 +125,17 @@ func main() {
 		apiRoutes.GET("/session/passkey/has", webauthn.HasPasskeys)
 
 		apiRoutes.GET("/profile/access-list", routes.GetAccessListRoutes)
+
+		apiRoutes.POST("/report", routes.CreateReport)
+		apiRoutes.GET("/report", routes.ListReports)
+		apiRoutes.GET("/report/:id", routes.GetReport)
+		apiRoutes.PATCH("/report/:id", routes.PatchReport)
+		apiRoutes.DELETE("/report/:id", routes.DeleteReport)
+		apiRoutes.POST("/report/:id/publish", routes.PublishReport)
+		apiRoutes.GET("/report/:id/versions", routes.ListReportVersions)
+		apiRoutes.GET("/report/:id/versions/:version", routes.GetReportVersion)
+		apiRoutes.GET("/report/:id/versions/:version/pdf", routes.GetReportVersionPDF)
+		apiRoutes.PUT("/report/:id/share", routes.UpdateReportShare)
 
 		apiRoutes.POST("/planning/new", routes.NewAssassment)
 		apiRoutes.GET("/planning", routes.RetrieveAssessmentsHandler)

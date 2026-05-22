@@ -27,6 +27,8 @@ roles:
         action: ["*"]
       - resource: "/planning"
         action: ["*"]
+      - resource: "/report"
+        action: ["*"]
       - resource: "/notification"
         action: ["*"]
       - resource: "/notes"
@@ -43,6 +45,8 @@ roles:
       - resource: "/session"
         action: ["*"]
       - resource: "/blob"
+        action: ["read"]
+      - resource: "/report"
         action: ["read"]
       - resource: "/notification"
         action: ["*"]
@@ -64,6 +68,8 @@ roles:
       - resource: "/settings"
         action: [""]
       - resource: "/profile"
+        action: ["read"]
+      - resource: "/report"
         action: ["read"]
       - resource: "/notification"
         action: ["*"]
@@ -88,6 +94,8 @@ roles:
         action: ["read"]
       - resource: "/planning"
         action: ["*"]
+      - resource: "/report"
+        action: ["read"]
       - resource: "/notification"
         action: ["*"]
       - resource: "/notes"
@@ -106,6 +114,8 @@ roles:
       - resource: "/notification"
         action: ["*"]
       - resource: "/blob"
+        action: ["*"]
+      - resource: "/report"
         action: ["*"]
       - resource: "/notes"
         action: ["*"]
