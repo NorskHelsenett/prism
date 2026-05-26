@@ -154,6 +154,12 @@ func main() {
 			protectedRoutes.DELETE("/vulnerability/:findingsID/comment/:cid", routes.DeleteComment)
 			protectedRoutes.PUT("/vulnerability/:findingsID/status/:status", routes.ChangeStatusVulnerability)
 
+			protectedRoutes.GET("/vulnerability/:findingsID/attachments", routes.ListAttachmentsHandler)
+			protectedRoutes.POST("/vulnerability/:findingsID/attachments", routes.PostAttachment)
+			protectedRoutes.GET("/vulnerability/:findingsID/attachments/:key", routes.GetAttachmentProxy)
+			protectedRoutes.GET("/vulnerability/:findingsID/attachments/:key/original", routes.GetAttachmentOriginal)
+			protectedRoutes.DELETE("/vulnerability/:findingsID/attachments/:key", routes.DeleteAttachmentHandler)
+
 			shareRoutes := apiRoutes.Group("/")
 			{
 
