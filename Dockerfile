@@ -14,7 +14,7 @@ COPY web/ .
 RUN npm run build
 
 # 2. Go build stage
-FROM golang:1.26.0-alpine AS gobuilder
+FROM golang:1.26.1-alpine AS gobuilder
 # Cross-compilation setup
 ARG TARGETOS=linux
 ARG TARGETARCH=amd64

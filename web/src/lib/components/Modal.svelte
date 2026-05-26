@@ -8,6 +8,7 @@
    * @typedef {Object} Props
    * @property {any} showModal
    * @property {boolean} [large]
+   * @property {boolean} [fullscreen]
    * @property {boolean} [modalBlur]
    * @property {boolean} [showHeader]
    * @property {import('svelte').Snippet} [title]
@@ -19,6 +20,7 @@
   let {
     showModal,
     large = true,
+    fullscreen = false,
     modalBlur = true,
     showHeader = true,
     title,
@@ -42,7 +44,7 @@
 </script>
 <dialog bind:this={dialog} onclose={handleClose}>
   <div class:modal-blur="{modalBlur}" class="modal fade show" id="modal-report" tabindex="-1" role="dialog" aria-modal="true" style="display: block;">
-      <div class="modal-dialog modal-dialog-centered" class:modal-lg={large} role="document">
+      <div class="modal-dialog modal-dialog-centered" class:modal-lg={large && !fullscreen} class:modal-fullscreen-xxl-down={fullscreen} class:modal-xxl={fullscreen} role="document">
         <div class="modal-content">
           {#if showHeader}
           <div class="modal-header">
