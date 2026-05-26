@@ -43,6 +43,12 @@ func main() {
 		log.Printf("attachment migration: %s", report.String())
 	}
 
+	// Move legacy per-user notification JSON blobs into the new notifications
+	// table, backfill typed columns on the subscribers table, dedupe shared
+	// endpoints across users (the cross-user bug, expressed as data), and
+	// install the UNIQUE endpoint index. Idempotent.
+	database.RunNotificationMigrationOnce()
+
 	initSessionDatabase()
 	sessionStore := session.NewSessionStore(session_db)
 	session.LoadSessionStore(sessionStore)
@@ -99,8 +105,11 @@ func main() {
 		apiRoutes.GET("/notification/publicKey", routes.GetNotificationPublicKey)
 		apiRoutes.GET("/notification", routes.GetNotificationsHandler)
 		apiRoutes.DELETE("/notification", routes.DeleteNotificationsHandler)
-		apiRoutes.PUT("/notification/:time/read", routes.MarkNotificationReadHandler)
+		apiRoutes.PUT("/notification/read-all", routes.MarkAllReadHandler)
+		apiRoutes.PUT("/notification/:id/read", routes.MarkNotificationReadHandler)
 		apiRoutes.POST("/notification/subscribe", routes.SubscribeNotification)
+		apiRoutes.DELETE("/notification/subscribe", routes.UnsubscribeNotification)
+		apiRoutes.GET("/notification/devices", routes.ListDevices)
 
 		apiRoutes.GET("/dashboard", routes.HandleDashboard)
 

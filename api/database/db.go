@@ -37,10 +37,42 @@ type ProjectData struct {
 	IsBugBounty  bool
 }
 
+// Subscriber is one push subscription tied to one browser/device. Endpoint is
+// globally unique — the same physical browser can only belong to one user at a
+// time. When a different user enables push on the same browser, the upsert in
+// subscribers.go takes the row over (rebinds Email + keys). This is what stops
+// cross-user push delivery on shared browsers.
+//
+// The legacy `subscription` JSON column from earlier schema versions is left in
+// place by GORM (auto-migrate never drops columns); the migration in
+// notification_migrate.go reads it to backfill the typed columns on first run
+// and ignores it thereafter.
 type Subscriber struct {
 	gorm.Model
-	Email        string
-	Subscription datatypes.JSON
+	Email      string    `gorm:"index"`
+	Endpoint   string    `gorm:"index"`
+	P256dh     string    `json:"-"`
+	Auth       string    `json:"-"`
+	UserAgent  string    `json:"-"`
+	LastSeenAt time.Time `json:"lastSeenAt"`
+}
+
+// Notification is an in-app notification row. Replaces the old per-user JSON
+// blob on UserData.Notifications that suffered read-modify-write races under
+// concurrent dispatch.
+type Notification struct {
+	ID              uint   `gorm:"primaryKey" json:"id"`
+	RecipientEmail  string `gorm:"index:idx_notif_recipient_created;index:idx_notif_recipient_read" json:"-"`
+	Kind            string `json:"kind,omitempty"`
+	Who             string `json:"who"`
+	What            string `json:"what"`
+	Where           string `json:"where"`
+	VulnerabilityID *uint  `json:"vulnerabilityId,omitempty"`
+	// IsRead defaults false. A scoped UPDATE flips it without ever rewriting
+	// the rest of the row, so two concurrent dispatchers can never clobber
+	// each other's writes.
+	IsRead    bool      `gorm:"index:idx_notif_recipient_read;default:false" json:"read"`
+	CreatedAt time.Time `gorm:"index:idx_notif_recipient_created" json:"when"`
 }
 
 func CreateProject(project *ProjectData) error {
@@ -151,15 +183,17 @@ type Metrics struct {
 
 type UserData struct {
 	gorm.Model
-	Email         string         `json:"email" gorm:"uniqueIndex"`
-	Name          string         `json:"name"`
-	Picture       string         `json:"picture"`
-	Role          string         `json:"role" gorm:"default:visitor"`
-	Title         string         `json:"title" gorm:"default:My title"`
-	Active        *bool          `json:"active" gorm:"default:true"`
-	OTPSecret     string         `json:"-"`
-	Notifications datatypes.JSON `json:"-"`
-	Settings      datatypes.JSON `json:"-"`
+	Email     string `json:"email" gorm:"uniqueIndex"`
+	Name      string `json:"name"`
+	Picture   string `json:"picture"`
+	Role      string `json:"role" gorm:"default:visitor"`
+	Title     string `json:"title" gorm:"default:My title"`
+	Active    *bool  `json:"active" gorm:"default:true"`
+	OTPSecret string `json:"-"`
+	// Notifications used to be a datatypes.JSON column on this row; the legacy
+	// column is left in place by GORM (auto-migrate never drops columns) and
+	// drained into the dedicated notifications table by notification_migrate.go.
+	Settings datatypes.JSON `json:"-"`
 }
 
 type Vulnerability struct {
@@ -254,6 +288,7 @@ func InitDB() {
 	db.AutoMigrate(&VulnerabilityAttachment{})
 	db.AutoMigrate(&AssessmentJSON{})
 	db.AutoMigrate(&Subscriber{})
+	db.AutoMigrate(&Notification{})
 	db.AutoMigrate(&models.APIKey{})
 	db.AutoMigrate(&models.SharedDocument{})
 	db.AutoMigrate(&models.Team{})
@@ -454,29 +489,9 @@ func GetAllProfilesWithTeams() (*ProfileResponse, error) {
 	}, nil
 }
 
-func DeleteNotifications(email string) error {
-	var userData UserData
-
-	// Fetch the user data by email
-	result := db.Where("email = ?", email).First(&userData)
-	if result.Error != nil {
-		return result.Error
-	}
-
-	userData.Notifications = nil
-
-	result = db.Save(&userData)
-	return result.Error
-}
-
-func GetAllSubscribers() ([]Subscriber, error) {
-	var subscriberList []Subscriber
-	result := db.Find(&subscriberList)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-	return subscriberList, nil
-}
+// DeleteNotifications / GetNotifications / CreateNotification / MarkNotificationAsRead
+// were rewritten against the new notifications table in notifications.go. The
+// subscriber CRUD lives in subscribers.go.
 
 func ExistsShare(token string) (*models.SharedDocument, error) {
 	var share models.SharedDocument
@@ -531,121 +546,8 @@ func PersistShareDocument(share *models.SharedDocument) error {
 	return nil
 }
 
-func AppendSubscriber(email string, subs []byte) error {
-	subscriber := Subscriber{
-		Email:        email,
-		Subscription: subs,
-	}
-
-	if err := db.Create(&subscriber).Error; err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func CreateNotification(email string, notification models.Notification) error {
-	var userData UserData
-
-	// Fetch the user data by email
-	result := db.Where("email = ?", email).First(&userData)
-	if result.Error != nil {
-		// Check if the error is a RecordNotFound error
-		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
-			// Fail softly by returning nil
-			return nil
-		}
-		// For other types of errors, return the error
-		return result.Error
-	}
-
-	// Unmarshal the JSON notifications into a slice
-	var notifications []models.Notification
-	// Check if the JSON field has content before unmarshalling
-	if len(userData.Notifications) > 0 {
-		if err := json.Unmarshal(userData.Notifications, &notifications); err != nil {
-			return err
-		}
-	} else {
-		// If the JSON is nil or empty, initialize it to an empty slice to avoid null in JSON output
-		notifications = []models.Notification{}
-	}
-
-	notifications = append(notifications, notification)
-
-	// Marshal the updated notifications slice back into JSON
-	updatedNotifications, err := json.Marshal(notifications)
-	if err != nil {
-		return err
-	}
-	userData.Notifications = updatedNotifications
-
-	// Save the updated user data back to the database
-	result = db.Save(&userData)
-	return result.Error
-}
-
-func MarkNotificationAsRead(email string, notificationTime time.Time) error {
-	var userData UserData
-
-	// Fetch the user data by email
-	result := db.Where("email = ?", email).First(&userData)
-	if result.Error != nil {
-		return result.Error
-	}
-
-	// Unmarshal the JSON notifications into a slice
-	var notifications []models.Notification
-	if err := json.Unmarshal(userData.Notifications, &notifications); err != nil {
-		return err
-	}
-
-	// Mark the notification as read
-	updated := false
-	for i, notification := range notifications {
-		if notification.When.Equal(notificationTime) && !notification.IsRead {
-			notifications[i].IsRead = true
-			updated = true
-			break
-		}
-	}
-
-	// If the notification was found and updated, marshal the slice back to JSON and update the record
-	if updated {
-		updatedNotifications, err := json.Marshal(notifications)
-		if err != nil {
-			return err
-		}
-		userData.Notifications = updatedNotifications
-		result = db.Save(&userData)
-		return result.Error
-	}
-
-	// If no updates were made, return nil to indicate no error occurred
-	return nil
-}
-
-func GetNotifications(email string) ([]models.Notification, error) {
-	var userData UserData
-	result := db.Where("email = ?", email).First(&userData)
-	if result.Error != nil {
-		return nil, result.Error
-	}
-
-	var notifications []models.Notification
-
-	// Check if the JSON field has content before unmarshalling
-	if len(userData.Notifications) > 0 {
-		if err := json.Unmarshal(userData.Notifications, &notifications); err != nil {
-			return nil, err
-		}
-	} else {
-		// If the JSON is nil or empty, initialize it to an empty slice to avoid null in JSON output
-		notifications = []models.Notification{}
-	}
-
-	return notifications, nil
-}
+// Notification + subscriber CRUD now live in notifications.go and
+// subscribers.go.
 
 func UpdateAssassment(assessment models.Assessment, id uint) error {
 	data, err := json.Marshal(assessment)
@@ -959,6 +861,36 @@ func CanAccessVulnerability(vulnID uint, email string, role string, globalViewer
 		return false, err
 	}
 	return count > 0, nil
+}
+
+// CanRecipientSeeVulnerability is the access check used by the notification
+// dispatcher. It refuses delivery to deactivated users and to anyone whose
+// current role no longer covers the vulnerability — so a hacker removed from
+// a project after commenting stops receiving notifications about it.
+func CanRecipientSeeVulnerability(email string, vulnID uint) (bool, error) {
+	var u UserData
+	if err := db.Select("role, active").Where("email = ?", email).First(&u).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	if u.Active != nil && !*u.Active {
+		return false, nil
+	}
+	role := u.Role
+	roleCfg, ok := config.AppConfig.Roles[role]
+	if !ok {
+		return false, nil
+	}
+	globalViewer := false
+	for _, perm := range roleCfg.Permissions {
+		if perm.Resource == "/vulnerability/:id" {
+			globalViewer = true
+			break
+		}
+	}
+	return CanAccessVulnerability(vulnID, email, role, globalViewer)
 }
 
 func HasAccessToProject(email string, projectID string, role string) (bool, error) {
