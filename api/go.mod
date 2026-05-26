@@ -3,6 +3,7 @@ module prism
 go 1.26.0
 
 require (
+	github.com/HugoSmits86/nativewebp v1.3.0
 	github.com/SherClockHolmes/webpush-go v1.4.0
 	github.com/coreos/go-oidc/v3 v3.18.0
 	github.com/gin-gonic/gin v1.12.0
@@ -12,6 +13,7 @@ require (
 	github.com/gorilla/securecookie v1.1.2
 	github.com/pquerna/otp v1.5.0
 	github.com/slack-go/slack v0.23.1
+	golang.org/x/image v0.41.0
 	golang.org/x/oauth2 v0.36.0
 	gopkg.in/yaml.v2 v2.4.0
 	gorm.io/datatypes v1.2.7

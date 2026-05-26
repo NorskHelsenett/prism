@@ -2,6 +2,7 @@
 	import Export from "./export.svelte";
 	import Slack from "./slack.svelte";
 	import DatabaseCleanup from "./databaseCleanup.svelte";
+	import AttachmentResolution from "./attachmentResolution.svelte";
 	import { Fetch } from "$lib/fetchUtil";
 	import { onMount } from "svelte";
 	import Multifactor from "./Multifactor.svelte";
@@ -15,6 +16,7 @@
 
 <Slack bind:settings />
 <Multifactor bind:settings />
+<AttachmentResolution bind:settings />
 <ResetWebPush />
 <DatabaseCleanup bind:settings/>
 <Export />

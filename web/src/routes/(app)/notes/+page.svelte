@@ -19,8 +19,7 @@
     remoteUpdatedConflict,
   } from '$lib/stores/notesStore';
   import { Fetch } from '$lib/fetchUtil';
-  import { apiEndpoint } from '$lib/stores/configStore';
-  import { get } from 'svelte/store';
+  import { fileToMarkdownImage } from '$lib/utils/inlineImage';
 
   const pretitle = 'Personal';
   const title = 'Notes';
@@ -85,21 +84,7 @@
   }
 
   async function uploadAndInsert(file, pos) {
-    const form = new FormData();
-    // Backend (api/routes/blob.go) reads the multipart form field "image".
-    form.append('image', file);
-    const endpoint = get(apiEndpoint);
-    const res = await fetch(`${endpoint}/api/blob/upload`, {
-      method: 'POST',
-      body: form,
-      credentials: 'include',
-    });
-    if (!res.ok) return;
-    const data = await res.json();
-    const filename = Array.isArray(data?.fileNames) ? data.fileNames[0] : null;
-    if (!filename) return;
-    const alt = file.name || 'image';
-    const link = `![${alt}](/api/blob/${filename})`;
+    const link = await fileToMarkdownImage(file, file.name || 'image');
     await tick();
     if (pos != null && editorRef?.insertImageAtPosition) {
       editorRef.insertImageAtPosition(link, pos);

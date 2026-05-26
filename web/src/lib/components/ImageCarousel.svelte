@@ -1,7 +1,5 @@
 <script>
-  import { createBubbler, stopPropagation } from 'svelte/legacy';
-
-  const bubble = createBubbler();
+  import { stopPropagation } from 'svelte/legacy';
   import { baseUrl } from '$lib/stores';
 
   /**
@@ -17,13 +15,13 @@
   function resolveImageSrc(image) {
     if (!image) return '';
     if (image.startsWith('data:image/')) return image;
-    if (image.startsWith('/api/blob/') || image.startsWith('http://') || image.startsWith('https://')) {
+    if (image.startsWith('/api/') || image.startsWith('http://') || image.startsWith('https://')) {
       return image;
     }
 
-    // Merge both modes:
-    // 1) short-ish file/blob ids -> /api/blob/<id>
-    // 2) large payload-like strings -> base64 data URL
+    // Only bare strings remain here: either a base64 payload from a legacy
+    // share endpoint, or a bare blob filename. Scoped attachment URLs are
+    // already handled by the `/api/` prefix branch above.
     const likelyBase64Payload = image.length > 100 || /[+/=]/.test(image);
     if (likelyBase64Payload) {
       return `data:image/png;base64,${image}`;
@@ -56,12 +54,14 @@
 {#if showModal}
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="modal modal-blur" onclick={closeModal}>
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <div class="modal-content" onclick={stopPropagation(bubble('click'))}>
+    <!-- modal-content used to swallow every click via stopPropagation. We
+         now let clicks fall through to the backdrop unless they hit an
+         interactive control (carousel buttons, indicators) — so clicking
+         empty space around the image closes the preview. -->
+    <div class="modal-content">
       <div class="">
-        <button class="close-button" onclick={closeModal}>×</button>
+        <button class="close-button" onclick={stopPropagation(closeModal)}>×</button>
       </div>
       <div class="">
         <!-- Carousel Implementation -->
@@ -71,7 +71,7 @@
               <button
                 type="button"
                 class:active={index === currentImageIndex}
-                onclick={() => currentImageIndex = index}
+                onclick={stopPropagation(() => currentImageIndex = index)}
                 aria-current={index === currentImageIndex ? 'true' : 'false'}
                 aria-label={`Go to slide ${index + 1}`}
               ></button>
@@ -85,11 +85,11 @@
               </div>
             {/each}
           </div>
-          <button class="btn-carousel carousel-control-prev" type="button" onclick={() => changeImage(-1)}>
+          <button class="btn-carousel carousel-control-prev" type="button" onclick={stopPropagation(() => changeImage(-1))}>
             <span class="carousel-control-prev-icon" aria-hidden="true"></span>
             <span class="visually-hidden">Previous</span>
           </button>
-          <button class="btn-carousel carousel-control-next" type="button" onclick={() => changeImage(1)}>
+          <button class="btn-carousel carousel-control-next" type="button" onclick={stopPropagation(() => changeImage(1))}>
             <span class="carousel-control-next-icon" aria-hidden="true"></span>
             <span class="visually-hidden">Next</span>
           </button>
