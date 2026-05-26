@@ -395,80 +395,92 @@ func GetPublicVulnerability(c *gin.Context, store *session.SessionStore) {
 	c.JSON(http.StatusOK, vuln)
 }
 
+// Match either the new scoped attachment URL or the legacy global blob URL.
+// New scoped pattern is matched first so it wins in the alternation when
+// markdown happens to embed both (unlikely, but defensive).
+var (
+	scopedAttachmentURLRegex = regexp.MustCompile(`/api/vulnerability/(\d+)/attachments/([a-zA-Z0-9\-]+)`)
+	legacyBlobShareURLRegex  = regexp.MustCompile(`/api/blob/([a-zA-Z0-9\-]+(?:\.[a-zA-Z0-9]+)?)`)
+)
+
+// extractMarkdownImagesWithBase64 walks evidence + remediation markdown and
+// the images[] array, replacing both legacy /api/blob/<filename> URLs and
+// new /api/vulnerability/<id>/attachments/<key> URLs with base64 data: URIs.
+//
+// Shared documents render in unauthenticated browsers; baking the bytes into
+// the response is how the share viewer sees the images without ever hitting
+// the auth-gated attachment endpoint.
 func extractMarkdownImagesWithBase64(vulnerability map[string]interface{}) error {
-	// Fields to process
-	markdownFields := []string{"evidence", "remediation"}
+	resolved := map[string]string{} // url → data: URI
 
-	// Regex pattern for UUID-style files with 3 or 4 char extensions
-	pattern := `/api/blob/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.[a-zA-Z]{3,4}`
-	re := regexp.MustCompile(pattern)
-
-	// Map to store image data (prevent fetching same image multiple times)
-	imageBase64Map := make(map[string]string)
-
-	// Process each markdown field
-	for _, field := range markdownFields {
-		markdown, ok := vulnerability[field].(string)
-		if !ok {
-			continue // Skip if field doesn't exist or isn't a string
+	resolve := func(url string) string {
+		if cached, ok := resolved[url]; ok {
+			return cached
 		}
-
-		// Find all matches in the markdown
-		matches := re.FindAllString(markdown, -1)
-
-		// Process each matched image path
-		for _, match := range matches {
-			// Extract just the filename from the path
-			imageName := match[len("/api/blob/"):]
-
-			// Get base64 data if we haven't already
-			if _, exists := imageBase64Map[imageName]; !exists {
-				// Get the image data from database
-				imageData, err := database.GetImage(imageName)
-				if err != nil {
-					fmt.Printf("failed to get image %s: %v\n", imageName, err)
-					continue
-				}
-
-				// Convert to base64
-				base64Data := base64.StdEncoding.EncodeToString(imageData.Data)
-				imageBase64Map[imageName] = base64Data
+		if m := scopedAttachmentURLRegex.FindStringSubmatch(url); len(m) == 3 {
+			id, err := strconv.ParseUint(m[1], 10, 64)
+			if err != nil {
+				return ""
 			}
-
-			// Replace the URL with base64 data
-			markdown = strings.Replace(
-				markdown,
-				match,
-				fmt.Sprintf("data:image/jpeg;base64,%s", imageBase64Map[imageName]),
-				-1,
-			)
+			att, err := database.GetAttachment(uint(id), m[2])
+			if err != nil {
+				fmt.Printf("share: load attachment %s: %v\n", url, err)
+				return ""
+			}
+			mime, data := att.ProxyMime, att.ProxyData
+			if len(data) == 0 {
+				mime, data = att.Mime, att.OriginalData
+			}
+			if len(data) == 0 || mime == "" {
+				return ""
+			}
+			out := "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(data)
+			resolved[url] = out
+			return out
 		}
-
-		// Update the field in vulnerability map
-		vulnerability[field] = markdown
+		if m := legacyBlobShareURLRegex.FindStringSubmatch(url); len(m) == 2 {
+			img, err := database.GetImage(m[1])
+			if err != nil {
+				fmt.Printf("share: load legacy blob %s: %v\n", url, err)
+				return ""
+			}
+			mime := database.SniffAttachmentMime(img.Data)
+			if !database.AllowedAttachmentMime(mime) {
+				mime = "application/octet-stream"
+			}
+			out := "data:" + mime + ";base64," + base64.StdEncoding.EncodeToString(img.Data)
+			resolved[url] = out
+			return out
+		}
+		return ""
 	}
 
-	// Update images array with base64 data
+	combined := regexp.MustCompile(scopedAttachmentURLRegex.String() + `|` + legacyBlobShareURLRegex.String())
+
+	for _, field := range []string{"evidence", "remediation"} {
+		raw, ok := vulnerability[field].(string)
+		if !ok || raw == "" {
+			continue
+		}
+		vulnerability[field] = combined.ReplaceAllStringFunc(raw, func(match string) string {
+			if dataURI := resolve(match); dataURI != "" {
+				return dataURI
+			}
+			return match
+		})
+	}
+
+	// The legacy images[] array stored raw filenames (no /api/blob/ prefix).
+	// Resolve those against the legacy path so old shared documents still
+	// render their attachments.
 	if images, ok := vulnerability["images"].([]interface{}); ok {
 		for i, img := range images {
-			if imageName, ok := img.(string); ok {
-				// Skip if we already have this image
-				if base64Data, exists := imageBase64Map[imageName]; exists {
-					images[i] = base64Data
-					continue
-				}
-
-				// Get the image data from database
-				imageData, err := database.GetImage(imageName)
-				if err != nil {
-					fmt.Printf("failed to get image %s: %v\n", imageName, err)
-					continue
-				}
-
-				// Convert to base64
-				base64Data := base64.StdEncoding.EncodeToString(imageData.Data)
-				images[i] = base64Data
-				imageBase64Map[imageName] = base64Data
+			name, ok := img.(string)
+			if !ok {
+				continue
+			}
+			if dataURI := resolve("/api/blob/" + name); dataURI != "" {
+				images[i] = dataURI
 			}
 		}
 		vulnerability["images"] = images

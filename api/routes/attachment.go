@@ -101,16 +101,22 @@ func PostAttachment(c *gin.Context) {
 	}
 
 	mime := database.SniffAttachmentMime(data)
-	if !database.AllowedAttachmentMime(mime) {
+	if !database.AllowedAttachmentMime(mime) || !database.VerifyAttachmentMagic(mime, data) {
 		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": "unsupported file type"})
 		return
 	}
 
-	proxy, proxyMime, err := database.EncodeAttachmentProxy(data)
-	if err != nil {
-		log.Printf("attachment: encode proxy for vuln=%d: %v", vulnID, err)
-		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": "could not process image"})
-		return
+	var (
+		proxy     []byte
+		proxyMime string
+	)
+	if database.AttachmentKind(mime) == "image" {
+		proxy, proxyMime, err = database.EncodeAttachmentProxy(data)
+		if err != nil {
+			log.Printf("attachment: encode proxy for vuln=%d: %v", vulnID, err)
+			c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": "could not process image"})
+			return
+		}
 	}
 
 	emailVal, _ := c.Get("email")
@@ -174,7 +180,15 @@ func GetAttachmentProxy(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
-	writeBytesWithETag(c, att.ProxyMime, att.ProxyData)
+	// Images: serve the downscaled WebP proxy. Documents (pdf, txt, json):
+	// serve the original — magic-byte verified on upload, MIME is on the
+	// whitelist, nosniff prevents the browser from upgrading it into a
+	// script context.
+	if att.IsImage() {
+		writeBytesWithETag(c, att.ProxyMime, att.ProxyData, "")
+		return
+	}
+	writeBytesWithETag(c, att.Mime, att.OriginalData, filenameForDownload(att))
 }
 
 // GetAttachmentOriginal serves the untouched original. Only the writer/finder
@@ -228,22 +242,33 @@ func DeleteAttachmentHandler(c *gin.Context) {
 }
 
 func attachmentSummary(vulnID uint, a *database.VulnerabilityAttachment) gin.H {
+	displayMime := a.ProxyMime
+	if displayMime == "" {
+		displayMime = a.Mime
+	}
 	return gin.H{
 		"key":       a.Key,
 		"url":       "/api/vulnerability/" + strconv.FormatUint(uint64(vulnID), 10) + "/attachments/" + a.Key,
 		"filename":  a.Filename,
-		"mime":      a.ProxyMime,
+		"mime":      displayMime,
+		"kind":      database.AttachmentKind(a.Mime),
 		"createdAt": a.CreatedAt.UTC().Format(time.RFC3339),
 	}
 }
 
-func writeBytesWithETag(c *gin.Context, mime string, data []byte) {
+// writeBytesWithETag streams the response with ETag + private revalidation
+// caching. Pass a non-empty downloadName to add Content-Disposition: inline
+// with the given filename (so PDFs/text files open with a sensible name).
+func writeBytesWithETag(c *gin.Context, mime string, data []byte, downloadName string) {
 	sum := sha256.Sum256(data)
 	etag := `"` + hex.EncodeToString(sum[:]) + `"`
 
 	c.Header("X-Content-Type-Options", "nosniff")
 	c.Header("Cache-Control", "private, no-cache, must-revalidate")
 	c.Header("ETag", etag)
+	if downloadName != "" {
+		c.Header("Content-Disposition", `inline; filename="`+downloadName+`"`)
+	}
 
 	if match := c.GetHeader("If-None-Match"); match != "" {
 		for _, part := range strings.Split(match, ",") {

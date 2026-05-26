@@ -180,10 +180,6 @@ func main() {
 		apiRoutes.GET("/profile/all", routes.GetAllProfilesEmailOnly)
 		apiRoutes.GET("/slack/channels", routes.GetSlackChannels)
 
-		apiRoutes.GET("/blob/:filename", routes.GetBlob)
-		apiRoutes.POST("/blob/upload", routes.HandleBlobUpload)
-		apiRoutes.DELETE("/blob/:filename", routes.HandleBlobDelete)
-
 		apiRoutes.GET("/notes", routes.ListNotes)
 		apiRoutes.GET("/notes/tags", routes.ListNoteTags)
 		apiRoutes.GET("/notes/events", routes.StreamNotes)

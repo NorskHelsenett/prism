@@ -2,12 +2,14 @@ package database
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"image"
 	_ "image/gif"
 	"image/jpeg"
 	_ "image/png"
 	"net/http"
+	"strings"
 	"time"
 
 	webpencoder "github.com/HugoSmits86/nativewebp"
@@ -21,17 +23,36 @@ const (
 	MaxAttachmentBytes    = 25 << 20
 )
 
-var allowedAttachmentMimes = map[string]struct{}{
-	"image/png":  {},
-	"image/jpeg": {},
-	"image/gif":  {},
-	"image/webp": {},
+// attachmentKind controls whether the file gets a downscaled proxy or is
+// served as-is. Images get a proxy for inline rendering; everything else is
+// served as the original with its real MIME (with nosniff so the browser
+// cannot upgrade content-type into a script context).
+type attachmentKind int
+
+const (
+	kindImage attachmentKind = iota
+	kindDocument
+)
+
+type mimeRule struct {
+	kind   attachmentKind
+	verify func([]byte) bool
 }
 
-// VulnerabilityAttachment is an image attached to exactly one vulnerability.
-// Access is derived from access to the parent vulnerability; there is no
-// per-attachment ACL beyond that. The bytes never round-trip through a global
-// blob namespace — every URL encodes the owning vuln id.
+var attachmentMimeRules = map[string]mimeRule{
+	"image/png":        {kind: kindImage, verify: bytesPrefix([]byte{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A})},
+	"image/jpeg":       {kind: kindImage, verify: bytesPrefix([]byte{0xFF, 0xD8, 0xFF})},
+	"image/gif":        {kind: kindImage, verify: verifyGIF},
+	"image/webp":       {kind: kindImage, verify: verifyWebP},
+	"application/pdf":  {kind: kindDocument, verify: bytesPrefix([]byte("%PDF-"))},
+	"text/plain":       {kind: kindDocument, verify: verifyTextLike},
+	"application/json": {kind: kindDocument, verify: verifyJSON},
+}
+
+// VulnerabilityAttachment is an image or document attached to exactly one
+// vulnerability. Access is derived from access to the parent vulnerability;
+// there is no per-attachment ACL beyond that. The bytes never round-trip
+// through a global blob namespace — every URL encodes the owning vuln id.
 type VulnerabilityAttachment struct {
 	ID        uint `gorm:"primaryKey"`
 	CreatedAt time.Time
@@ -42,27 +63,114 @@ type VulnerabilityAttachment struct {
 	Key             string `gorm:"uniqueIndex;size:64;not null"`
 
 	Filename string
-	Mime     string
+	Mime     string // sniffed + magic-verified; one of attachmentMimeRules
 
 	OriginalData []byte
-	ProxyData    []byte
-	ProxyMime    string
+	// ProxyData is the downscaled image (WebP, JPEG fallback) for inline
+	// rendering. Empty for non-image attachments — those are served by
+	// streaming OriginalData with nosniff.
+	ProxyData []byte
+	ProxyMime string
 
 	UploadedBy string `gorm:"index"`
 }
 
+// IsImage reports whether the attachment has a renderable image proxy.
+func (a *VulnerabilityAttachment) IsImage() bool {
+	return len(a.ProxyData) > 0
+}
+
+// AllowedAttachmentMime reports whether the sniffed MIME is in the whitelist.
+// Pass the raw value from SniffAttachmentMime; parameter normalisation is
+// handled internally.
 func AllowedAttachmentMime(mime string) bool {
-	_, ok := allowedAttachmentMimes[mime]
+	_, ok := attachmentMimeRules[normaliseMime(mime)]
 	return ok
 }
 
+// VerifyAttachmentMagic confirms the file's leading bytes actually match the
+// claimed MIME. Defends against renaming a `.html` to `.png` to smuggle a
+// content-type past the sniffer (the F-3 path).
+func VerifyAttachmentMagic(mime string, data []byte) bool {
+	rule, ok := attachmentMimeRules[normaliseMime(mime)]
+	if !ok {
+		return false
+	}
+	if rule.verify == nil {
+		return true
+	}
+	return rule.verify(data)
+}
+
+// AttachmentKind classifies the MIME. Returns "image" or "document"; empty if
+// the MIME is not allowed.
+func AttachmentKind(mime string) string {
+	rule, ok := attachmentMimeRules[normaliseMime(mime)]
+	if !ok {
+		return ""
+	}
+	switch rule.kind {
+	case kindImage:
+		return "image"
+	default:
+		return "document"
+	}
+}
+
+// SniffAttachmentMime returns the sniffed MIME of the bytes, ignoring any
+// client-supplied content-type. Always normalised (no charset parameter).
 func SniffAttachmentMime(data []byte) string {
-	return http.DetectContentType(data)
+	return normaliseMime(http.DetectContentType(data))
+}
+
+func normaliseMime(mime string) string {
+	if i := strings.Index(mime, ";"); i >= 0 {
+		mime = mime[:i]
+	}
+	return strings.ToLower(strings.TrimSpace(mime))
+}
+
+func bytesPrefix(prefix []byte) func([]byte) bool {
+	return func(b []byte) bool { return bytes.HasPrefix(b, prefix) }
+}
+
+func verifyGIF(b []byte) bool {
+	return bytes.HasPrefix(b, []byte("GIF87a")) || bytes.HasPrefix(b, []byte("GIF89a"))
+}
+
+func verifyWebP(b []byte) bool {
+	return len(b) >= 12 && bytes.HasPrefix(b, []byte("RIFF")) && bytes.Equal(b[8:12], []byte("WEBP"))
+}
+
+// verifyTextLike rejects bytes containing NUL or stray control characters.
+// Plain text and JSON go through this; if a caller wants to upload arbitrary
+// bytes they should choose a different MIME (and add it to the whitelist).
+func verifyTextLike(b []byte) bool {
+	sample := b
+	if len(sample) > 4096 {
+		sample = sample[:4096]
+	}
+	for _, c := range sample {
+		if c == 0 {
+			return false
+		}
+		// permit common whitespace; reject other control bytes
+		if c < 0x09 || (c > 0x0D && c < 0x20) {
+			return false
+		}
+	}
+	return true
+}
+
+func verifyJSON(b []byte) bool {
+	var x any
+	return json.Unmarshal(b, &x) == nil
 }
 
 // EncodeAttachmentProxy downscales the long edge to 1080px and re-encodes as
 // WebP. Falls back to JPEG if the WebP encoder rejects the image. Never
-// upscales.
+// upscales. Returns empty bytes if the MIME isn't an image type; callers
+// should branch on AttachmentKind before invoking.
 func EncodeAttachmentProxy(original []byte) ([]byte, string, error) {
 	img, _, err := image.Decode(bytes.NewReader(original))
 	if err != nil {
