@@ -1,11 +1,16 @@
 package routes
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"prism/database"
@@ -15,6 +20,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// PushMessage is the JSON payload delivered to service-worker.js. Mirrors the
+// fields the existing SW reads (title/body/url); keep new fields optional so
+// older service workers still render the basics.
 type PushMessage struct {
 	Title string `json:"title"`
 	Body  string `json:"body"`
@@ -24,7 +32,6 @@ type PushMessage struct {
 var (
 	vapidPublicKey  string
 	vapidPrivateKey string
-	err             error
 )
 
 const (
@@ -33,7 +40,7 @@ const (
 )
 
 func InitNotification() {
-
+	var err error
 	for retries := 0; retries < maxRetries; retries++ {
 		var vapidKey string
 		vapidKey, err = database.GetVAAPIpublicKey()
@@ -51,8 +58,7 @@ func InitNotification() {
 	}
 
 	if vapidPublicKey == "" {
-		err = createAndPersistVAAPIKeys()
-		if err != nil {
+		if err := createAndPersistVAAPIKeys(); err != nil {
 			log.Fatalf("Unable to generate VAAPI keys: %v", err)
 		}
 	} else {
@@ -64,83 +70,94 @@ func InitNotification() {
 }
 
 func createAndPersistVAAPIKeys() error {
-	vapidPrivateKey, vapidPublicKey, err = webpush.GenerateVAPIDKeys()
+	priv, pub, err := webpush.GenerateVAPIDKeys()
 	if err != nil {
 		return fmt.Errorf("Unable to generate VAAPI keys: %v", err)
 	}
-	err = database.CreateVAAPIprivateKey(vapidPrivateKey, vapidPublicKey)
-	if err != nil {
+	vapidPrivateKey = priv
+	vapidPublicKey = pub
+	if err := database.CreateVAAPIprivateKey(vapidPrivateKey, vapidPublicKey); err != nil {
 		return fmt.Errorf("Unable to store VAAPI keys: %v", err)
 	}
 	return nil
 }
 
-type Subscriber struct {
-	Subscription webpush.Subscription
-	Email        string
-}
-
+// DeleteNotificationsHandler clears all notification rows for the caller. The
+// dropdown's "Clear all" button now uses PUT /api/notification/read-all
+// instead, which preserves history; this endpoint stays for completeness
+// (e.g. account-wipe flows).
 func DeleteNotificationsHandler(c *gin.Context) {
 	email, _ := c.Get("email")
-
-	if database.DeleteNotifications(email.(string)) != nil {
+	if err := database.DeleteNotifications(email.(string)); err != nil {
+		log.Printf("notifications: delete for %q: %v", email, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "error fetching notifications"})
 		return
 	}
+	c.JSON(http.StatusOK, gin.H{"message": "notifications deleted"})
+}
 
-	c.JSON(http.StatusOK, gin.H{"error": "invalid time format"})
+// MarkAllReadHandler flips IsRead on every unread row for the caller in one
+// SQL UPDATE, replacing the old "delete to clear the badge" hack.
+func MarkAllReadHandler(c *gin.Context) {
+	email, _ := c.Get("email")
+	if err := database.MarkAllNotificationsRead(email.(string)); err != nil {
+		log.Printf("notifications: mark-all-read for %q: %v", email, err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not mark notifications read"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "marked read"})
 }
 
 func GetNotificationPublicKey(c *gin.Context) {
 	publicKey, err := database.GetVAAPIpublicKey()
 	if err != nil {
+		log.Printf("notifications: get public key: %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "error fetching vaapi public key"})
 		return
 	}
-
 	c.JSON(http.StatusOK, publicKey)
 }
 
 func GetNotificationsHandler(c *gin.Context) {
 	email, _ := c.Get("email")
-
-	notifications, err := database.GetNotifications(email.(string))
-
+	notifications, err := database.GetNotifications(email.(string), 50)
 	if err != nil {
+		log.Printf("notifications: get for %q: %v", email, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "error fetching notifications"})
 		return
 	}
-
-	notifications = []models.Notification{}
-
 	c.JSON(http.StatusOK, notifications)
 }
 
+// MarkNotificationReadHandler now takes the row id rather than the RFC3339
+// timestamp. The old timestamp-based lookup round-tripped through time.Parse
+// and was unstable across precision boundaries; ids are the natural key.
 func MarkNotificationReadHandler(c *gin.Context) {
 	email, exists := c.Get("email")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
 		return
 	}
-
-	// Parse the "time" parameter
-	timeParam := c.Param("time")
-	notificationTime, err := time.Parse(time.RFC3339, timeParam) // Assuming RFC3339 format for the timestamp
+	idParam := c.Param("id")
+	id, err := strconv.ParseUint(idParam, 10, 64)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid time format"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid notification id"})
 		return
 	}
-
-	// Mark the notification as read
-	err = database.MarkNotificationAsRead(email.(string), notificationTime)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "error marking notification as read"})
+	if err := database.MarkNotificationAsRead(email.(string), uint(id)); err != nil {
+		// Surface 404 rather than leaking ownership info — matches the
+		// project-wide policy of not returning 500 for normal misses.
+		log.Printf("notifications: mark read id=%d email=%q: %v", id, email, err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "notification not found"})
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"message": "notification marked as read"})
 }
 
+// SubscribeNotification accepts a PushSubscription JSON and binds the device
+// to the current user. The actual take-over (rebinding the endpoint away from
+// any previous owner on the same browser) happens inside
+// database.UpsertSubscriber.
 func SubscribeNotification(c *gin.Context) {
 	email, _ := c.Get("email")
 	var sub webpush.Subscription
@@ -148,31 +165,70 @@ func SubscribeNotification(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad Request"})
 		return
 	}
-
-	jsonSub, err := json.Marshal(&sub)
-	if err != nil {
-		log.Printf("Error marshalling sub %v", err)
+	userAgent := c.GetHeader("User-Agent")
+	if err := database.UpsertSubscriber(email.(string), sub, userAgent); err != nil {
+		log.Printf("notifications: upsert subscriber for %q: %v", email, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "could not register subscription"})
 		return
 	}
-
-	if database.AppendSubscriber(email.(string), jsonSub) != nil {
-		log.Printf("Error appending subscriber %v", err)
-		return
-	}
-
 	c.JSON(http.StatusCreated, gin.H{"status": "created"})
 }
 
-func ResetNotifications(c *gin.Context) {
-	err := database.ResetNotifications()
+// UnsubscribeNotification removes one device's subscription. The frontend
+// calls this from the explicit "disable notifications" button — *not* on
+// logout. Logout intentionally leaves the row in place so the user keeps
+// receiving pushes after signing out, which is the chosen behaviour.
+func UnsubscribeNotification(c *gin.Context) {
+	email, _ := c.Get("email")
+	var body struct {
+		Endpoint string `json:"endpoint"`
+	}
+	if err := c.BindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad Request"})
+		return
+	}
+	if err := database.DeleteSubscriberByEndpoint(email.(string), body.Endpoint); err != nil {
+		log.Printf("notifications: delete subscriber for %q: %v", email, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "could not remove subscription"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "removed"})
+}
+
+// ListDevices returns the caller's push subscriptions for a future "your
+// devices" management UI. Endpoints are hashed because the raw value is a
+// secret URL that lets anyone push to that device.
+func ListDevices(c *gin.Context) {
+	email, _ := c.Get("email")
+	rows, err := database.ListSubscribersForEmail(email.(string))
 	if err != nil {
+		log.Printf("notifications: list devices for %q: %v", email, err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "could not list devices"})
+		return
+	}
+	out := make([]gin.H, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, gin.H{
+			"endpointHash": hashEndpoint(r.Endpoint),
+			"userAgent":    r.UserAgent,
+			"lastSeenAt":   r.LastSeenAt,
+		})
+	}
+	c.JSON(http.StatusOK, out)
+}
+
+func hashEndpoint(endpoint string) string {
+	sum := sha256.Sum256([]byte(endpoint))
+	return hex.EncodeToString(sum[:8])
+}
+
+func ResetNotifications(c *gin.Context) {
+	if err := database.ResetNotifications(); err != nil {
 		log.Printf("Unable to reset VAAPI keys %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Unable to perform requested task"})
 		return
 	}
-
-	err = createAndPersistVAAPIKeys()
-	if err != nil {
+	if err := createAndPersistVAAPIKeys(); err != nil {
 		log.Printf("Unable to persist VAAPI keys %v", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Unable to perform requested task"})
 		return
@@ -180,106 +236,193 @@ func ResetNotifications(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"success": "VAAPI keys reseted and created"})
 }
 
-func SendMessage(title, body, url, foundBy, ignoreEmail string, usersToNotify map[string]bool) error {
-	// Placeholder for the logic to find subscribers who have read access to the resource
-	//subscribers := findSubscribersWithReadAccess(url)
+// DispatchRequest is the new entry point the event queue hands to the
+// dispatcher. Replaces SendMessage's positional-arg soup and makes the
+// distinction between "actor" (skipped from delivery, recorded as Who) and
+// recipients explicit.
+type DispatchRequest struct {
+	Kind            string
+	VulnerabilityID uint
+	ActorEmail      string
+	Recipients      []string
+	Title           string
+	Body            string
+	URL             string
+}
 
-	// Map to keep track of the subscribers who have already received the notification
-	sentTo := make(map[string]bool)
+// pushSender is the function Dispatch uses to deliver one push. The real
+// implementation in sendPush talks to a webpush provider over HTTPS; tests
+// swap this for an in-memory recorder so they can assert delivery shape
+// without standing up VAPID + a fake provider.
+var pushSender = sendPush
 
-	subscribers, err := database.GetAllSubscribers()
-	if err != nil {
-		return err
+// Dispatch is the single fan-out point for both push and in-app delivery. It:
+//   - normalises and dedupes the recipient list (trim/lowercase)
+//   - drops the actor and any recipient whose access has been revoked
+//   - honours the per-user prefs matrix for each channel
+//   - inserts one notifications row per surviving recipient (race-free single
+//     INSERT — no read-modify-write)
+//   - pushes to every endpoint the recipient has registered (no `break` on
+//     first match like the old code)
+//   - cleans up dead endpoints (404/410) so the table can't grow stale
+//
+// Push and in-app errors are logged and skipped per-recipient; one bad device
+// no longer halts delivery to the rest of the list.
+func Dispatch(req DispatchRequest) error {
+	recipients := normaliseRecipients(req.Recipients, req.ActorEmail)
+	if len(recipients) == 0 {
+		return nil
 	}
 
-	// notification each subscriber in PRISM
-	for userEmail := range usersToNotify {
-		// Skip if the subscriber is the one who registered the vulnerability
-		if userEmail == ignoreEmail {
+	subs, err := database.ListSubscribersForEmails(recipients)
+	if err != nil {
+		log.Printf("notifications: list subscribers: %v", err)
+		subs = nil // Continue with in-app delivery even if push lookup fails.
+	}
+	subsByEmail := map[string][]database.Subscriber{}
+	for _, s := range subs {
+		s := s
+		subsByEmail[s.Email] = append(subsByEmail[s.Email], s)
+	}
+
+	pushPayload, err := json.Marshal(&PushMessage{
+		Title: req.Title,
+		Body:  req.Body,
+		Url:   req.URL,
+	})
+	if err != nil {
+		return fmt.Errorf("marshal push payload: %w", err)
+	}
+
+	vulnID := req.VulnerabilityID
+	var vulnIDPtr *uint
+	if vulnID != 0 {
+		v := vulnID
+		vulnIDPtr = &v
+	}
+
+	for _, recipient := range recipients {
+		canSee := true
+		if vulnID != 0 {
+			ok, err := database.CanRecipientSeeVulnerability(recipient, vulnID)
+			if err != nil {
+				log.Printf("notifications: acl check for %q: %v", recipient, err)
+				continue
+			}
+			canSee = ok
+		}
+		if !canSee {
 			continue
 		}
 
-		// Web push notification to each subscriber
-		for _, s := range subscribers {
-			if s.Email == userEmail {
-				err = sendPushNotification(s.Subscription, title, body, url)
-				if err != nil {
-					return err
-				}
+		prefs, err := loadPrefs(recipient)
+		if err != nil {
+			log.Printf("notifications: load prefs for %q: %v", recipient, err)
+			prefs = models.NotificationPrefs{}.Effective()
+		}
 
-				break
+		if inAppEnabled(prefs, req.Kind) {
+			if err := database.CreateNotification(recipient, models.Notification{
+				Kind:            req.Kind,
+				Who:             req.ActorEmail,
+				What:            req.Body,
+				Where:           req.URL,
+				VulnerabilityID: vulnIDPtr,
+			}); err != nil {
+				log.Printf("notifications: create in-app for %q: %v", recipient, err)
 			}
 		}
 
-		// Skip if the subscriber has already been sent this notification
-		if _, alreadySent := sentTo[userEmail]; alreadySent {
+		if !pushEnabled(prefs, req.Kind) {
 			continue
 		}
-
-		// Create the notification object
-		notification := models.Notification{
-			Who:    ignoreEmail,
-			What:   body,
-			IsRead: false,
-			Where:  url,
-			When:   time.Now(),
+		for _, s := range subsByEmail[recipient] {
+			s := s
+			if err := pushSender(s, pushPayload); err != nil {
+				log.Printf("notifications: push to %q (endpoint %s): %v",
+					recipient, hashEndpoint(s.Endpoint), err)
+			}
 		}
-
-		// Save the notification to the database
-		err := database.CreateNotification(userEmail, notification)
-		if err != nil {
-			log.Printf("Error creating notification for %s: %v", userEmail, err)
-			return err
-		}
-
-		// Mark this subscriber as having been sent the notification
-		sentTo[userEmail] = true
 	}
 	return nil
 }
 
-func sendPushNotification(subscriptionJson []byte, title, body, url string) error {
-	// Construct your push notification payload by marshaling your data structure to JSON
-	data := &PushMessage{
-		Title: title,
-		Body:  body,
-		Url:   url,
+func inAppEnabled(p models.ResolvedNotificationPrefs, kind string) bool {
+	switch kind {
+	case models.NotificationKindNewVuln:
+		return p.InAppNewVuln
+	case models.NotificationKindNewComment:
+		return p.InAppNewComment
+	default:
+		return true
 	}
-	jsonPayload, err := json.Marshal(data)
+}
+
+func pushEnabled(p models.ResolvedNotificationPrefs, kind string) bool {
+	switch kind {
+	case models.NotificationKindNewVuln:
+		return p.PushNewVuln
+	case models.NotificationKindNewComment:
+		return p.PushNewComment
+	default:
+		return true
+	}
+}
+
+func loadPrefs(email string) (models.ResolvedNotificationPrefs, error) {
+	settings, err := database.GetPreferencesForUser(email)
 	if err != nil {
-		log.Print(http.StatusInternalServerError, gin.H{"error": "Error marshaling push notification payload"})
-		return err
+		return models.NotificationPrefs{}.Effective(), err
 	}
-	var subscription webpush.Subscription
+	return settings.NotificationPrefs.Effective(), nil
+}
 
-	if err := json.Unmarshal(subscriptionJson, &subscription); err != nil {
-		log.Printf("Error unmarshalling subscribers %v", err)
-		return err
+// normaliseRecipients trims whitespace, lowercases, drops the actor, and
+// dedupes. The dispatcher always uses the canonical lowercased form so push
+// lookups and ACL checks agree on identity.
+func normaliseRecipients(in []string, actor string) []string {
+	actor = strings.ToLower(strings.TrimSpace(actor))
+	seen := map[string]struct{}{}
+	out := make([]string, 0, len(in))
+	for _, raw := range in {
+		e := strings.ToLower(strings.TrimSpace(raw))
+		if e == "" || e == actor {
+			continue
+		}
+		if _, dup := seen[e]; dup {
+			continue
+		}
+		seen[e] = struct{}{}
+		out = append(out, e)
 	}
+	return out
+}
 
-	resp, err := webpush.SendNotification(jsonPayload, &subscription, &webpush.Options{
+// sendPush dispatches one push and reaps dead endpoints. Returning nil for
+// 404/410 lets the caller continue down the recipient list — the row is gone
+// from the next dispatch onward.
+func sendPush(s database.Subscriber, payload []byte) error {
+	sub := s.AsPushSubscription()
+	resp, err := webpush.SendNotification(payload, &sub, &webpush.Options{
 		Subscriber:      "cat@nhn.no",
 		VAPIDPublicKey:  vapidPublicKey,
 		VAPIDPrivateKey: vapidPrivateKey,
 		TTL:             30,
 	})
 	if err != nil {
-		// Handle error
-		log.Printf("Error sending web push %v", err)
 		return err
 	}
-	if resp.StatusCode != 200 && resp.StatusCode != 202 {
-		// Read response body for additional error details
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			log.Printf("Error reading response body: %v", err)
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusGone {
+		if delErr := database.DeleteDeadSubscriber(s.Endpoint); delErr != nil {
+			log.Printf("notifications: prune dead endpoint %s: %v",
+				hashEndpoint(s.Endpoint), delErr)
 		}
-		bodyString := string(bodyBytes)
-
-		// Log detailed error message
-		log.Printf("Error sending web push. Status Code: %d, Status: %s, Response Body: %s",
-			resp.StatusCode, resp.Status, bodyString)
+		return nil
 	}
-	defer resp.Body.Close() // Close the response body when done reading
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		body, _ := io.ReadAll(resp.Body)
+		return errors.New("push provider returned " + resp.Status + ": " + string(body))
+	}
 	return nil
 }

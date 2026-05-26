@@ -175,13 +175,11 @@ func getUrlFor(channel string, timestamp string, workspace string) string {
 }
 
 func sendBrowserNotification(event database.EventQueue) {
-
 	if event.Kind != models.NewVulnerability {
 		return
 	}
 
 	finding, err := database.GetJSONData(event.TableID)
-
 	if err != nil {
 		updateEvent(event, err)
 		log.Printf("Error getting the event from table %s", err)
@@ -189,48 +187,52 @@ func sendBrowserNotification(event database.EventQueue) {
 	}
 
 	var vulnData Vulnerability
-	err = json.Unmarshal(finding.Vulnerability, &vulnData)
-	if err != nil {
+	if err := json.Unmarshal(finding.Vulnerability, &vulnData); err != nil {
 		updateEvent(event, err)
-		log.Printf("Error unmarshelling the event %s", err)
-
+		log.Printf("Error unmarshalling the event %s", err)
 		return
 	}
 
-	var data VulnerabilityData
-	data.Vulnerability = vulnData
-	data.URL = "/vulnerability/" + strconv.FormatUint(uint64(finding.ID), 10) + "/view"
+	url := "/vulnerability/" + strconv.FormatUint(uint64(finding.ID), 10) + "/view"
 
-	usersToNotify := make(map[string]bool)
+	recipients := []string{}
 	var projectName string
-
 	if finding.ProjectID != nil {
 		project, _ := database.GetProject(*finding.ProjectID)
 		projectName = project.ProjectName
-
-		// Split the HackerName string by comma and add each name to the map
-		for _, hacker := range strings.Split(project.HackerName, ",") {
-			if hacker != "" { // Make sure the string is not empty
-				usersToNotify[hacker] = true
-			}
-		}
-
-		// Split the ClientEmail string by comma and add each email to the map
-		for _, email := range strings.Split(project.ClientEmail, ",") {
-			if email != "" { // Make sure the string is not empty
-				usersToNotify[email] = true
-			}
-		}
+		recipients = append(recipients, splitMembers(project.HackerName)...)
+		recipients = append(recipients, splitMembers(project.ClientEmail)...)
 	}
 
-	// missing global users
-	// missing manually subscribed to project notification users
-
-	err = routes.SendMessage(projectName, "New vulnerability "+data.Vulnerability.Title, data.URL, finding.FoundBy, finding.FoundBy, usersToNotify)
+	err = routes.Dispatch(routes.DispatchRequest{
+		Kind:            models.NotificationKindNewVuln,
+		VulnerabilityID: finding.ID,
+		ActorEmail:      finding.FoundBy,
+		Recipients:      recipients,
+		Title:           projectName,
+		Body:            "New vulnerability " + vulnData.Title,
+		URL:             url,
+	})
 	if err != nil {
 		log.Printf("Error sending the message %s", err)
 	}
 	updateEvent(event, err)
+}
+
+// splitMembers parses one of the comma-separated email columns on
+// ProjectData. The Dispatcher does its own trim+lowercase pass, but doing it
+// here too keeps both halves of the code paths consistent and makes the
+// recipient list easier to reason about in logs.
+func splitMembers(commaSeparated string) []string {
+	parts := strings.Split(commaSeparated, ",")
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 func updateEvent(event database.EventQueue, err error) {
@@ -246,64 +248,39 @@ func updateEvent(event database.EventQueue, err error) {
 }
 
 func sendCommentsNotification(event database.EventQueue) {
-
 	if event.Kind != models.NewComment {
 		return
 	}
 
 	finding, err := database.GetJSONData(event.TableID)
-
 	if err != nil {
 		return
 	}
-
-	var vulnData Vulnerability
-	err = json.Unmarshal(finding.Vulnerability, &vulnData)
-	if err != nil {
-		updateEvent(event, err)
-		return
-	}
-
-	var data VulnerabilityData
-	data.Vulnerability = vulnData
 
 	vulnerability, _ := database.GetJSONData(finding.ID)
 
 	var comments []models.Comment
-
 	_ = json.Unmarshal([]byte(vulnerability.Comments), &comments)
 
-	usersToNotify := make(map[string]bool)
-
+	recipients := []string{vulnerability.FoundBy}
 	var lastComment models.Comment
-
-	// Ensure we have at least one comment to initialize lastComment
 	if len(comments) > 0 {
 		lastComment = comments[0]
 	}
-
 	for _, comment := range comments {
-		usersToNotify[comment.UserEmail] = true
+		recipients = append(recipients, comment.UserEmail)
 		if lastComment.CreatedAt.Before(comment.CreatedAt) {
 			lastComment = comment
 		}
 	}
 
-	data.URL = "/vulnerability/" + strconv.FormatUint(uint64(finding.ID), 10) + "/view#" + lastComment.ID
-
-	// usersToNotify = append(usersToNotify, vulnerability.FoundBy)
-	usersToNotify[vulnerability.FoundBy] = true
-
 	if finding.ProjectID != nil {
 		project, _ := database.GetProject(*finding.ProjectID)
-		var projectUsers []string
-		projectUsers = append(projectUsers, strings.Split(project.HackerName, ",")...)
-		projectUsers = append(projectUsers, strings.Split(project.ClientEmail, ",")...)
-
-		for _, user := range projectUsers {
-			usersToNotify[user] = true
-		}
+		recipients = append(recipients, splitMembers(project.HackerName)...)
+		recipients = append(recipients, splitMembers(project.ClientEmail)...)
 	}
+
+	url := "/vulnerability/" + strconv.FormatUint(uint64(finding.ID), 10) + "/view#" + lastComment.ID
 
 	var message string
 	if len(lastComment.Text) > 50 {
@@ -312,7 +289,15 @@ func sendCommentsNotification(event database.EventQueue) {
 		message = "💬 " + lastComment.Text
 	}
 
-	err = routes.SendMessage("PRISM", message, data.URL, finding.FoundBy, lastComment.UserEmail, usersToNotify)
+	err = routes.Dispatch(routes.DispatchRequest{
+		Kind:            models.NotificationKindNewComment,
+		VulnerabilityID: finding.ID,
+		ActorEmail:      lastComment.UserEmail,
+		Recipients:      recipients,
+		Title:           "PRISM",
+		Body:            message,
+		URL:             url,
+	})
 	updateEvent(event, err)
 }
 

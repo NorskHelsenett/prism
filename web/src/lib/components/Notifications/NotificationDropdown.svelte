@@ -14,6 +14,7 @@
 /**
  * Notification structure as received from server.
  * @typedef {Object} Notification
+ * @property {number} id - Unique row id used for mark-as-read.
  * @property {string} who - The identifier of the user who triggered the notification.
  * @property {string} what - A description of the notification event.
  * @property {boolean} read - Whether the notification has been read.
@@ -31,31 +32,66 @@
   let { notifications = $bindable([]) } = $props();
   let notificationPermission = $state("default");
 
+  // Cursor used by the toast diff: anything strictly newer than this on a
+  // subsequent poll fires a toast. Initialised to the most recent timestamp
+  // already in the list when the component mounts, so we don't spam toasts
+  // for backlog the user already saw.
+  /** @type {string | null} */
+  let lastSeenWhen = $state(null);
+  let primed = $state(false);
 
-  // Function to sort notifications by 'when' in descending order
-  function sortNotifications() {
-    /** @type {Notification[]} */
-    const newNotifications = notifications.filter(notification =>
-      !notifications.some(existing => existing.when === notification.when)
+  /**
+   * @param {string | null} acc
+   * @param {Notification} n
+   * @returns {string | null}
+   */
+  function pickNewer(acc, n) {
+    if (!n.when) return acc;
+    if (!acc) return n.when;
+    return new Date(n.when) > new Date(acc) ? n.when : acc;
+  }
+
+  function renderToasts() {
+    if (!Array.isArray(notifications)) return;
+    if (!primed) {
+      /** @type {string | null} */
+      let max = null;
+      for (const n of notifications) max = pickNewer(max, n);
+      lastSeenWhen = max;
+      primed = true;
+      return;
+    }
+    const fresh = notifications.filter(n =>
+      n.read === false &&
+      (lastSeenWhen === null || new Date(n.when) > new Date(lastSeenWhen))
     );
-
-    // Display toasts for new notifications
-    newNotifications.forEach(async newNotification => {
-      if(newNotification.read == false){
+    if (fresh.length === 0) return;
+    fresh.forEach(async newNotification => {
+      let label = newNotification.who;
+      try {
         const userData = await Fetch(`/api/profile/${newNotification.who}`);
-        toast.info(`${userData.name}- ${newNotification.what}`, {
-                  action: {
-                    label: 'Show',
-                    onClick: () => openAction(newNotification)
-                  }
-                });
-      }
+        if (userData?.name) label = userData.name;
+      } catch (_) { /* fall back to the raw identifier */ }
+      toast.info(`${label} — ${newNotification.what}`, {
+        action: {
+          label: 'Show',
+          onClick: () => openAction(newNotification)
+        }
+      });
     });
+    /** @type {string | null} */
+    let max = lastSeenWhen;
+    for (const n of fresh) max = pickNewer(max, n);
+    lastSeenWhen = max;
+  }
+
+  function sortNotifications() {
     notifications = notifications.sort((a, b) => new Date(b.when) - new Date(a.when));
   }
 
   onMount(async () => {
-    await sortNotifications()
+    sortNotifications();
+    renderToasts();
     if ('Notification' in window) {
       notificationPermission = Notification.permission;
     }
@@ -86,30 +122,33 @@
       }
   });
 
+  onDestroy(() => unsubscribe());
+
   function handlePermissionChange(event) {
     notificationPermission = event.detail.notificationPermission;
   }
 
   async function openAction(notification){
-    await Fetch("/api/notification/" + notification.when + "/read", {
-      method:"PUT"
-    });
+    await Fetch(`/api/notification/${notification.id}/read`, { method: "PUT" });
     notification.read = true;
-    window.location.href = notification.where; //@todo force redirect, fix
-    await goto(notification.where)
+    // The server only stores paths in `where` so navigating to it can't
+    // redirect off-site.
+    await goto(notification.where);
     closeDropdown();
   }
 
   async function markAllRead() {
-    await Fetch("/api/notification", {method: "DELETE"});
-    notifications = []
-    setTimeout(() => {
-      closeDropdown();
-    }, 1000);
+    // Switched from DELETE /api/notification to PUT /api/notification/read-all
+    // so clearing the badge no longer destroys history.
+    await Fetch("/api/notification/read-all", { method: "PUT" });
+    notifications = notifications.map(n => ({ ...n, read: true }));
+    setTimeout(closeDropdown, 1000);
   }
+
   run(() => {
     if (notifications) {
-      sortNotifications()
+      sortNotifications();
+      renderToasts();
     }
   });
 </script>
@@ -150,7 +189,6 @@
     transition:slide
 >
 
-  <!-- <div class="dropdown-divider"></div> -->
   {#if notificationPermission == 'granted'}
   {#if notifications?.length > 0}
     <div class=" pl-3 pr-3 pt-1">
@@ -159,14 +197,14 @@
         <label class="form-label text-azure">Notifications</label>
       </div>
       <div class="col-auto">
-        <a href="#" onclick={markAllRead}>Clear all</a>
+        <a href="#" onclick={markAllRead}>Mark all read</a>
       </div>
       </div>
     </div>
   {/if}
   <div class="d-flex justify-content-center flex-wrap">
     {#if notifications?.length > 0}
-        {#each notifications as notification}
+        {#each notifications as notification (notification.id)}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <div class="dropdown-item w-100 cursor-pointer" class:bg-secondary-lt={notification.read == false} onclick={() => openAction(notification)} >
