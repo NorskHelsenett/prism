@@ -33,6 +33,16 @@ func main() {
 		log.Fatalf("Configuration is loaded from auth.OIDC.init()")
 	}
 	database.InitDB()
+
+	// Convert any legacy /api/blob/<id> URLs and inline data: URIs in
+	// vulnerability evidence/remediation into per-vuln attachment rows.
+	// Idempotent: a no-op once everything is on the new scheme.
+	if report, err := database.MigrateAllAttachments(false); err != nil {
+		log.Printf("attachment migration: %v", err)
+	} else if report.VulnerabilitiesChanged > 0 || report.LegacyBlobsConverted > 0 || report.DataURIsConverted > 0 {
+		log.Printf("attachment migration: %s", report.String())
+	}
+
 	initSessionDatabase()
 	sessionStore := session.NewSessionStore(session_db)
 	session.LoadSessionStore(sessionStore)

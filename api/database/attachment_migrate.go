@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -70,22 +71,53 @@ func MigrateAllAttachments(dryRun bool) (MigrationReport, error) {
 	}
 	report.VulnerabilitiesScanned = len(vulns)
 
-	for _, v := range vulns {
-		v := v
-		changed, err := normaliseVulnAttachments(&v, &report, dryRun)
-		if err != nil {
-			report.Errors = append(report.Errors, fmt.Sprintf("vuln %d: %v", v.ID, err))
-			continue
+	if dryRun {
+		// No writes, so no transaction needed. The walk is read-only.
+		for _, v := range vulns {
+			v := v
+			changed, err := normaliseVulnAttachments(db, &v, &report, true)
+			if err != nil {
+				report.Errors = append(report.Errors, fmt.Sprintf("vuln %d: %v", v.ID, err))
+				continue
+			}
+			if changed {
+				report.VulnerabilitiesChanged++
+			}
 		}
-		if changed {
-			report.VulnerabilitiesChanged++
-			if !dryRun {
-				if err := db.Save(&v).Error; err != nil {
+		return report, nil
+	}
+
+	// Commit mode: do every write under a single transaction. Each attachment
+	// insert otherwise auto-commits (and with _synchronous=FULL costs one
+	// fsync), which turns into hours on prod-sized data. One transaction =
+	// one fsync at the end.
+	total := len(vulns)
+	const heartbeatEvery = 10
+	err := db.Transaction(func(tx *gorm.DB) error {
+		for i, v := range vulns {
+			v := v
+			changed, err := normaliseVulnAttachments(tx, &v, &report, false)
+			if err != nil {
+				report.Errors = append(report.Errors, fmt.Sprintf("vuln %d: %v", v.ID, err))
+			} else if changed {
+				report.VulnerabilitiesChanged++
+				if err := tx.Save(&v).Error; err != nil {
 					report.Errors = append(report.Errors,
 						fmt.Sprintf("save vuln %d: %v", v.ID, err))
 				}
 			}
+			if (i+1)%heartbeatEvery == 0 || i+1 == total {
+				log.Printf("attachment migration: %d/%d vulns processed (rewritten=%d, legacy converted=%d, data-uris converted=%d)",
+					i+1, total,
+					report.VulnerabilitiesChanged,
+					report.LegacyBlobsConverted,
+					report.DataURIsConverted)
+			}
 		}
+		return nil
+	})
+	if err != nil {
+		return report, fmt.Errorf("migration transaction: %w", err)
 	}
 	return report, nil
 }
@@ -100,7 +132,7 @@ func MigrateAllAttachments(dryRun bool) (MigrationReport, error) {
 // (no dry-run here).
 func MigrateVulnAttachments(v *JSONData) (bool, error) {
 	var report MigrationReport
-	changed, err := normaliseVulnAttachments(v, &report, false)
+	changed, err := normaliseVulnAttachments(db, v, &report, false)
 	if err != nil {
 		return false, err
 	}
@@ -113,7 +145,9 @@ func MigrateVulnAttachments(v *JSONData) (bool, error) {
 // normaliseVulnAttachments inspects the JSON-encoded vulnerability payload,
 // extracts evidence + remediation, rewrites image references, and folds the
 // result back into v.Vulnerability. Returns whether any change was made.
-func normaliseVulnAttachments(v *JSONData, report *MigrationReport, dryRun bool) (bool, error) {
+// All DB work flows through tx so the caller can batch many vulns into a
+// single transaction.
+func normaliseVulnAttachments(tx *gorm.DB, v *JSONData, report *MigrationReport, dryRun bool) (bool, error) {
 	if len(v.Vulnerability) == 0 {
 		return false, nil
 	}
@@ -128,7 +162,7 @@ func normaliseVulnAttachments(v *JSONData, report *MigrationReport, dryRun bool)
 		if !ok || raw == "" {
 			continue
 		}
-		rewritten, err := normaliseMarkdownReferences(v.ID, v.FoundBy, raw, report, dryRun)
+		rewritten, err := normaliseMarkdownReferences(tx, v.ID, v.FoundBy, raw, report, dryRun)
 		if err != nil {
 			return false, fmt.Errorf("%s: %w", field, err)
 		}
@@ -152,8 +186,9 @@ func normaliseVulnAttachments(v *JSONData, report *MigrationReport, dryRun bool)
 // normaliseMarkdownReferences scans a markdown string and rewrites every
 // legacy or inline image reference into a scoped attachment URL. Each
 // distinct reference creates at most one attachment row (deduplicated within
-// the same vulnerability).
+// the same vulnerability). All DB work goes through tx.
 func normaliseMarkdownReferences(
+	tx *gorm.DB,
 	vulnID uint,
 	foundBy string,
 	markdown string,
@@ -194,7 +229,7 @@ func normaliseMarkdownReferences(
 				fmt.Sprintf("vuln %d: data URI MIME %q failed verification", vulnID, mime))
 			return match
 		}
-		url, err := persistMigrationAttachment(vulnID, foundBy, "inline-image", mime, bytes, dryRun)
+		url, err := persistMigrationAttachment(tx, vulnID, foundBy, "inline-image", mime, bytes, dryRun)
 		if err != nil {
 			report.DecodeFailures++
 			report.Errors = append(report.Errors,
@@ -212,8 +247,8 @@ func normaliseMarkdownReferences(
 		if mapped, ok := legacyMapping[filename]; ok {
 			return mapped
 		}
-		img, err := GetImage(filename)
-		if err != nil {
+		var img ImageData
+		if err := tx.Where("filename = ?", filename).First(&img).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				report.LegacyBlobsMissing++
 				return match
@@ -229,7 +264,7 @@ func normaliseMarkdownReferences(
 				fmt.Sprintf("vuln %d: legacy blob %s failed sniff/magic", vulnID, filename))
 			return match
 		}
-		url, err := persistMigrationAttachment(vulnID, foundBy, filename, mime, img.Data, dryRun)
+		url, err := persistMigrationAttachment(tx, vulnID, foundBy, filename, mime, img.Data, dryRun)
 		if err != nil {
 			report.DecodeFailures++
 			report.Errors = append(report.Errors,
@@ -247,8 +282,10 @@ func normaliseMarkdownReferences(
 // persistMigrationAttachment creates a VulnerabilityAttachment row from raw
 // bytes during migration. In dryRun mode it returns a stable simulated URL
 // without touching the database, so the caller can still measure the
-// rewrite shape and counts.
+// rewrite shape and counts. All writes go through tx so callers can batch
+// the whole migration into one transaction.
 func persistMigrationAttachment(
+	tx *gorm.DB,
 	vulnID uint,
 	foundBy string,
 	filename string,
@@ -282,7 +319,7 @@ func persistMigrationAttachment(
 		ProxyMime:       proxyMime,
 		UploadedBy:      foundBy,
 	}
-	if err := CreateAttachment(att); err != nil {
+	if err := tx.Create(att).Error; err != nil {
 		return "", err
 	}
 	return url, nil
