@@ -208,6 +208,27 @@ func PostSettings(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Settings updated successfully"})
 }
 
+// RegenerateAttachmentProxies re-encodes every existing attachment's proxy
+// using the current Settings.AttachmentMaxEdge. Invoked from the admin
+// Settings panel after the operator changes the resolution tier. Runs
+// synchronously inside the request — the response returns once the
+// transaction commits, which is typical practice for an explicit admin
+// action and avoids surprise long-tail jobs.
+func RegenerateAttachmentProxies(c *gin.Context) {
+	report, err := database.RegenerateAllProxies()
+	if err != nil {
+		log.Printf("regen proxies: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to regenerate proxies"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"total":       report.Total,
+		"regenerated": report.Regenerated,
+		"skipped":     report.Skipped,
+		"errors":      report.Errors,
+	})
+}
+
 // GetAllRoles retrieves all role names from the application configuration and
 // returns them as an array of strings.
 func GetAllRoles(c *gin.Context) {

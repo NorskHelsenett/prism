@@ -18,10 +18,10 @@ import (
 	"gorm.io/gorm"
 )
 
-const (
-	maxAttachmentLongEdge = 1080
-	MaxAttachmentBytes    = 25 << 20
-)
+// MaxAttachmentBytes caps the upload size at 25 MiB. Proxy long-edge is now
+// configurable via the admin setting Settings.AttachmentMaxEdge, with the
+// fallback in DefaultAttachmentMaxEdge.
+const MaxAttachmentBytes = 25 << 20
 
 // attachmentKind controls whether the file gets a downscaled proxy or is
 // served as-is. Images get a proxy for inline rendering; everything else is
@@ -167,11 +167,15 @@ func verifyJSON(b []byte) bool {
 	return json.Unmarshal(b, &x) == nil
 }
 
-// EncodeAttachmentProxy downscales the long edge to 1080px and re-encodes as
-// WebP. Falls back to JPEG if the WebP encoder rejects the image. Never
-// upscales. Returns empty bytes if the MIME isn't an image type; callers
-// should branch on AttachmentKind before invoking.
-func EncodeAttachmentProxy(original []byte) ([]byte, string, error) {
+// EncodeAttachmentProxy re-encodes the original as WebP (lossless), down-
+// scaling first if the long edge exceeds maxEdge. Falls back to JPEG if the
+// WebP encoder rejects the image. Never upscales. Returns empty bytes if the
+// MIME isn't an image type; callers should branch on AttachmentKind before
+// invoking. Pass maxEdge=0 to use DefaultAttachmentMaxEdge.
+func EncodeAttachmentProxy(original []byte, maxEdge int) ([]byte, string, error) {
+	if maxEdge <= 0 {
+		maxEdge = DefaultAttachmentMaxEdge
+	}
 	img, _, err := image.Decode(bytes.NewReader(original))
 	if err != nil {
 		return nil, "", err
@@ -187,8 +191,8 @@ func EncodeAttachmentProxy(original []byte) ([]byte, string, error) {
 	}
 
 	target := img
-	if longEdge > maxAttachmentLongEdge {
-		scale := float64(maxAttachmentLongEdge) / float64(longEdge)
+	if longEdge > maxEdge {
+		scale := float64(maxEdge) / float64(longEdge)
 		nw := int(float64(w) * scale)
 		nh := int(float64(h) * scale)
 		if nw < 1 {

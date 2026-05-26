@@ -119,6 +119,24 @@ type Settings struct {
 	Metrics             Metrics              `gorm:"-" json:"metrics"`
 	MFAEnabled          bool                 `gorm:"default:false"`
 	WebPushNotification string               `gorm:"column:vaapi_keys" json:"-"`
+
+	// AttachmentMaxEdge caps the long edge of the proxy image generated for
+	// each upload (the bytes served to anyone with vuln-read access). The
+	// original is always stored at full resolution untouched; only the proxy
+	// is downscaled. 0 means "use the default" (DefaultAttachmentMaxEdge).
+	AttachmentMaxEdge int `json:"attachmentMaxEdge" gorm:"default:2560"`
+}
+
+const DefaultAttachmentMaxEdge = 2560
+
+// EffectiveAttachmentMaxEdge returns the configured proxy max edge, with a
+// safe default if the column is zero or settings can't be loaded.
+func EffectiveAttachmentMaxEdge() int {
+	s, err := GetSettings(false)
+	if err != nil || s == nil || s.AttachmentMaxEdge <= 0 {
+		return DefaultAttachmentMaxEdge
+	}
+	return s.AttachmentMaxEdge
 }
 
 type WebPushNotificationSettings struct {

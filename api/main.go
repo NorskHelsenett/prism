@@ -220,6 +220,7 @@ func main() {
 		apiRoutes.GET("/settings/events", event.EventQueues)
 		apiRoutes.GET("/settings", routes.GetSettings)
 		apiRoutes.POST("/settings", routes.PostSettings)
+		apiRoutes.POST("/settings/attachments/regenerate-proxies", routes.RegenerateAttachmentProxies)
 		apiRoutes.GET("/settings/roles-list", routes.GetAllRoles)
 		apiRoutes.GET("/settings/cleanup", routes.CleanUpDatabase)
 		apiRoutes.PUT("/settings/events/:id/update/:status", event.UpdateEventQueues)

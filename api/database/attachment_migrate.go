@@ -279,6 +279,73 @@ func normaliseMarkdownReferences(
 	return markdown, nil
 }
 
+type RegenReport struct {
+	Total       int
+	Regenerated int
+	Skipped     int
+	Errors      []string
+}
+
+func (r RegenReport) String() string {
+	out := fmt.Sprintf("regenerated %d/%d proxies (skipped %d)", r.Regenerated, r.Total, r.Skipped)
+	if len(r.Errors) > 0 {
+		out += fmt.Sprintf(" — %d errors", len(r.Errors))
+	}
+	return out
+}
+
+// RegenerateAllProxies walks every existing attachment and re-encodes its
+// proxy using the current Settings.AttachmentMaxEdge. Triggered from the
+// admin Settings panel when the operator changes the resolution tier.
+// Idempotent: re-running with the same setting produces equivalent bytes.
+//
+// The original is the source of truth; this function never touches
+// OriginalData. Wrapped in a single transaction for the same fsync reason
+// as MigrateAllAttachments.
+func RegenerateAllProxies() (RegenReport, error) {
+	var report RegenReport
+	maxEdge := EffectiveAttachmentMaxEdge()
+
+	var attachments []VulnerabilityAttachment
+	if err := db.Find(&attachments).Error; err != nil {
+		return report, fmt.Errorf("load attachments: %w", err)
+	}
+	report.Total = len(attachments)
+
+	err := db.Transaction(func(tx *gorm.DB) error {
+		for i, a := range attachments {
+			a := a
+			if AttachmentKind(a.Mime) != "image" || len(a.OriginalData) == 0 {
+				report.Skipped++
+				continue
+			}
+			proxy, proxyMime, err := EncodeAttachmentProxy(a.OriginalData, maxEdge)
+			if err != nil {
+				report.Errors = append(report.Errors,
+					fmt.Sprintf("attachment %d (key=%s): %v", a.ID, a.Key, err))
+				continue
+			}
+			if err := tx.Model(&VulnerabilityAttachment{}).
+				Where("id = ?", a.ID).
+				Updates(map[string]any{"proxy_data": proxy, "proxy_mime": proxyMime}).Error; err != nil {
+				report.Errors = append(report.Errors,
+					fmt.Sprintf("attachment %d: update: %v", a.ID, err))
+				continue
+			}
+			report.Regenerated++
+			if (i+1)%10 == 0 || i+1 == report.Total {
+				log.Printf("proxy regen: %d/%d processed (regenerated=%d, errors=%d)",
+					i+1, report.Total, report.Regenerated, len(report.Errors))
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return report, fmt.Errorf("regen transaction: %w", err)
+	}
+	return report, nil
+}
+
 // persistMigrationAttachment creates a VulnerabilityAttachment row from raw
 // bytes during migration. In dryRun mode it returns a stable simulated URL
 // without touching the database, so the caller can still measure the
@@ -299,7 +366,7 @@ func persistMigrationAttachment(
 	)
 	if AttachmentKind(mime) == "image" {
 		var err error
-		proxy, proxyMime, err = EncodeAttachmentProxy(data)
+		proxy, proxyMime, err = EncodeAttachmentProxy(data, EffectiveAttachmentMaxEdge())
 		if err != nil {
 			return "", fmt.Errorf("encode proxy: %w", err)
 		}

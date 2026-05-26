@@ -111,7 +111,7 @@ func PostAttachment(c *gin.Context) {
 		proxyMime string
 	)
 	if database.AttachmentKind(mime) == "image" {
-		proxy, proxyMime, err = database.EncodeAttachmentProxy(data)
+		proxy, proxyMime, err = database.EncodeAttachmentProxy(data, database.EffectiveAttachmentMaxEdge())
 		if err != nil {
 			log.Printf("attachment: encode proxy for vuln=%d: %v", vulnID, err)
 			c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": "could not process image"})
