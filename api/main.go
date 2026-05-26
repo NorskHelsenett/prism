@@ -37,11 +37,25 @@ func main() {
 	// Convert any legacy /api/blob/<id> URLs and inline data: URIs in
 	// vulnerability evidence/remediation into per-vuln attachment rows.
 	// Idempotent: a no-op once everything is on the new scheme.
-	if report, err := database.MigrateAllAttachments(false); err != nil {
-		log.Printf("attachment migration: %v", err)
-	} else if report.VulnerabilitiesChanged > 0 || report.LegacyBlobsConverted > 0 || report.DataURIsConverted > 0 {
-		log.Printf("attachment migration: %s", report.String())
-	}
+	//
+	// Run in a goroutine AFTER InitDB so the HTTP and health servers can
+	// start immediately. A large first-time migration can take a while
+	// (it re-encodes every legacy image), and if we ran it synchronously
+	// the kubelet's liveness/readiness probes would fail before any
+	// listener was up and recycle the pod mid-migration.
+	go func() {
+		log.Printf("attachment migration: starting in background")
+		report, err := database.MigrateAllAttachments(false)
+		if err != nil {
+			log.Printf("attachment migration: %v", err)
+			return
+		}
+		if report.VulnerabilitiesChanged > 0 || report.LegacyBlobsConverted > 0 || report.DataURIsConverted > 0 {
+			log.Printf("attachment migration: %s", report.String())
+		} else {
+			log.Printf("attachment migration: no work to do")
+		}
+	}()
 
 	initSessionDatabase()
 	sessionStore := session.NewSessionStore(session_db)
@@ -165,9 +179,12 @@ func main() {
 			protectedRoutes.PUT("/vulnerability/:findingsID/status/:status", routes.ChangeStatusVulnerability)
 
 			protectedRoutes.GET("/vulnerability/:findingsID/attachments", routes.ListAttachmentsHandler)
+			protectedRoutes.HEAD("/vulnerability/:findingsID/attachments", routes.ListAttachmentsHandler)
 			protectedRoutes.POST("/vulnerability/:findingsID/attachments", routes.PostAttachment)
 			protectedRoutes.GET("/vulnerability/:findingsID/attachments/:key", routes.GetAttachmentProxy)
+			protectedRoutes.HEAD("/vulnerability/:findingsID/attachments/:key", routes.GetAttachmentProxy)
 			protectedRoutes.GET("/vulnerability/:findingsID/attachments/:key/original", routes.GetAttachmentOriginal)
+			protectedRoutes.HEAD("/vulnerability/:findingsID/attachments/:key/original", routes.GetAttachmentOriginal)
 			protectedRoutes.DELETE("/vulnerability/:findingsID/attachments/:key", routes.DeleteAttachmentHandler)
 
 			shareRoutes := apiRoutes.Group("/")

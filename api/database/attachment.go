@@ -142,13 +142,22 @@ func verifyWebP(b []byte) bool {
 	return len(b) >= 12 && bytes.HasPrefix(b, []byte("RIFF")) && bytes.Equal(b[8:12], []byte("WEBP"))
 }
 
-// verifyTextLike rejects bytes containing NUL or stray control characters.
-// Plain text and JSON go through this; if a caller wants to upload arbitrary
-// bytes they should choose a different MIME (and add it to the whitelist).
+// verifyTextLike rejects bytes containing NUL or stray control characters,
+// and also bytes that look like markup. http.DetectContentType sniffs
+// `<svg>…</svg>` or `<?xml …?>` as text/plain (not unambiguous HTML), so
+// without this guard a caller could upload SVG/HTML markup under the
+// text/plain whitelist. Storing markup as text/plain is harmless on read
+// (nosniff prevents promotion), but it creates a UX surprise (an "image"
+// upload shows as text) and leaves a defence-in-depth gap if anything ever
+// served the bytes with a renderable MIME.
 func verifyTextLike(b []byte) bool {
 	sample := b
 	if len(sample) > 4096 {
 		sample = sample[:4096]
+	}
+	trimmed := bytes.TrimLeft(sample, " \t\r\n")
+	if len(trimmed) > 0 && trimmed[0] == '<' {
+		return false
 	}
 	for _, c := range sample {
 		if c == 0 {
