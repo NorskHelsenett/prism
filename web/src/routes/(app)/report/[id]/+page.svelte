@@ -6,10 +6,45 @@
   import { Fetch } from '$lib/fetchUtil';
   import RichTextEditor from '$lib/components/editor/RichTextEditor.svelte';
   import DeleteModal from '$lib/components/DeleteModal.svelte';
+  import Modal from '$lib/components/Modal.svelte';
+  import Markdown from '$lib/components/Markdown.svelte';
+  import SeverityBucket from '$lib/components/severityBucket.svelte';
   import { apiEndpoint } from '$lib/stores/configStore';
   import { get } from 'svelte/store';
 
   let showDeleteModal = $state(false);
+  let showPreview = $state(false);
+  /** @type {{ raw: any, data: Record<string, any> } | null} */
+  let previewVuln = $state(null);
+
+  function vulnData(v) {
+    if (!v) return {};
+    if (typeof v.Vulnerability === 'string') {
+      try { return JSON.parse(v.Vulnerability); } catch (_) { return {}; }
+    }
+    return v.Vulnerability || {};
+  }
+
+  function statusBadgeClass(status) {
+    switch (status) {
+      case 'Reported': return 'bg-azure-lt';
+      case 'Validated': return 'bg-pink-lt';
+      case 'In Progress': return 'bg-orange-lt';
+      case 'Rejected':
+      case 'Resolved': return 'bg-green-lt';
+      default: return 'bg-secondary-lt';
+    }
+  }
+
+  function openPreview(v) {
+    previewVuln = { raw: v, data: vulnData(v) };
+    showPreview = true;
+  }
+
+  function closePreview() {
+    showPreview = false;
+    previewVuln = null;
+  }
 
   let report = $state(null);
   let projects = $state([]);
@@ -152,6 +187,85 @@
 
 <DeleteModal bind:showDeleteModal onDelete={remove} deleteButtonText="Yes, delete it" text="Delete this report and all its published versions. This cannot be undone." />
 
+<Modal bind:showModal={showPreview} fullscreen={true} on:close={closePreview}>
+  {#snippet title()}
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <h3 class="modal-title mb-0">{previewVuln?.data.title || 'Untitled finding'}</h3>
+      {#if previewVuln?.data.criticality || previewVuln?.data.severity}
+        <SeverityBucket severity={previewVuln?.data.criticality || previewVuln?.data.severity || ''} />
+      {/if}
+      {#if previewVuln?.raw.Status}
+        <span class={'badge ' + statusBadgeClass(previewVuln.raw.Status)}>{previewVuln.raw.Status}</span>
+      {/if}
+    </div>
+  {/snippet}
+
+  {#if previewVuln}
+    {@const d = previewVuln.data}
+    <div class="modal-body">
+      <div class="row g-3 mb-3">
+        <div class="col-md-3">
+          <div class="text-muted small">Category</div>
+          <div>{d.category || '—'}</div>
+        </div>
+        <div class="col-md-3">
+          <div class="text-muted small">Endpoint</div>
+          <div class="text-break">{d.endpoint || '—'}</div>
+        </div>
+        <div class="col-md-2">
+          <div class="text-muted small">Ease of exploitation</div>
+          <div>{d.easeOfExploitation || '—'}</div>
+        </div>
+        <div class="col-md-2">
+          <div class="text-muted small">Impact</div>
+          <div>{d.impact || '—'}</div>
+        </div>
+        <div class="col-md-2">
+          <div class="text-muted small">Date</div>
+          <div>{d.date || '—'}</div>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-4">
+          <div class="text-muted small">Assigned to</div>
+          <div>{d.assignedTo || '—'}</div>
+        </div>
+        <div class="col-md-4">
+          <div class="text-muted small">Public-facing</div>
+          <div>{d.isPublicFacing ? 'Yes' : 'No'}</div>
+        </div>
+        <div class="col-md-4">
+          <div class="text-muted small">Visibility</div>
+          <div>{d.visibility || '—'}</div>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <h4>Evidence</h4>
+        {#if d.evidence}
+          <Markdown markdown={d.evidence} />
+        {:else}
+          <div class="text-muted">No evidence captured.</div>
+        {/if}
+      </div>
+
+      <div>
+        <h4>Remediation</h4>
+        {#if d.remediation}
+          <Markdown markdown={d.remediation} />
+        {:else}
+          <div class="text-muted">No remediation captured.</div>
+        {/if}
+      </div>
+    </div>
+    <div class="modal-footer">
+      <a class="btn btn-link link-secondary me-auto" href={`/vulnerability/${previewVuln.raw.ID}/view`} target="_blank" rel="noopener">Open full view</a>
+      <button type="button" class="btn" onclick={closePreview}>Close</button>
+    </div>
+  {/if}
+</Modal>
+
 {#if !report}
   <div class="text-muted">Loading…</div>
 {:else}
@@ -188,25 +302,50 @@
 
       <div class="card mb-3">
         <div class="card-header"><h3 class="card-title">Findings</h3></div>
-        <div class="card-body">
-          {#if vulnerabilities.length === 0}
-            <div class="text-muted">No vulnerabilities available for the selected projects.</div>
-          {:else}
-            <div class="list-group">
-              {#each vulnerabilities as v}
-                {@const data = v.Vulnerability ? (typeof v.Vulnerability === 'string' ? JSON.parse(v.Vulnerability) : v.Vulnerability) : {}}
-                <label class="list-group-item">
-                  <input type="checkbox" class="form-check-input me-2"
-                    checked={selectedVulnIds.includes(v.ID)}
-                    onchange={() => toggleVuln(v.ID)} />
-                  <strong>{data.title || 'Untitled finding'}</strong>
-                  <span class="badge bg-secondary-lt ms-2">{data.severity || 'unknown'}</span>
-                  <span class="badge bg-blue-lt ms-1">{v.Status}</span>
-                </label>
-              {/each}
-            </div>
-          {/if}
-        </div>
+        {#if vulnerabilities.length === 0}
+          <div class="card-body text-muted">No vulnerabilities available for the selected projects.</div>
+        {:else}
+          <div class="table-responsive">
+            <table class="table card-table table-vcenter">
+              <thead>
+                <tr>
+                  <th style="width: 2.5rem"></th>
+                  <th>Title</th>
+                  <th style="width: 11rem">Criticality</th>
+                  <th>Category</th>
+                  <th style="width: 8rem">Status</th>
+                  <th>Endpoint</th>
+                  <th class="text-end" style="width: 7rem"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each vulnerabilities as v}
+                  {@const data = vulnData(v)}
+                  <tr>
+                    <td>
+                      <input type="checkbox" class="form-check-input"
+                        checked={selectedVulnIds.includes(v.ID)}
+                        onchange={() => toggleVuln(v.ID)}
+                        aria-label="Include in report" />
+                    </td>
+                    <td>
+                      <button type="button" class="btn btn-link p-0 text-start" onclick={() => openPreview(v)}>
+                        {data.title || 'Untitled finding'}
+                      </button>
+                    </td>
+                    <td><SeverityBucket severity={data.criticality || data.severity || ''} /></td>
+                    <td class="text-muted">{data.category || '—'}</td>
+                    <td><span class={'badge ' + statusBadgeClass(v.Status)}>{v.Status}</span></td>
+                    <td class="text-muted text-truncate" style="max-width: 18rem">{data.endpoint || '—'}</td>
+                    <td class="text-end">
+                      <button type="button" class="btn btn-sm" onclick={() => openPreview(v)}>Preview</button>
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        {/if}
       </div>
 
       <div class="card">
