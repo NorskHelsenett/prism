@@ -115,7 +115,8 @@
 
   .flex {
     display: inline-flex;
-    gap:12px
+    gap:12px;
+    vertical-align: middle;
   }
   .items-center {
     align-items: center;
