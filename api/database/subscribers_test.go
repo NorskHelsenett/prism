@@ -1,6 +1,7 @@
 package database
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -158,6 +159,80 @@ func TestUpsertSubscriber_RejectsMissingEndpoint(t *testing.T) {
 	err := UpsertSubscriber("alice@x", webpush.Subscription{}, "")
 	if err == nil {
 		t.Fatalf("expected error for empty endpoint")
+	}
+}
+
+// TestUpsertSubscriber_RejectsTakeOverWithoutMatchingKeys is the regression
+// guard for the pentest F-01 finding: an authed user must not be able to
+// yank another user's subscription by knowing only the endpoint URL. The
+// take-over is allowed only when the requesting browser can prove it holds
+// the underlying subscription by presenting the same p256dh/auth keys.
+func TestUpsertSubscriber_RejectsTakeOverWithoutMatchingKeys(t *testing.T) {
+	defer setupNotificationsTestDB(t)()
+
+	endpoint := "https://push/contested"
+	original := webpush.Subscription{
+		Endpoint: endpoint,
+		Keys:     webpush.Keys{P256dh: "real-p256", Auth: "real-auth"},
+	}
+	if err := UpsertSubscriber("alice@x", original, "alice-ua"); err != nil {
+		t.Fatalf("alice upsert: %v", err)
+	}
+
+	// Attacker knows the URL but not the keys.
+	urlOnly := webpush.Subscription{
+		Endpoint: endpoint,
+		// p256dh + auth empty (the live pentest attack)
+	}
+	if err := UpsertSubscriber("bob@x", urlOnly, "bob-ua"); !errors.Is(err, ErrSubscriberEndpointClaimed) {
+		t.Fatalf("expected ErrSubscriberEndpointClaimed for url-only take-over, got %v", err)
+	}
+	// Attacker guesses wrong keys.
+	wrongKeys := webpush.Subscription{
+		Endpoint: endpoint,
+		Keys:     webpush.Keys{P256dh: "guessed", Auth: "guessed"},
+	}
+	if err := UpsertSubscriber("bob@x", wrongKeys, "bob-ua"); !errors.Is(err, ErrSubscriberEndpointClaimed) {
+		t.Fatalf("expected ErrSubscriberEndpointClaimed for wrong-keys take-over, got %v", err)
+	}
+
+	// Alice's row is intact.
+	rows, err := ListSubscribersForEmail("alice@x")
+	if err != nil {
+		t.Fatalf("list alice: %v", err)
+	}
+	if len(rows) != 1 || rows[0].P256dh != "real-p256" || rows[0].Auth != "real-auth" {
+		t.Fatalf("alice's row was clobbered by failed take-over: %+v", rows)
+	}
+	// Bob has no row for this endpoint.
+	bobRows, _ := ListSubscribersForEmail("bob@x")
+	if len(bobRows) != 0 {
+		t.Fatalf("bob should have no row after rejected take-over, got %+v", bobRows)
+	}
+}
+
+// TestUpsertSubscriber_AllowsTakeOverWhenKeysMatch covers the legitimate
+// shared-browser path: Alice logs out, Bob logs in on the same browser, the
+// browser returns the same endpoint *and* the same keys from
+// pushManager.getSubscription, take-over succeeds.
+func TestUpsertSubscriber_AllowsTakeOverWhenKeysMatch(t *testing.T) {
+	defer setupNotificationsTestDB(t)()
+
+	endpoint := "https://push/shared"
+	sub := webpush.Subscription{
+		Endpoint: endpoint,
+		Keys:     webpush.Keys{P256dh: "shared-p256", Auth: "shared-auth"},
+	}
+	if err := UpsertSubscriber("alice@x", sub, ""); err != nil {
+		t.Fatalf("alice upsert: %v", err)
+	}
+	if err := UpsertSubscriber("bob@x", sub, ""); err != nil {
+		t.Fatalf("bob take-over with matching keys should succeed: %v", err)
+	}
+	aliceRows, _ := ListSubscribersForEmail("alice@x")
+	bobRows, _ := ListSubscribersForEmail("bob@x")
+	if len(aliceRows) != 0 || len(bobRows) != 1 || bobRows[0].Endpoint != endpoint {
+		t.Fatalf("matching-keys take-over didn't rebind cleanly: alice=%v bob=%v", aliceRows, bobRows)
 	}
 }
 

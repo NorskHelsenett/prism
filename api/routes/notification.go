@@ -157,7 +157,9 @@ func MarkNotificationReadHandler(c *gin.Context) {
 // SubscribeNotification accepts a PushSubscription JSON and binds the device
 // to the current user. The actual take-over (rebinding the endpoint away from
 // any previous owner on the same browser) happens inside
-// database.UpsertSubscriber.
+// database.UpsertSubscriber, and is gated on the caller presenting the same
+// p256dh/auth keys as the existing row — so a third party who only knows the
+// endpoint URL can't yank somebody else's subscription.
 func SubscribeNotification(c *gin.Context) {
 	email, _ := c.Get("email")
 	var sub webpush.Subscription
@@ -167,6 +169,15 @@ func SubscribeNotification(c *gin.Context) {
 	}
 	userAgent := c.GetHeader("User-Agent")
 	if err := database.UpsertSubscriber(email.(string), sub, userAgent); err != nil {
+		if errors.Is(err, database.ErrSubscriberEndpointClaimed) {
+			// 409 distinguishes "endpoint is already someone else's" from a
+			// generic validation failure. The body stays opaque so we don't
+			// confirm the existence of any particular endpoint to a probing
+			// attacker.
+			log.Printf("notifications: take-over rejected for %q (endpoint claimed)", email)
+			c.JSON(http.StatusConflict, gin.H{"error": "endpoint already registered"})
+			return
+		}
 		log.Printf("notifications: upsert subscriber for %q: %v", email, err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "could not register subscription"})
 		return
