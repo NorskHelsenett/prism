@@ -73,10 +73,7 @@
 				groupId: p.GroupID || null,
 				sortOrder: p.SortOrder || 0
 			}))
-			.sort((a, b) => {
-				if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
-				return a.id - b.id;
-			});
+			.sort((a, b) => a.name.localeCompare(b.name));
 	}
 
 	function isMineFn(email, project) {
@@ -194,8 +191,8 @@
 		}
 		return {
 			ungrouped,
-			groups: Array.from(byId.values()).sort(
-				(a, b) => a.group.sortOrder - b.group.sortOrder
+			groups: Array.from(byId.values()).sort((a, b) =>
+				a.group.name.localeCompare(b.group.name)
 			)
 		};
 	});
@@ -279,15 +276,18 @@
 		}
 	}
 
-	async function assignProjectToGroup(projectId, groupId, sortOrder) {
+	async function assignProjectToGroup(projectId, groupId) {
 		try {
-			const body = { groupId };
-			if (typeof sortOrder === 'number') body.sortOrder = sortOrder;
 			await Fetch(`/api/project/${projectId}/group`, {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(body)
+				body: JSON.stringify({ groupId })
 			});
+			const p = projects.find((x) => x.id === projectId);
+			if (p) {
+				p.groupId = groupId;
+				projects = [...projects];
+			}
 		} catch (err) {
 			console.error('Error assigning project to group:', err);
 		}
@@ -309,54 +309,13 @@
 			};
 			groups = [...groups, newGroup];
 			await Promise.all([
-				assignProjectToGroup(projectA.id, newGroup.id, 0),
-				assignProjectToGroup(projectB.id, newGroup.id, 1)
+				assignProjectToGroup(projectA.id, newGroup.id),
+				assignProjectToGroup(projectB.id, newGroup.id)
 			]);
-			projectA.groupId = newGroup.id;
-			projectA.sortOrder = 0;
-			projectB.groupId = newGroup.id;
-			projectB.sortOrder = 1;
-			projects = [...projects];
 			startEditGroup(newGroup);
 		} catch (err) {
 			console.error('Error creating group:', err);
 		}
-	}
-
-	// Reorder dragged before target within the same section (or move dragged into target's section
-	// at target's position). Returns the new array of {id, sortOrder} pairs that were updated, and
-	// the new groupId for the dragged project.
-	function computeReorder(dragged, target) {
-		const targetGroupId = target.groupId || null;
-		// Build current order of the destination section
-		const sectionItems = projects
-			.filter((p) => (p.groupId || null) === targetGroupId && p.id !== dragged.id)
-			.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
-		const targetIndex = sectionItems.findIndex((p) => p.id === target.id);
-		const insertAt = targetIndex >= 0 ? targetIndex : sectionItems.length;
-		sectionItems.splice(insertAt, 0, { ...dragged, groupId: targetGroupId });
-		// Renumber sortOrder for the section
-		return sectionItems.map((p, i) => ({ id: p.id, sortOrder: i, groupId: targetGroupId }));
-	}
-
-	async function applyReorder(updates) {
-		// Optimistically update local state
-		const byId = new Map(updates.map((u) => [u.id, u]));
-		projects = projects.map((p) => {
-			const u = byId.get(p.id);
-			if (!u) return p;
-			return { ...p, sortOrder: u.sortOrder, groupId: u.groupId };
-		});
-		// Persist in parallel
-		await Promise.all(
-			updates.map((u) =>
-				Fetch(`/api/project/${u.id}/group`, {
-					method: 'PATCH',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ groupId: u.groupId, sortOrder: u.sortOrder })
-				})
-			)
-		);
 	}
 
 	function onProjectDragStart(e, project) {
@@ -396,13 +355,14 @@
 		const targetGroup = target.groupId || null;
 
 		if (draggedGroup === null && targetGroup === null) {
-			// Both ungrouped → create new group with both
+			// Both ungrouped → create a new group containing both
 			await createGroupFromProjects(dragged, target);
 			return;
 		}
-		// Reorder within same section, or move dragged into target's section at target's position
-		const updates = computeReorder(dragged, target);
-		await applyReorder(updates);
+		// Same section → no-op (ordering is alphabetical, not drag-driven)
+		if (draggedGroup === targetGroup) return;
+		// Cross-section → dragged joins the target's section
+		await assignProjectToGroup(dragged.id, targetGroup);
 	}
 
 	function onGroupHeaderDragOver(e, groupKey) {
@@ -424,18 +384,7 @@
 		const dragged = projects.find((p) => p.id === draggedId);
 		if (!dragged) return;
 		if ((dragged.groupId || null) === groupId) return;
-		// Place at end of section
-		const sectionItems = projects
-			.filter((p) => (p.groupId || null) === groupId && p.id !== dragged.id)
-			.sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id);
-		const newSortOrder = sectionItems.length;
-		await assignProjectToGroup(dragged.id, groupId, newSortOrder);
-		const updated = projects.find((p) => p.id === dragged.id);
-		if (updated) {
-			updated.groupId = groupId;
-			updated.sortOrder = newSortOrder;
-			projects = [...projects];
-		}
+		await assignProjectToGroup(dragged.id, groupId);
 	}
 
 	function splitEmails(value) {

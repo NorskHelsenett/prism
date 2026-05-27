@@ -124,7 +124,9 @@
 		}
 		return {
 			ungrouped,
-			groups: Array.from(byId.values()).sort((a, b) => a.group.sortOrder - b.group.sortOrder)
+			groups: Array.from(byId.values()).sort((a, b) =>
+				a.group.name.localeCompare(b.group.name)
+			)
 		};
 	});
 
