@@ -58,68 +58,137 @@ var (
 	scopedURLRegex = regexp.MustCompile(`/api/vulnerability/(\d+)/attachments/([a-zA-Z0-9\-]+)`)
 )
 
-// MigrateAllAttachments walks every vulnerability and normalises any image
-// references in the evidence + remediation fields. Idempotent: running it
-// twice produces the same result. With dryRun=true nothing is written; the
-// report is filled in as if changes were applied.
+// migrationCandidatePredicate selects only vulnerabilities whose markdown
+// could possibly contain something the normaliser would rewrite. The
+// previous implementation loaded every JSONData row into memory on every
+// boot — and on prod-sized data that was ~1 GiB of RSS for a no-op pass.
+// SQLite executes this LIKE-scan against the JSON column without
+// deserialising into Go, so it's cheap even without an index.
+const migrationCandidatePredicate = `vulnerability LIKE '%/api/blob/%' OR vulnerability LIKE '%data:image%'`
+
+// migrationBatchSize caps the number of JSONData rows held in memory at any
+// one time during the batched scan. Each batch runs in its own transaction
+// so we don't accumulate gorm session state across the whole walk.
+const migrationBatchSize = 50
+
+// MigrateAllAttachments walks vulnerabilities whose evidence/remediation
+// markdown contains legacy /api/blob/<id> URLs or inline data: URIs and
+// rewrites them into per-vuln attachment rows. Idempotent: running it twice
+// is a near-no-op (just the predicate scan + a small cleanup pass).
+//
+// With dryRun=true nothing is written; the report reflects what would change.
 func MigrateAllAttachments(dryRun bool) (MigrationReport, error) {
 	var report MigrationReport
 
-	var vulns []JSONData
-	if err := db.Find(&vulns).Error; err != nil {
-		return report, fmt.Errorf("load vulnerabilities: %w", err)
+	// Pre-scan: cheap COUNT to decide whether to do any row loading at all.
+	// Idempotent boots return early here — bounded memory + bounded time.
+	var candidateCount int64
+	if err := db.Model(&JSONData{}).Where(migrationCandidatePredicate).Count(&candidateCount).Error; err != nil {
+		return report, fmt.Errorf("count migration candidates: %w", err)
 	}
-	report.VulnerabilitiesScanned = len(vulns)
-
-	if dryRun {
-		// No writes, so no transaction needed. The walk is read-only.
-		for _, v := range vulns {
-			v := v
-			changed, err := normaliseVulnAttachments(db, &v, &report, true)
-			if err != nil {
-				report.Errors = append(report.Errors, fmt.Sprintf("vuln %d: %v", v.ID, err))
-				continue
-			}
-			if changed {
-				report.VulnerabilitiesChanged++
-			}
+	if candidateCount == 0 {
+		if !dryRun {
+			pruneOrphanLegacyImages(&report)
 		}
 		return report, nil
 	}
 
-	// Commit mode: do every write under a single transaction. Each attachment
-	// insert otherwise auto-commits (and with _synchronous=FULL costs one
-	// fsync), which turns into hours on prod-sized data. One transaction =
-	// one fsync at the end.
-	total := len(vulns)
-	const heartbeatEvery = 10
-	err := db.Transaction(func(tx *gorm.DB) error {
-		for i, v := range vulns {
-			v := v
-			changed, err := normaliseVulnAttachments(tx, &v, &report, false)
-			if err != nil {
-				report.Errors = append(report.Errors, fmt.Sprintf("vuln %d: %v", v.ID, err))
-			} else if changed {
-				report.VulnerabilitiesChanged++
-				if err := tx.Save(&v).Error; err != nil {
-					report.Errors = append(report.Errors,
-						fmt.Sprintf("save vuln %d: %v", v.ID, err))
+	if dryRun {
+		var batch []JSONData
+		err := db.Where(migrationCandidatePredicate).
+			FindInBatches(&batch, migrationBatchSize, func(_ *gorm.DB, _ int) error {
+				report.VulnerabilitiesScanned += len(batch)
+				for i := range batch {
+					v := batch[i]
+					changed, err := normaliseVulnAttachments(db, &v, &report, true)
+					if err != nil {
+						report.Errors = append(report.Errors, fmt.Sprintf("vuln %d: %v", v.ID, err))
+						continue
+					}
+					if changed {
+						report.VulnerabilitiesChanged++
+					}
 				}
-			}
-			if (i+1)%heartbeatEvery == 0 || i+1 == total {
-				log.Printf("attachment migration: %d/%d vulns processed (rewritten=%d, legacy converted=%d, data-uris converted=%d)",
-					i+1, total,
+				return nil
+			}).Error
+		if err != nil {
+			return report, fmt.Errorf("dry-run scan: %w", err)
+		}
+		return report, nil
+	}
+
+	// Commit mode: one transaction per batch. We still amortise fsyncs across
+	// migrationBatchSize inserts/updates without holding the entire walk's
+	// state in memory.
+	var batch []JSONData
+	err := db.Where(migrationCandidatePredicate).
+		FindInBatches(&batch, migrationBatchSize, func(_ *gorm.DB, batchNumber int) error {
+			processed := report.VulnerabilitiesScanned
+			report.VulnerabilitiesScanned += len(batch)
+			return db.Transaction(func(tx *gorm.DB) error {
+				for i := range batch {
+					v := batch[i]
+					changed, err := normaliseVulnAttachments(tx, &v, &report, false)
+					if err != nil {
+						report.Errors = append(report.Errors, fmt.Sprintf("vuln %d: %v", v.ID, err))
+						continue
+					}
+					if changed {
+						report.VulnerabilitiesChanged++
+						if err := tx.Save(&v).Error; err != nil {
+							report.Errors = append(report.Errors,
+								fmt.Sprintf("save vuln %d: %v", v.ID, err))
+						}
+					}
+				}
+				log.Printf("attachment migration: batch %d done (%d cumulative; rewritten=%d, legacy converted=%d, data-uris converted=%d)",
+					batchNumber, processed+len(batch),
 					report.VulnerabilitiesChanged,
 					report.LegacyBlobsConverted,
 					report.DataURIsConverted)
-			}
-		}
-		return nil
-	})
+				return nil
+			})
+		}).Error
 	if err != nil {
-		return report, fmt.Errorf("migration transaction: %w", err)
+		return report, fmt.Errorf("migration walk: %w", err)
 	}
+
+	pruneOrphanLegacyImages(&report)
 	return report, nil
+}
+
+// pruneOrphanLegacyImages clears the legacy image_data table when no
+// vulnerability markdown references /api/blob/ anymore. The migration has
+// already copied every referenced row's bytes into vulnerability_attachments,
+// so the remaining rows are guaranteed to be orphans. This reverses the
+// "database doubled" symptom observed on prod after the v1 migration left
+// the legacy rows behind as a safety net.
+func pruneOrphanLegacyImages(report *MigrationReport) {
+	var stillReferenced int64
+	if err := db.Model(&JSONData{}).Where("vulnerability LIKE '%/api/blob/%'").Count(&stillReferenced).Error; err != nil {
+		report.Errors = append(report.Errors, fmt.Sprintf("count legacy refs: %v", err))
+		return
+	}
+	if stillReferenced > 0 {
+		log.Printf("attachment migration: %d vuln(s) still reference /api/blob/ — keeping legacy image_data for diagnosis", stillReferenced)
+		return
+	}
+	var legacyRows int64
+	if err := db.Model(&ImageData{}).Count(&legacyRows).Error; err != nil {
+		report.Errors = append(report.Errors, fmt.Sprintf("count legacy rows: %v", err))
+		return
+	}
+	if legacyRows == 0 {
+		return
+	}
+	// Unscoped().Delete drops the rows hard (no soft-delete tombstone). They
+	// were never accessed through any route that respects gorm.DeletedAt
+	// anyway — image_data has no model-level filtering on it.
+	if err := db.Unscoped().Where("1 = 1").Delete(&ImageData{}).Error; err != nil {
+		report.Errors = append(report.Errors, fmt.Sprintf("prune legacy: %v", err))
+		return
+	}
+	log.Printf("attachment migration: pruned %d orphan image_data rows", legacyRows)
 }
 
 // MigrateVulnAttachments runs the same normalisation as the batch migration
@@ -306,42 +375,48 @@ func RegenerateAllProxies() (RegenReport, error) {
 	var report RegenReport
 	maxEdge := EffectiveAttachmentMaxEdge()
 
-	var attachments []VulnerabilityAttachment
-	if err := db.Find(&attachments).Error; err != nil {
-		return report, fmt.Errorf("load attachments: %w", err)
+	// Count up front so the report's Total is accurate; the prior
+	// db.Find(&attachments) loaded every blob's bytes into Go memory
+	// simultaneously, which was the other plausible source of the
+	// ~1 GiB RSS spike on prod.
+	var total int64
+	if err := db.Model(&VulnerabilityAttachment{}).Count(&total).Error; err != nil {
+		return report, fmt.Errorf("count attachments: %w", err)
 	}
-	report.Total = len(attachments)
+	report.Total = int(total)
 
-	err := db.Transaction(func(tx *gorm.DB) error {
-		for i, a := range attachments {
-			a := a
-			if AttachmentKind(a.Mime) != "image" || len(a.OriginalData) == 0 {
-				report.Skipped++
-				continue
+	const batchSize = 25
+	var batch []VulnerabilityAttachment
+	err := db.FindInBatches(&batch, batchSize, func(_ *gorm.DB, batchNumber int) error {
+		return db.Transaction(func(tx *gorm.DB) error {
+			for i := range batch {
+				a := batch[i]
+				if AttachmentKind(a.Mime) != "image" || len(a.OriginalData) == 0 {
+					report.Skipped++
+					continue
+				}
+				proxy, proxyMime, err := EncodeAttachmentProxy(a.OriginalData, maxEdge)
+				if err != nil {
+					report.Errors = append(report.Errors,
+						fmt.Sprintf("attachment %d (key=%s): %v", a.ID, a.Key, err))
+					continue
+				}
+				if err := tx.Model(&VulnerabilityAttachment{}).
+					Where("id = ?", a.ID).
+					Updates(map[string]any{"proxy_data": proxy, "proxy_mime": proxyMime}).Error; err != nil {
+					report.Errors = append(report.Errors,
+						fmt.Sprintf("attachment %d: update: %v", a.ID, err))
+					continue
+				}
+				report.Regenerated++
 			}
-			proxy, proxyMime, err := EncodeAttachmentProxy(a.OriginalData, maxEdge)
-			if err != nil {
-				report.Errors = append(report.Errors,
-					fmt.Sprintf("attachment %d (key=%s): %v", a.ID, a.Key, err))
-				continue
-			}
-			if err := tx.Model(&VulnerabilityAttachment{}).
-				Where("id = ?", a.ID).
-				Updates(map[string]any{"proxy_data": proxy, "proxy_mime": proxyMime}).Error; err != nil {
-				report.Errors = append(report.Errors,
-					fmt.Sprintf("attachment %d: update: %v", a.ID, err))
-				continue
-			}
-			report.Regenerated++
-			if (i+1)%10 == 0 || i+1 == report.Total {
-				log.Printf("proxy regen: %d/%d processed (regenerated=%d, errors=%d)",
-					i+1, report.Total, report.Regenerated, len(report.Errors))
-			}
-		}
-		return nil
-	})
+			log.Printf("proxy regen: batch %d done (regenerated=%d, skipped=%d, errors=%d)",
+				batchNumber, report.Regenerated, report.Skipped, len(report.Errors))
+			return nil
+		})
+	}).Error
 	if err != nil {
-		return report, fmt.Errorf("regen transaction: %w", err)
+		return report, fmt.Errorf("regen walk: %w", err)
 	}
 	return report, nil
 }
