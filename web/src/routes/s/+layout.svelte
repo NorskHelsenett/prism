@@ -1,6 +1,6 @@
 <script>
-  import '../../app.css'
   import '@tabler/core/dist/css/tabler.min.css';
+  import '../../app.css';
   import { initializeApiEndpoint, isLoading } from '$lib/stores/configStore';
 	import { onMount } from 'svelte';
   /**

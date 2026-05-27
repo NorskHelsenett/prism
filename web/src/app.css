@@ -57,10 +57,13 @@
   cursor: pointer;
 }
 
-/* Hotfix: Tabler's default negative margin on stacked avatars was clipping them
-   into the previous neighbour. Drop the negative margin and keep just the ring
-   so avatars sit side-by-side instead of overlapping into invisibility. */
+/* Override Tabler's stacked-avatar negative margin. Tabler ships
+   `margin-right: calc(-.5 * var(--tblr-avatar-size)) !important` which
+   pulls each avatar half-way under the previous one — on small avatar
+   sizes that's enough to swallow them entirely. Reset it here, and
+   note that app.css must be imported AFTER tabler.min.css for this
+   !important to win the cascade. */
 .avatar-list-stacked .avatar {
-  /* margin-right: calc(-.5 * var(--tblr-avatar-size))!important; */
+  margin-right: 0 !important;
   box-shadow: var(--tblr-avatar-box-shadow), 0 0 0 2px var(--tblr-card-bg, var(--tblr-bg-surface));
 }

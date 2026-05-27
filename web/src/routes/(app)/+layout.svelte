@@ -1,10 +1,10 @@
 <script>
 	import { run, preventDefault } from 'svelte/legacy';
 
-	import '../../app.css';
 	import { onDestroy, onMount } from 'svelte';
 	import { initializeApiEndpoint, isLoading, isAuthenticated } from '$lib/stores/configStore';
 	import '@tabler/core/dist/css/tabler.min.css';
+	import '../../app.css';
 	import { theme } from '$lib/stores/themeStore';
 	import { page } from '$app/stores';
 	import { derived } from 'svelte/store';
