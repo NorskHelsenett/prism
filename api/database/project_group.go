@@ -34,6 +34,16 @@ func DeleteProjectGroup(id uint) error {
 }
 
 func SetProjectGroup(projectID uint, groupID *uint, sortOrder *int) error {
+	// Verify the project exists (and isn't soft-deleted) before issuing the
+	// update so the caller can distinguish "not found" from "DB error".
+	var count int64
+	if err := db.Model(&ProjectData{}).Where("id = ?", projectID).Count(&count).Error; err != nil {
+		return err
+	}
+	if count == 0 {
+		return gorm.ErrRecordNotFound
+	}
+
 	updates := map[string]interface{}{
 		"group_id": groupID,
 	}

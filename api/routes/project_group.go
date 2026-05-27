@@ -12,6 +12,10 @@ import (
 	"prism/database"
 )
 
+func notFound(c *gin.Context, msg string) {
+	c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": msg})
+}
+
 type projectGroupRequest struct {
 	Name      string `json:"name"`
 	Color     string `json:"color"`
@@ -125,7 +129,7 @@ func PatchProjectGroupAssignment(c *gin.Context) {
 	idStr := c.Param("projectID")
 	id, err := strconv.ParseUint(idStr, 10, strconv.IntSize)
 	if err != nil {
-		c.AbortWithStatus(http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid project ID"})
 		return
 	}
 	var req assignProjectGroupRequest
@@ -134,8 +138,13 @@ func PatchProjectGroupAssignment(c *gin.Context) {
 		return
 	}
 	if err := database.SetProjectGroup(uint(id), req.GroupID, req.SortOrder); err != nil {
-		log.Printf("SetProjectGroup(%d) failed: %v", id, err)
-		c.AbortWithStatus(http.StatusNotFound)
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			notFound(c, "Project not found")
+			return
+		}
+		// Keep failures opaque to the client; log internally for diagnosis.
+		log.Printf("SetProjectGroup(%d, groupId=%v, sortOrder=%v) failed: %v", id, req.GroupID, req.SortOrder, err)
+		notFound(c, "Project not found")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Project group assignment updated"})

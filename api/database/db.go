@@ -260,6 +260,9 @@ func InitDB() {
 	db.AutoMigrate(&UserData{})
 	db.AutoMigrate(&ProjectData{})
 	db.AutoMigrate(&ProjectGroup{})
+	if err := EnsureProjectColumns(); err != nil {
+		log.Printf("EnsureProjectColumns failed: %v", err)
+	}
 	db.AutoMigrate(&EventQueue{})
 	db.AutoMigrate(&Settings{})
 	db.AutoMigrate(&AuditLog{})
