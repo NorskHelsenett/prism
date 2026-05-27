@@ -193,8 +193,8 @@ let severityData = $state({
         <div class="datagrid-item">
           <div class="datagrid-title">Client Email</div>
           <div class="datagrid-content">
-            {#each project.ClientEmail.split(',') as email (email)}
-              <Avatar email={email.trim()} option={{ showName: false }}/>
+            {#each (project.ClientEmail || '').split(',').map(e => e.trim()).filter(Boolean) as email (email)}
+              <Avatar email={email} option={{ showName: false }}/>
             {/each}
           </div>
         </div>
@@ -202,8 +202,8 @@ let severityData = $state({
         <div class="datagrid-item">
           <div class="datagrid-title">Assigned Hackers</div>
           <div class="datagrid-content">
-            {#each project.HackerName.split(',') as email (email)}
-              <Avatar email={email.trim()} option={{ showName: false }}/>
+            {#each (project.HackerName || '').split(',').map(e => e.trim()).filter(Boolean) as email (email)}
+              <Avatar email={email} option={{ showName: false }}/>
             {/each}
           </div>
         </div>

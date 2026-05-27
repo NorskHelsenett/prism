@@ -35,6 +35,18 @@ type ProjectData struct {
 	ClientEmail  string
 	HackerName   string
 	IsBugBounty  bool
+	StartDate    string `gorm:"type:date"`
+	EndDate      string `gorm:"type:date"`
+	Color        string
+	GroupID      *uint `gorm:"index"`
+	SortOrder    int   `gorm:"default:0"`
+}
+
+type ProjectGroup struct {
+	gorm.Model
+	Name      string `gorm:"not null"`
+	Color     string
+	SortOrder int `gorm:"default:0"`
 }
 
 type Subscriber struct {
@@ -247,6 +259,7 @@ func InitDB() {
 	db.AutoMigrate(&JSONData{})
 	db.AutoMigrate(&UserData{})
 	db.AutoMigrate(&ProjectData{})
+	db.AutoMigrate(&ProjectGroup{})
 	db.AutoMigrate(&EventQueue{})
 	db.AutoMigrate(&Settings{})
 	db.AutoMigrate(&AuditLog{})

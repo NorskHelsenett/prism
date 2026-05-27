@@ -12,6 +12,29 @@
 	let editMode = $state(false);
 	const { startDate, endDate } = calculateWeek();
 	let loading = $state(true);
+	let projectColorMap = $state({});
+	const STANDALONE_TASK_COLOR = '#94a3b8';
+
+	function getTaskColor(task) {
+		const firstProjectId = task.projects?.[0]?.id;
+		if (firstProjectId && projectColorMap[firstProjectId]) {
+			return projectColorMap[firstProjectId];
+		}
+		return task.color || STANDALONE_TASK_COLOR;
+	}
+
+	async function fetchProjectColors() {
+		try {
+			const result = await Fetch('/api/project/all');
+			const map = {};
+			for (const p of result || []) {
+				if (p.Color) map[p.ID] = p.Color;
+			}
+			projectColorMap = map;
+		} catch (err) {
+			console.error('Error fetching project colors:', err);
+		}
+	}
 
 
 	// Drag and drop state variables
@@ -75,8 +98,8 @@
 			console.error('Error fetching teams or preferences:', error);
 		}
 
-		// Initial fetch of calendar events
-		await fetchCalendarEvents();
+		// Initial fetch of calendar events and project colors
+		await Promise.all([fetchCalendarEvents(), fetchProjectColors()]);
 
 		document.addEventListener('mouseup', handleMouseUp);
 		document.addEventListener('mousemove', handleDragMove);
@@ -1414,7 +1437,7 @@
 	));
 	run(() => {
 		if (!reload) {
-			fetchCalendarEvents().then(() => {
+			Promise.all([fetchCalendarEvents(), fetchProjectColors()]).then(() => {
 				// Update visible days after calendar events are loaded
 				setTimeout(updateVisibleDays, 100);
 			});
@@ -1628,7 +1651,7 @@
 													class:task-compact={compact && taskHasOverlap}
 													onclick={(e) => handleTaskClick(e, calendar)}
 													onmousedown={(e) => handleTaskDragStart(e, calendar, member)}
-													style="width: {calendar.width}; background-color: {calendar.color}; top: {taskTop}px; height: {taskHeight}px; display: flex; justify-content: flex-start; align-items: center; gap: 8px; padding: 0 8px; cursor: pointer; color: white;"
+													style="width: {calendar.width}; background-color: {getTaskColor(calendar)}; top: {taskTop}px; height: {taskHeight}px; display: flex; justify-content: flex-start; align-items: center; gap: 8px; padding: 0 8px; cursor: pointer; color: white;"
 												>
 													<div
 														class="resize-handle-left"

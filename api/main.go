@@ -202,6 +202,12 @@ func main() {
 
 		apiRoutes.POST("/project", routes.HandleProjectPost)
 		apiRoutes.GET("/project/all", routes.GetProjects)
+
+		apiRoutes.GET("/project-group", routes.GetProjectGroups)
+		apiRoutes.POST("/project-group", routes.PostProjectGroup)
+		apiRoutes.PUT("/project-group/:groupID", routes.PutProjectGroup)
+		apiRoutes.DELETE("/project-group/:groupID", routes.DeleteProjectGroupHandler)
+		apiRoutes.PATCH("/project/:projectID/group", routes.PatchProjectGroupAssignment)
 		apiRoutes.GET("/vulnerability/search", routes.SearchVulnerabilities)
 
 		apiRoutes.GET("/profile/all", routes.GetAllProfilesEmailOnly)

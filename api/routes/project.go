@@ -4,14 +4,32 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
 	"prism/database"
-	"strconv"
 )
+
+// normalizeDateOnly returns a YYYY-MM-DD string for plain dates and clears values
+// that represent "unset" — including Go's time.Time zero (0001-01-01...) which can
+// leak in if a date was once serialized as a time.Time before this column became a
+// plain string field.
+func normalizeDateOnly(value string) string {
+	if value == "" {
+		return ""
+	}
+	if len(value) >= 10 {
+		prefix := value[:10]
+		if prefix == "0001-01-01" {
+			return ""
+		}
+		return prefix
+	}
+	return value
+}
 
 func GetProjects(c *gin.Context) {
 	isGlobal, _ := c.Get("isGlobalProject")
@@ -36,21 +54,52 @@ func GetProjects(c *gin.Context) {
 		}
 	}
 
-	// Map database projects to simplified Project struct
-	projects := make([]struct {
-		ID          uint      `json:"ID"`
-		Name        string    `json:"ProjectName"`
-		CreatedAt   time.Time `json:"CreatedAt"`
-		IsBugBounty bool      `json:"IsBugBounty"`
-		ClientEmail string    `json:"ClientEmail"`
-	}, len(dbProjects))
+	rangeStart := c.Query("startDate")
+	rangeEnd := c.Query("endDate")
 
-	for i, p := range dbProjects {
-		projects[i].ID = p.ID
-		projects[i].Name = p.ProjectName
-		projects[i].CreatedAt = p.CreatedAt
-		projects[i].IsBugBounty = p.IsBugBounty
-		projects[i].ClientEmail = p.ClientEmail
+	type projectSummary struct {
+		ID           uint      `json:"ID"`
+		Name         string    `json:"ProjectName"`
+		CreatedAt    time.Time `json:"CreatedAt"`
+		IsBugBounty  bool      `json:"IsBugBounty"`
+		ClientEmail  string    `json:"ClientEmail"`
+		HackerName   string    `json:"HackerName"`
+		SlackChannel string    `json:"SlackChannel"`
+		StartDate    string    `json:"StartDate"`
+		EndDate      string    `json:"EndDate"`
+		Color        string    `json:"Color"`
+		GroupID      *uint     `json:"GroupID"`
+		SortOrder    int       `json:"SortOrder"`
+	}
+
+	projects := make([]projectSummary, 0, len(dbProjects))
+	for _, p := range dbProjects {
+		startDate := normalizeDateOnly(p.StartDate)
+		endDate := normalizeDateOnly(p.EndDate)
+		if rangeStart != "" && rangeEnd != "" {
+			// Only return projects whose [StartDate, EndDate] overlaps the requested range.
+			// Projects with missing dates are excluded from windowed queries.
+			if startDate == "" || endDate == "" {
+				continue
+			}
+			if endDate < rangeStart || startDate > rangeEnd {
+				continue
+			}
+		}
+		projects = append(projects, projectSummary{
+			ID:           p.ID,
+			Name:         p.ProjectName,
+			CreatedAt:    p.CreatedAt,
+			IsBugBounty:  p.IsBugBounty,
+			ClientEmail:  p.ClientEmail,
+			HackerName:   p.HackerName,
+			SlackChannel: p.SlackChannel,
+			StartDate:    startDate,
+			EndDate:      endDate,
+			Color:        p.Color,
+			GroupID:      p.GroupID,
+			SortOrder:    p.SortOrder,
+		})
 	}
 
 	c.JSON(http.StatusOK, projects)
@@ -82,6 +131,9 @@ func HandleProjectPut(c *gin.Context) {
 		return
 	}
 
+	updatedProjectData.StartDate = normalizeDateOnly(updatedProjectData.StartDate)
+	updatedProjectData.EndDate = normalizeDateOnly(updatedProjectData.EndDate)
+
 	err = database.UpdateProject(&updatedProjectData)
 	if err != nil {
 		if !errors.Is(err, database.ErrNotFound) && !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -99,6 +151,9 @@ func HandleProjectPost(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	projectData.StartDate = normalizeDateOnly(projectData.StartDate)
+	projectData.EndDate = normalizeDateOnly(projectData.EndDate)
 
 	if err := database.CreateProject(&projectData); err != nil {
 		log.Printf("CreateProject failed: %v", err)
@@ -144,11 +199,17 @@ func GetProject(c *gin.Context) {
 
 	// Map database project to simplified Project struct
 	project := struct {
-		ID   uint   `json:"ID"`
-		Name string `json:"ProjectName"`
+		ID        uint   `json:"ID"`
+		Name      string `json:"ProjectName"`
+		StartDate string `json:"StartDate"`
+		EndDate   string `json:"EndDate"`
+		Color     string `json:"Color"`
 	}{
-		ID:   dbProject.ID,
-		Name: dbProject.ProjectName,
+		ID:        dbProject.ID,
+		Name:      dbProject.ProjectName,
+		StartDate: normalizeDateOnly(dbProject.StartDate),
+		EndDate:   normalizeDateOnly(dbProject.EndDate),
+		Color:     dbProject.Color,
 	}
 
 	c.JSON(http.StatusOK, project)

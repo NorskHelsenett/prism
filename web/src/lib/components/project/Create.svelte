@@ -29,6 +29,14 @@
   let isBugBounty = $state(false);
   let isPersisting = $state(false)
   let hackers = $state([]);
+  let startDate = $state('');
+  let endDate = $state('');
+  let color = $state('#206bc4');
+
+  const projectColors = [
+    '#206bc4', '#4299e1', '#2fb344', '#f76707', '#d63939',
+    '#ae3ec9', '#fbbf24', '#64748b', '#0ca678', '#6366f1'
+  ];
 
   function closeModal() {
     showModal = false;
@@ -58,6 +66,9 @@
       clientEmail: clientEmailToPost,
       hackerName: hackerName.map(item => item.email).join(','),
       isBugBounty: isBugBounty,
+      startDate: startDate,
+      endDate: endDate,
+      color: color,
       ID: model?.ID
     };
     const formData = new FormData();
@@ -92,6 +103,13 @@
       isPersisting = false
     }
   }
+  function toDateOnly(value) {
+    if (!value || typeof value !== 'string') return '';
+    const prefix = value.slice(0, 10);
+    if (prefix === '0001-01-01') return '';
+    return prefix;
+  }
+
   onMount(async () => {
     if (model != null) {
       projectName = model.ProjectName;
@@ -101,6 +119,9 @@
       hackerNameInitilized = splitEmails(model.HackerName);
       isBugBounty = model.IsBugBounty;
       hackers = hackerNameInitilized.map((email, index) => ({ id: index, email }));
+      startDate = toDateOnly(model.StartDate);
+      endDate = toDateOnly(model.EndDate);
+      color = model.Color || '#206bc4';
     }
   });
 
@@ -148,6 +169,50 @@
                           >This project is part of the bug bounty program</span
                         >
                       </label>
+                    </div>
+                    <div class="row mb-3 g-2">
+                      <div class="col-md-6">
+                        <label for="startDate" class="form-label">Start Date</label>
+                        <input
+                          id="startDate"
+                          type="date"
+                          class="form-control"
+                          bind:value={startDate}
+                        />
+                      </div>
+                      <div class="col-md-6">
+                        <label for="endDate" class="form-label">End Date</label>
+                        <input
+                          id="endDate"
+                          type="date"
+                          class="form-control"
+                          bind:value={endDate}
+                        />
+                      </div>
+                      <small class="form-hint mt-1">
+                        Project lifespan, shown on the planning calendar and list.
+                      </small>
+                    </div>
+                    <div class="mb-3">
+                      <label class="form-label">Color</label>
+                      <div class="color-swatches">
+                        {#each projectColors as swatch}
+                          <button
+                            type="button"
+                            class="color-swatch"
+                            class:selected={color === swatch}
+                            style="background-color: {swatch}"
+                            aria-label="Pick color {swatch}"
+                            onclick={() => (color = swatch)}
+                          ></button>
+                        {/each}
+                        <input
+                          type="color"
+                          class="color-swatch color-custom"
+                          bind:value={color}
+                          aria-label="Custom color"
+                        />
+                      </div>
                     </div>
                     <div class="mb-3">
                       <label class="form-label">Slack Channel</label>
@@ -274,3 +339,35 @@
     </div>
   {/snippet}
 </Modal>
+
+<style>
+  .color-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .color-swatch {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 0 0 1px var(--tblr-border-color);
+    cursor: pointer;
+    padding: 0;
+    transition: transform 0.1s ease;
+  }
+  .color-swatch:hover {
+    transform: scale(1.1);
+  }
+  .color-swatch.selected {
+    box-shadow: 0 0 0 2px var(--tblr-primary);
+    transform: scale(1.1);
+  }
+  .color-custom {
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .color-custom::-webkit-color-swatch-wrapper { padding: 0; }
+  .color-custom::-webkit-color-swatch { border: none; border-radius: 50%; }
+</style>
