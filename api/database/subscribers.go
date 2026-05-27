@@ -14,39 +14,69 @@ import (
 // key; without it, the take-over semantics cannot be enforced.
 var ErrSubscriberMissingEndpoint = errors.New("push subscription is missing endpoint")
 
-// UpsertSubscriber binds the given push endpoint to the given email, taking it
-// over from any other email that previously owned it.
+// ErrSubscriberEndpointClaimed is returned when a user tries to register a
+// push endpoint that's already bound to a different email and the request
+// can't prove ownership of the underlying browser subscription (its
+// p256dh/auth keys don't match what we have on file). Refusing the take-over
+// here is what stops an attacker who only knows an endpoint URL from
+// deregistering or hijacking somebody else's subscription. The legitimate
+// shared-browser path still works because the same browser returns the same
+// keys from pushManager.getSubscription on every login.
+var ErrSubscriberEndpointClaimed = errors.New("push endpoint is registered to another account")
+
+// UpsertSubscriber binds the given push endpoint to the given email, taking
+// it over from any other email that previously owned it — but only when the
+// caller can prove possession of the underlying browser subscription by
+// presenting the same p256dh/auth keys.
 //
-// This is the core fix for the cross-user push delivery bug: a single browser
-// only ever has one row in subscribers, owned by the user who most recently
-// enabled push on that device. When Alice subscribes on browser B then logs
-// out, Alice's row keeps endpoint X. If Bob then logs in on browser B and
-// enables push, browser B returns the same endpoint X (pushManager is per
-// browser-installation, not per user), and this upsert rebinds X to Bob.
-// Alice's row for X is gone — server pushes for Alice no longer land on
-// Bob's screen.
+// This is the core fix for the cross-user push delivery bug: a single
+// browser only ever has one row in subscribers, owned by the user who most
+// recently enabled push on that device. When Alice subscribes on browser B
+// then logs out, Alice's row keeps endpoint X. If Bob then logs in on
+// browser B and enables push, browser B returns the same endpoint X *and*
+// the same keys from pushManager.getSubscription (push endpoints are
+// per-browser-installation, and so are their keys). The keys-match check
+// lets this legitimate take-over through, while blocking an attacker who
+// only knows the endpoint URL (or knows the URL but not the keys) from
+// deregistering or hijacking the victim's subscription.
 //
 // We don't use ON CONFLICT here because GORM/sqlite ON CONFLICT requires a
-// UNIQUE index, and the migration installs that index. We instead delete any
-// other row owning this endpoint inside a single transaction, then upsert by
-// (email, endpoint).
+// UNIQUE index, and the migration installs that index. We do the conflict
+// check + take-over + upsert inside a single transaction.
 func UpsertSubscriber(email string, sub webpush.Subscription, userAgent string) error {
 	endpoint := strings.TrimSpace(sub.Endpoint)
 	if endpoint == "" {
 		return ErrSubscriberMissingEndpoint
 	}
 	return db.Transaction(func(tx *gorm.DB) error {
-		// Take-over: delete any row pointing at this endpoint that doesn't
-		// belong to the current user. Same email/endpoint is left in place and
-		// re-fetched below so the upsert is a single round-trip.
-		if err := tx.Unscoped().
-			Where("endpoint = ? AND email <> ?", endpoint, email).
-			Delete(&Subscriber{}).Error; err != nil {
+		// First check whether a different email already owns this endpoint.
+		// Take-over is only permitted when the requesting browser can present
+		// the same p256dh+auth pair we have on file — that's the proof the
+		// browser actually holds the underlying push subscription. Without
+		// the check, any authed user could yank another user's row by
+		// knowing only the endpoint URL.
+		var conflict Subscriber
+		err := tx.Where("endpoint = ? AND email <> ?", endpoint, email).
+			First(&conflict).Error
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
+		}
+		if err == nil {
+			if sub.Keys.P256dh == "" || sub.Keys.Auth == "" ||
+				sub.Keys.P256dh != conflict.P256dh ||
+				sub.Keys.Auth != conflict.Auth {
+				return ErrSubscriberEndpointClaimed
+			}
+			// Keys match — rebind the row to the new owner.
+			if err := tx.Unscoped().
+				Where("endpoint = ? AND email <> ?", endpoint, email).
+				Delete(&Subscriber{}).Error; err != nil {
+				return err
+			}
 		}
 
 		var existing Subscriber
-		err := tx.Where("email = ? AND endpoint = ?", email, endpoint).
+		err = tx.Where("email = ? AND endpoint = ?", email, endpoint).
 			First(&existing).Error
 		now := time.Now().UTC()
 		if errors.Is(err, gorm.ErrRecordNotFound) {
