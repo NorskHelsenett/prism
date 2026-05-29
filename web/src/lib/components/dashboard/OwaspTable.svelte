@@ -20,7 +20,7 @@
 
     vulns.forEach(item => {
       const category = item.Vulnerability.category || '';
-      const criticality = item.Vulnerability.criticality.toLowerCase();
+      const criticality = (item.Vulnerability?.criticality || '').toLowerCase();
 
       if (!(category in results)) {
         results[category] = { information: 0, low: 0, medium: 0, high: 0, critical: 0 };

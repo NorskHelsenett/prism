@@ -32,7 +32,7 @@
 
     apiResponse.forEach(item => {
       const category = item.Vulnerability.category || '';
-      const criticality = item.Vulnerability.criticality.toLowerCase();
+      const criticality = (item.Vulnerability?.criticality || '').toLowerCase();
 
       if (!(category in results)) {
         results[category] = { information: 0, low: 0, medium: 0, high: 0, critical: 0 };
@@ -87,7 +87,7 @@ let severityData = $state({
     severityData = { critical: 0, high: 0, medium: 0, low: 0, information: 0 };
 
     vulnerabilities.forEach(vulnerability => {
-      const criticality = vulnerability.Vulnerability.criticality.toLowerCase();
+      const criticality = (vulnerability.Vulnerability?.criticality || '').toLowerCase();
 
       if (criticality === 'critical') {
         severityData.critical += 1;
