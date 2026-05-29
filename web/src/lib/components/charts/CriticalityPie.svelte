@@ -102,7 +102,7 @@
       severityData = { critical: 0, high: 0, medium: 0, low: 0, information: 0 };
 
       vulnerabilities.forEach(vulnerability => {
-        const criticality = vulnerability.Vulnerability.criticality.toLowerCase();
+        const criticality = (vulnerability.Vulnerability?.criticality || '').toLowerCase();
 
         if (criticality === 'critical') {
           severityData.critical += 1;

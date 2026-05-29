@@ -23,36 +23,33 @@ let checked = $state(0)
   /** @type {Props} */
   let { markdown = $bindable(""), writeAccess = false } = $props();
 
-// Add a custom renderer for tables
-renderer.table = function(header, body) {
-  return `<table class="">
-    <thead>${header}</thead>
-    ${body}</table>`;
+// marked v5+ passes token objects (not strings) to renderer methods.
+// Task-list checkboxes are emitted as a separate `checkbox` token inside the
+// list item's tokens; suppress the built-in one so our custom input is the only one.
+renderer.checkbox = function() {
+  return '';
 };
 
-renderer.listitem = function(text) {
-  if (text.includes("type=\"checkbox\"") == false){
-    return "<li>" + text + "</li>"
+renderer.listitem = function(item) {
+  const body = this.parser.parse(item.tokens);
+  if (!item.task) {
+    return `<li>${body}</li>`;
   }
-  // Assuming the text is in the format: '[ ] Item text' or '[x] Item text'
-  const isChecked = text.includes('checked');
-  if (isChecked) {
-    checked++
+  if (item.checked) {
+    checked++;
   }
   const isDisabled = !writeAccess; // Modify as needed
-  let itemText = text.replace(/^\[\s?x?\]\s?/, '');
-  itemText = itemText.replace(/<input [^>]*type="checkbox"[^>]*>\s*/, '');
-
   return `
     <label class="form-check" data-index="${todo++}">
-      <input class="form-check-input" type="checkbox" ${isChecked ? 'checked' : ''} ${isDisabled ? 'disabled' : ''}>
-      <span class="form-check-label">${itemText}</span>
+      <input class="form-check-input" type="checkbox" ${item.checked ? 'checked' : ''} ${isDisabled ? 'disabled' : ''}>
+      <span class="form-check-label">${body.trim()}</span>
     </label>
   `;
 };
 
 // Add a custom renderer for links
-renderer.link = function(href, title, text) {
+renderer.link = function({ href, title, tokens }) {
+  const text = this.parser.parseInline(tokens);
   // Ensure the href has the 'https://' prefix
   if (!href.startsWith('http://') && !href.startsWith('https://')) {
     href = 'https://' + href;
