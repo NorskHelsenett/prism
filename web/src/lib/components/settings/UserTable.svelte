@@ -22,9 +22,10 @@
   let userFilter = $state("active");
 
   onMount(async () => {
-    users = await Fetch("/api/settings/users/all")
+    const fetchedUsers = await Fetch("/api/settings/users/all")
+    showDropdown = fetchedUsers.map(() => false)
+    users = fetchedUsers
     roles = await Fetch("/api/settings/roles-list")
-    showDropdown = users.map(() => false)
   });
 
   let filteredUsers = $derived(users.filter(user => {
