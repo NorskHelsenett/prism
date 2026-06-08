@@ -9,7 +9,7 @@
    */
 
   /** @type {Props} */
-  let { show = $bindable(false), children } = $props();
+  let { show = $bindable(), children } = $props();
   let dropdownElement = $state();
 
   function handleClickOutside(event) {
