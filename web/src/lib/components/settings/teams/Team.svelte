@@ -27,7 +27,7 @@
 
   export async function fetchTeams() {
     const response = await Fetch("/api/settings/teams");
-    teams = response;
+    teams = (Array.isArray(response) ? response : []).map(team => ({ ...team, showDropdown: false }));
   }
 
   function openNewTeamModal() {
@@ -100,7 +100,7 @@
       method: 'PUT',
       body: JSON.stringify(team)
     });
-    teams = teams.map(t => t.ID === updatedTeam.ID ? { ...updatedTeam, members: updatedTeam.members || '[]' } : t);
+    teams = teams.map(t => t.ID === updatedTeam.ID ? { ...updatedTeam, members: updatedTeam.members || '[]', showDropdown: false } : t);
   }
 
   async function updateMembersFromAvatarList(event, team) {
