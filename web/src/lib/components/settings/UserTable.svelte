@@ -24,6 +24,7 @@
   onMount(async () => {
     users = await Fetch("/api/settings/users/all")
     roles = await Fetch("/api/settings/roles-list")
+    showDropdown = users.map(() => false)
   });
 
   let filteredUsers = $derived(users.filter(user => {
@@ -137,7 +138,7 @@ function formatDate(dateString) {
     mfaStatus = null
     loadingMfaStatus = true
     showInfoModal = true
-    showDropdown = [false]
+    showDropdown = users.map(() => false)
 
     const status = await Fetch(`/api/settings/session/mfa-status/${user.email}`);
     if (status && !status.error) {
@@ -159,7 +160,7 @@ function formatDate(dateString) {
       : `Activate ${user.name}? The user will be able to log in again.`;
     toggleDialogButton = isActive ? "Deactivate" : "Activate";
     showToggleModal = true;
-    showDropdown = [false];
+    showDropdown = users.map(() => false);
   }
 
   async function toggleUserActivePrompted() {
