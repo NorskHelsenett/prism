@@ -259,7 +259,7 @@ function formatDate(dateString) {
             </div>
           </td>
           <td class="text-secondary" title={formatDateText(user.CreatedAt)}><i class="ti ti-license"></i> {formatDate(user.CreatedAt)}</td>
-          <td class="text-secondary" title={formatDateText(user.UpdatedAt)}>{formatDate(user.UpdatedAt)}</td>
+          <td class="text-secondary" title={user.lastSeen ? formatDateText(user.lastSeen) : ''}>{user.lastSeen ? formatDate(user.lastSeen) : 'Never'}</td>
           <td data-label="Role">
             <select class="form-select" disabled={userIsAdmin(user.role)} onchange={updateUser(user)}>
               {#each roles as role}

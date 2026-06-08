@@ -74,13 +74,16 @@ func (s *SessionStore) SaveOrUpdateUserData(name string, email string, picture s
 	// First, try to find the existing user data by email
 	result := s.DB.Where("email = ?", email).First(&existingUserData)
 
+	now := time.Now()
+
 	// Handle the case where the user data might not exist
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		// If not found, create a new record
 		newUserData := &database.UserData{
-			Name:    name,
-			Email:   email,
-			Picture: picture,
+			Name:     name,
+			Email:    email,
+			Picture:  picture,
+			LastSeen: &now,
 		}
 		return s.DB.Create(newUserData).Error
 	} else if result.Error != nil {
@@ -93,6 +96,7 @@ func (s *SessionStore) SaveOrUpdateUserData(name string, email string, picture s
 	if picture != "" {
 		existingUserData.Picture = picture
 	}
+	existingUserData.LastSeen = &now
 	return s.DB.Save(&existingUserData).Error
 }
 

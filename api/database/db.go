@@ -169,6 +169,7 @@ type UserData struct {
 	Role          string         `json:"role" gorm:"default:visitor"`
 	Title         string         `json:"title" gorm:"default:My title"`
 	Active        *bool          `json:"active" gorm:"default:true"`
+	LastSeen      *time.Time     `json:"lastSeen"`
 	OTPSecret     string         `json:"-"`
 	Notifications datatypes.JSON `json:"-"`
 	Settings      datatypes.JSON `json:"-"`
@@ -1477,13 +1478,16 @@ func SaveOrUpdateUserData(name string, email string, picture string) error {
 	// First, try to find the existing user data by email
 	result := db.Where("email = ?", email).First(&existingUserData)
 
+	now := time.Now()
+
 	// Handle the case where the user data might not exist
 	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 		// If not found, create a new record
 		newUserData := &UserData{
-			Name:    name,
-			Email:   email,
-			Picture: picture,
+			Name:     name,
+			Email:    email,
+			Picture:  picture,
+			LastSeen: &now,
 		}
 		return db.Create(newUserData).Error
 	} else if result.Error != nil {
@@ -1496,6 +1500,7 @@ func SaveOrUpdateUserData(name string, email string, picture string) error {
 	if picture != "" {
 		existingUserData.Picture = picture
 	}
+	existingUserData.LastSeen = &now
 	return db.Save(&existingUserData).Error
 }
 
