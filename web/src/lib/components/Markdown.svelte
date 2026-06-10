@@ -5,6 +5,7 @@ import DOMPurify from 'dompurify'
 import { marked } from 'marked';
 import { createEventDispatcher } from 'svelte';
 import { onMount } from 'svelte';
+import { isVideoSource } from '$lib/utils/inlineImage';
 
 const dispatch = createEventDispatcher();
 
@@ -50,8 +51,10 @@ renderer.listitem = function(item) {
 // Add a custom renderer for links
 renderer.link = function({ href, title, tokens }) {
   const text = this.parser.parseInline(tokens);
-  // Ensure the href has the 'https://' prefix
-  if (!href.startsWith('http://') && !href.startsWith('https://')) {
+  // Site-relative hrefs (scoped attachment URLs like
+  // /api/vulnerability/<id>/attachments/<key>) pass through untouched;
+  // everything else gets the 'https://' prefix when missing a scheme.
+  if (!href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('/') && !href.startsWith('#')) {
     href = 'https://' + href;
   }
   const target = '_blank'; // Open link in a new tab
@@ -60,17 +63,30 @@ renderer.link = function({ href, title, tokens }) {
   return `<a href="${href}" target="${target}" rel="${rel}" ${titleAttr}>${text}</a>`;
 };
 
+// Media renderer: markdown image syntax doubles as the video embed — scoped
+// attachment URLs carry a cosmetic .mp4/.webm suffix so the right element can
+// be picked here without a metadata round-trip.
+renderer.image = function({ href, text }) {
+  const escape = (s) => String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  if (isVideoSource(href)) {
+    return `<video controls preload="metadata" src="${escape(href)}" title="${escape(text)}"></video>`;
+  }
+  return `<img src="${escape(href)}" alt="${escape(text)}">`;
+};
+
 // Configure DOMPurify to allow 'target' and 'rel' attributes on 'a' tags
 const domPurifyConfig = {
   ALLOWED_TAGS: [
     'a', 'b', 'i', 'em', 'strong', 'p', 'ul', 'ol', 'li',
-    'table', 'thead', 'tbody', 'tr', 'th', 'td', 'img',
+    'table', 'thead', 'tbody', 'tr', 'th', 'td', 'img', 'video',
     'label', 'input', 'span', 'div', 'hr', 'h1', 'h2',
     'h3', 'h4', 'h5', 'h6', 'pre', 'code', 'blockquote'
   ],
   ALLOWED_ATTR: [
     'href', 'title', 'target', 'rel', 'class', 'src',
-    'alt', 'data-index', 'type', 'checked', 'disabled'
+    'alt', 'data-index', 'type', 'checked', 'disabled',
+    'controls', 'preload'
   ]
 };
 
@@ -165,6 +181,14 @@ function updateText(index) {
   }
 
   :global(.markdown-content img){
+    border-radius: 5px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 100%;
+  }
+
+  :global(.markdown-content video){
     border-radius: 5px;
     display: block;
     margin-left: auto;

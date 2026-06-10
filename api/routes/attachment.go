@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -100,11 +101,9 @@ func PostAttachment(c *gin.Context) {
 		return
 	}
 
-	mime := database.SniffAttachmentMime(data)
-	if !database.AllowedAttachmentMime(mime) || !database.VerifyAttachmentMagic(mime, data) {
-		c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": "unsupported file type"})
-		return
-	}
+	// Sniffed from the bytes and magic-verified; anything unrecognised is
+	// stored as application/octet-stream and only served as a forced download.
+	mime := database.ResolveAttachmentMime(data)
 
 	var (
 		proxy     []byte
@@ -177,21 +176,31 @@ func GetAttachmentProxy(c *gin.Context) {
 	if !ok {
 		return
 	}
-	key := c.Param("key")
-	att, err := database.GetAttachment(vulnID, key)
+	att, err := database.GetAttachment(vulnID, attachmentKeyParam(c))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
-	// Images: serve the downscaled WebP proxy. Documents (pdf, txt, json):
-	// serve the original — magic-byte verified on upload, MIME is on the
-	// whitelist, nosniff prevents the browser from upgrading it into a
-	// script context.
+	// Images: serve the downscaled WebP proxy. Videos: stream the original
+	// with Range support so <video> can seek. Documents (pdf, txt, json):
+	// serve the original inline — magic-byte verified on upload, MIME is on
+	// the whitelist, nosniff prevents the browser from upgrading it into a
+	// script context. Generic files: forced download, never rendered.
 	if att.IsImage() {
 		writeBytesWithETag(c, att.ProxyMime, att.ProxyData, "")
 		return
 	}
-	writeBytesWithETag(c, att.Mime, att.OriginalData, filenameForDownload(att))
+	switch database.AttachmentKind(att.Mime) {
+	case "video":
+		serveBytesWithRanges(c, att.Mime, att.OriginalData, filenameForDownload(att))
+	case "file":
+		c.Header("X-Content-Type-Options", "nosniff")
+		c.Header("Cache-Control", "private, no-cache, must-revalidate")
+		c.Header("Content-Disposition", `attachment; filename="`+filenameForDownload(att)+`"`)
+		c.Data(http.StatusOK, "application/octet-stream", att.OriginalData)
+	default:
+		writeBytesWithETag(c, att.Mime, att.OriginalData, filenameForDownload(att))
+	}
 }
 
 // GetAttachmentOriginal serves the untouched original. Only the writer/finder
@@ -208,8 +217,7 @@ func GetAttachmentOriginal(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
-	key := c.Param("key")
-	att, err := database.GetAttachment(vulnID, key)
+	att, err := database.GetAttachment(vulnID, attachmentKeyParam(c))
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
@@ -236,12 +244,22 @@ func DeleteAttachmentHandler(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
-	key := c.Param("key")
-	if err := database.DeleteAttachment(vulnID, key); err != nil {
+	if err := database.DeleteAttachment(vulnID, attachmentKeyParam(c)); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
 	c.Status(http.StatusNoContent)
+}
+
+// attachmentKeyParam returns :key with any cosmetic extension stripped
+// (URLs carry e.g. ".mp4" so the markdown renderer can pick <video> without
+// a metadata round-trip; stored keys are UUIDs and never contain dots).
+func attachmentKeyParam(c *gin.Context) string {
+	key := c.Param("key")
+	if i := strings.IndexByte(key, '.'); i > 0 {
+		key = key[:i]
+	}
+	return key
 }
 
 func attachmentSummary(vulnID uint, a *database.VulnerabilityAttachment) gin.H {
@@ -251,12 +269,33 @@ func attachmentSummary(vulnID uint, a *database.VulnerabilityAttachment) gin.H {
 	}
 	return gin.H{
 		"key":       a.Key,
-		"url":       "/api/vulnerability/" + strconv.FormatUint(uint64(vulnID), 10) + "/attachments/" + a.Key,
+		"url":       "/api/vulnerability/" + strconv.FormatUint(uint64(vulnID), 10) + "/attachments/" + a.Key + database.AttachmentURLSuffix(a.Mime),
 		"filename":  a.Filename,
 		"mime":      displayMime,
 		"kind":      database.AttachmentKind(a.Mime),
 		"createdAt": a.CreatedAt.UTC().Format(time.RFC3339),
 	}
+}
+
+// serveBytesWithRanges streams with HTTP Range support (video seeking) plus
+// the same nosniff/private-revalidation posture as writeBytesWithETag.
+// http.ServeContent handles Range, If-Range and If-None-Match (via the ETag
+// header set below).
+func serveBytesWithRanges(c *gin.Context, mime string, data []byte, downloadName string) {
+	sum := sha256.Sum256(data)
+	etag := `"` + hex.EncodeToString(sum[:]) + `"`
+
+	c.Header("X-Content-Type-Options", "nosniff")
+	c.Header("Cache-Control", "private, no-cache, must-revalidate")
+	c.Header("ETag", etag)
+	if downloadName != "" {
+		c.Header("Content-Disposition", `inline; filename="`+downloadName+`"`)
+	}
+	if mime == "" {
+		mime = "application/octet-stream"
+	}
+	c.Header("Content-Type", mime)
+	http.ServeContent(c.Writer, c.Request, "", time.Time{}, bytes.NewReader(data))
 }
 
 // writeBytesWithETag streams the response with ETag + private revalidation
@@ -317,6 +356,14 @@ func filenameForDownload(a *database.VulnerabilityAttachment) string {
 		ext = ".gif"
 	case "image/webp":
 		ext = ".webp"
+	case "video/mp4":
+		ext = ".mp4"
+	case "video/webm":
+		ext = ".webm"
+	case "application/zip":
+		ext = ".zip"
+	case "application/x-gzip":
+		ext = ".gz"
 	}
 	return a.Key + ext
 }
