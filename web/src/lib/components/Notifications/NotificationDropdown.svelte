@@ -1,97 +1,20 @@
 <script>
-  import { run, preventDefault } from 'svelte/legacy';
+  import { preventDefault } from 'svelte/legacy';
 
-  import { onDestroy, onMount } from 'svelte';
+  import { onMount } from 'svelte';
   import { clickOutside } from '../clickOutside.js';
-  import { userStore } from '$lib/userStore.js';
-  import { goto } from '$app/navigation';
   import { slide } from 'svelte/transition'
   import NotificationButton from "$lib/components/Notifications/NotificationButton.svelte";
-	import NotificationsListItem from './NotificationsListItem.svelte';
-	import { Fetch } from '$lib/fetchUtil.js';
-	import { toast } from 'svelte-sonner';
+  import NotificationsListItem from './NotificationsListItem.svelte';
+  import { notifications, unreadCount, markAllRead, openNotification } from '$lib/stores/notificationStore.js';
 
-/**
- * Notification structure as received from server.
- * @typedef {Object} Notification
- * @property {number} id - Unique row id used for mark-as-read.
- * @property {string} who - The identifier of the user who triggered the notification.
- * @property {string} what - A description of the notification event.
- * @property {boolean} read - Whether the notification has been read.
- * @property {string} where - The location associated with the notification event.
- * @property {string} when - The timestamp of when the notification was created.
- */
-
-
-  /**
-   * @typedef {Object} Props
-   * @property {Notification[]} [notifications] - Global array to store notifications.
-   */
-
-  /** @type {Props} */
-  let { notifications = $bindable([]) } = $props();
+  // The list renders straight from the store — delivery, toasts and cross-tab
+  // sync live in notificationStore.js (fed by the per-user SSE stream). The
+  // in-app list is NOT gated on browser push permission: push is an optional
+  // extra channel, offered below the list while the user hasn't decided yet.
   let notificationPermission = $state("default");
 
-  // Cursor used by the toast diff: anything strictly newer than this on a
-  // subsequent poll fires a toast. Initialised to the most recent timestamp
-  // already in the list when the component mounts, so we don't spam toasts
-  // for backlog the user already saw.
-  /** @type {string | null} */
-  let lastSeenWhen = $state(null);
-  let primed = $state(false);
-
-  /**
-   * @param {string | null} acc
-   * @param {Notification} n
-   * @returns {string | null}
-   */
-  function pickNewer(acc, n) {
-    if (!n.when) return acc;
-    if (!acc) return n.when;
-    return new Date(n.when) > new Date(acc) ? n.when : acc;
-  }
-
-  function renderToasts() {
-    if (!Array.isArray(notifications)) return;
-    if (!primed) {
-      /** @type {string | null} */
-      let max = null;
-      for (const n of notifications) max = pickNewer(max, n);
-      lastSeenWhen = max;
-      primed = true;
-      return;
-    }
-    const fresh = notifications.filter(n =>
-      n.read === false &&
-      (lastSeenWhen === null || new Date(n.when) > new Date(lastSeenWhen))
-    );
-    if (fresh.length === 0) return;
-    fresh.forEach(async newNotification => {
-      let label = newNotification.who;
-      try {
-        const userData = await Fetch(`/api/profile/${newNotification.who}`);
-        if (userData?.name) label = userData.name;
-      } catch (_) { /* fall back to the raw identifier */ }
-      toast.info(`${label} — ${newNotification.what}`, {
-        action: {
-          label: 'Show',
-          onClick: () => openAction(newNotification)
-        }
-      });
-    });
-    /** @type {string | null} */
-    let max = lastSeenWhen;
-    for (const n of fresh) max = pickNewer(max, n);
-    lastSeenWhen = max;
-  }
-
-  function sortNotifications() {
-    notifications = notifications.sort((a, b) => new Date(b.when) - new Date(a.when));
-  }
-
-  onMount(async () => {
-    sortNotifications();
-    renderToasts();
+  onMount(() => {
     if ('Notification' in window) {
       notificationPermission = Notification.permission;
     }
@@ -107,50 +30,19 @@
       isHidden = true;
   }
 
-  let user = {
-      image: "",
-      role: "visitor",
-      name: ""
-  }
-
-  // Subscribe to the user store
-  const unsubscribe = userStore.subscribe(storeUser => {
-      if (!storeUser.loading) {
-          user.image = storeUser.picture;
-          user.role = storeUser.role;
-          user.name = storeUser.name;
-      }
-  });
-
-  onDestroy(() => unsubscribe());
-
   function handlePermissionChange(event) {
     notificationPermission = event.detail.notificationPermission;
   }
 
   async function openAction(notification){
-    await Fetch(`/api/notification/${notification.id}/read`, { method: "PUT" });
-    notification.read = true;
-    // The server only stores paths in `where` so navigating to it can't
-    // redirect off-site.
-    await goto(notification.where);
+    await openNotification(notification);
     closeDropdown();
   }
 
-  async function markAllRead() {
-    // Switched from DELETE /api/notification to PUT /api/notification/read-all
-    // so clearing the badge no longer destroys history.
-    await Fetch("/api/notification/read-all", { method: "PUT" });
-    notifications = notifications.map(n => ({ ...n, read: true }));
+  async function markAllReadAction() {
+    await markAllRead();
     setTimeout(closeDropdown, 1000);
   }
-
-  run(() => {
-    if (notifications) {
-      sortNotifications();
-      renderToasts();
-    }
-  });
 </script>
 
   <a
@@ -177,7 +69,7 @@
       d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"
     ></path><path d="M9 17v1a3 3 0 0 0 6 0v-1"></path></svg
   >
-  {#if notifications?.some(f => f.read === false) || notificationPermission == 'default'}
+  {#if $unreadCount > 0}
     <span class="badge bg-red"></span>
   {/if}
 </a>
@@ -189,22 +81,21 @@
     transition:slide
 >
 
-  {#if notificationPermission == 'granted'}
-  {#if notifications?.length > 0}
+  {#if $notifications.length > 0}
     <div class=" pl-3 pr-3 pt-1">
       <div class="row">
         <div class="col">
         <label class="form-label text-azure">Notifications</label>
       </div>
       <div class="col-auto">
-        <a href="#" onclick={markAllRead}>Mark all read</a>
+        <a href="#" onclick={markAllReadAction}>Mark all read</a>
       </div>
       </div>
     </div>
   {/if}
   <div class="d-flex justify-content-center flex-wrap">
-    {#if notifications?.length > 0}
-        {#each notifications as notification (notification.id)}
+    {#if $notifications.length > 0}
+        {#each $notifications as notification (notification.id)}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <div class="dropdown-item w-100 cursor-pointer" class:bg-secondary-lt={notification.read == false} onclick={() => openAction(notification)} >
@@ -224,19 +115,10 @@
     </div>
     {/if}
   </div>
-  {:else}
-  <div class="container">
-    <div class="row justify-content-center">
-      <div class="col">
-        <h4 class="text-secondary p-4 pb-0">Enable browser notifications to get the latest news from <strong>PRISM</strong></h4>
-        <div class="text-center">
-          <img src="/img/notification.png" class="w-70" alt="Notification Icon">
-        </div>
-        <div class="text-center">
-          <NotificationButton {notificationPermission} on:permissionChange={handlePermissionChange}/>
-        </div>
-      </div>
-    </div>
+  {#if notificationPermission === 'default'}
+  <div class="pl-3 pr-3 pt-1 text-center border-top">
+    <p class="text-secondary text-small mb-2 mt-2">Enable browser notifications to get the latest news from <strong>PRISM</strong></p>
+    <NotificationButton {notificationPermission} on:permissionChange={handlePermissionChange}/>
   </div>
   {/if}
 </div>
@@ -254,12 +136,6 @@
   }
   .z-1{
     z-index: 1;
-  }
-  .pb-0{
-    padding-bottom: 0;
-  }
-  .w-70{
-    width: 70%;
   }
   #background{
     position: absolute;

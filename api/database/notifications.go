@@ -9,15 +9,17 @@ import (
 	"gorm.io/gorm"
 )
 
-// CreateNotification inserts one row into notifications. This is a single
-// INSERT — there is no read-modify-write — so two dispatchers can race to
-// write notifications for the same user without losing data, which was the
-// failure mode of the old UserData.Notifications JSON column.
-func CreateNotification(recipientEmail string, n models.Notification) error {
+// CreateNotification inserts one row into notifications and returns the
+// stored row in wire form (id and createdAt populated) so the dispatcher can
+// stream it to connected clients. This is a single INSERT — there is no
+// read-modify-write — so two dispatchers can race to write notifications for
+// the same user without losing data, which was the failure mode of the old
+// UserData.Notifications JSON column.
+func CreateNotification(recipientEmail string, n models.Notification) (models.Notification, error) {
 	if recipientEmail == "" {
 		// Defensive — the dispatcher already filters empties, but cheap to
 		// short-circuit rather than insert a row no one can read.
-		return nil
+		return models.Notification{}, nil
 	}
 	row := Notification{
 		RecipientEmail:  recipientEmail,
@@ -30,9 +32,9 @@ func CreateNotification(recipientEmail string, n models.Notification) error {
 		CreatedAt:       time.Now().UTC(),
 	}
 	if err := db.Create(&row).Error; err != nil {
-		return err
+		return models.Notification{}, err
 	}
-	return nil
+	return row.Wire(), nil
 }
 
 // GetNotifications returns the most recent notifications for one user. The

@@ -118,6 +118,7 @@ func main() {
 	{
 		apiRoutes.GET("/notification/publicKey", routes.GetNotificationPublicKey)
 		apiRoutes.GET("/notification", routes.GetNotificationsHandler)
+		apiRoutes.GET("/notification/events", routes.StreamNotificationsHandler)
 		apiRoutes.DELETE("/notification", routes.DeleteNotificationsHandler)
 		apiRoutes.PUT("/notification/read-all", routes.MarkAllReadHandler)
 		apiRoutes.PUT("/notification/:id/read", routes.MarkNotificationReadHandler)

@@ -10,7 +10,7 @@ import (
 func TestCreateNotification_InsertsRow(t *testing.T) {
 	defer setupNotificationsTestDB(t)()
 
-	if err := CreateNotification("alice@x", models.Notification{
+	if _, err := CreateNotification("alice@x", models.Notification{
 		Kind:  models.NotificationKindNewVuln,
 		Who:   "bob@x",
 		What:  "New vuln",
@@ -39,7 +39,7 @@ func TestCreateNotification_InsertsRow(t *testing.T) {
 
 func TestCreateNotification_EmptyRecipientIsNoop(t *testing.T) {
 	defer setupNotificationsTestDB(t)()
-	if err := CreateNotification("", models.Notification{What: "ghost"}); err != nil {
+	if _, err := CreateNotification("", models.Notification{What: "ghost"}); err != nil {
 		t.Fatalf("empty recipient should be no-op, got error: %v", err)
 	}
 	var count int64
@@ -54,11 +54,11 @@ func TestCreateNotification_EmptyRecipientIsNoop(t *testing.T) {
 func TestGetNotifications_OnlyReturnsRecipientsRows(t *testing.T) {
 	defer setupNotificationsTestDB(t)()
 	for _, who := range []string{"alice@x", "alice@x", "alice@x"} {
-		if err := CreateNotification(who, models.Notification{What: "alice msg"}); err != nil {
+		if _, err := CreateNotification(who, models.Notification{What: "alice msg"}); err != nil {
 			t.Fatalf("create: %v", err)
 		}
 	}
-	if err := CreateNotification("bob@x", models.Notification{What: "bob msg"}); err != nil {
+	if _, err := CreateNotification("bob@x", models.Notification{What: "bob msg"}); err != nil {
 		t.Fatalf("create bob: %v", err)
 	}
 
@@ -79,7 +79,7 @@ func TestGetNotifications_OnlyReturnsRecipientsRows(t *testing.T) {
 func TestGetNotifications_HonoursLimitAndOrdersDesc(t *testing.T) {
 	defer setupNotificationsTestDB(t)()
 	for i := 0; i < 5; i++ {
-		if err := CreateNotification("alice@x", models.Notification{What: "msg"}); err != nil {
+		if _, err := CreateNotification("alice@x", models.Notification{What: "msg"}); err != nil {
 			t.Fatalf("create: %v", err)
 		}
 	}
@@ -98,7 +98,7 @@ func TestGetNotifications_HonoursLimitAndOrdersDesc(t *testing.T) {
 
 func TestMarkNotificationAsRead_ScopedByRecipient(t *testing.T) {
 	defer setupNotificationsTestDB(t)()
-	if err := CreateNotification("alice@x", models.Notification{What: "for alice"}); err != nil {
+	if _, err := CreateNotification("alice@x", models.Notification{What: "for alice"}); err != nil {
 		t.Fatalf("create: %v", err)
 	}
 	var row Notification
@@ -130,13 +130,13 @@ func TestMarkNotificationAsRead_ScopedByRecipient(t *testing.T) {
 
 func TestMarkAllNotificationsRead_FlipsUnreadOnly(t *testing.T) {
 	defer setupNotificationsTestDB(t)()
-	if err := CreateNotification("alice@x", models.Notification{What: "one"}); err != nil {
+	if _, err := CreateNotification("alice@x", models.Notification{What: "one"}); err != nil {
 		t.Fatalf("create one: %v", err)
 	}
-	if err := CreateNotification("alice@x", models.Notification{What: "two"}); err != nil {
+	if _, err := CreateNotification("alice@x", models.Notification{What: "two"}); err != nil {
 		t.Fatalf("create two: %v", err)
 	}
-	if err := CreateNotification("bob@x", models.Notification{What: "bob"}); err != nil {
+	if _, err := CreateNotification("bob@x", models.Notification{What: "bob"}); err != nil {
 		t.Fatalf("create bob: %v", err)
 	}
 
@@ -162,10 +162,10 @@ func TestMarkAllNotificationsRead_FlipsUnreadOnly(t *testing.T) {
 
 func TestDeleteNotifications_ScopedByRecipient(t *testing.T) {
 	defer setupNotificationsTestDB(t)()
-	if err := CreateNotification("alice@x", models.Notification{What: "a"}); err != nil {
+	if _, err := CreateNotification("alice@x", models.Notification{What: "a"}); err != nil {
 		t.Fatalf("create: %v", err)
 	}
-	if err := CreateNotification("bob@x", models.Notification{What: "b"}); err != nil {
+	if _, err := CreateNotification("bob@x", models.Notification{What: "b"}); err != nil {
 		t.Fatalf("create bob: %v", err)
 	}
 	if err := DeleteNotifications("alice@x"); err != nil {
@@ -194,7 +194,7 @@ func TestCreateNotification_ConcurrentWritesAllPersist(t *testing.T) {
 		i := i
 		go func() {
 			defer wg.Done()
-			_ = CreateNotification("alice@x", models.Notification{
+			_, _ = CreateNotification("alice@x", models.Notification{
 				What: "concurrent",
 				Who:  "bob@x",
 			})
