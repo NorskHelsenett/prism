@@ -101,10 +101,13 @@ func DeleteNotificationsHandler(c *gin.Context) {
 func MarkAllReadHandler(c *gin.Context) {
 	email, _ := c.Get("email")
 	if err := database.MarkAllNotificationsRead(email.(string)); err != nil {
+		// Log internally, respond generically — project policy is to never
+		// surface a 500 to the client.
 		log.Printf("notifications: mark-all-read for %q: %v", email, err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not mark notifications read"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
+	notificationHub.publish(email.(string), NotificationEvent{Type: "notification.readAll"})
 	c.JSON(http.StatusOK, gin.H{"message": "marked read"})
 }
 
@@ -151,6 +154,7 @@ func MarkNotificationReadHandler(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "notification not found"})
 		return
 	}
+	notificationHub.publish(email.(string), NotificationEvent{Type: "notification.read", ID: uint(id)})
 	c.JSON(http.StatusOK, gin.H{"message": "notification marked as read"})
 }
 
@@ -333,14 +337,24 @@ func Dispatch(req DispatchRequest) error {
 		}
 
 		if inAppEnabled(prefs, req.Kind) {
-			if err := database.CreateNotification(recipient, models.Notification{
+			created, err := database.CreateNotification(recipient, models.Notification{
 				Kind:            req.Kind,
 				Who:             req.ActorEmail,
 				What:            req.Body,
 				Where:           req.URL,
 				VulnerabilityID: vulnIDPtr,
-			}); err != nil {
+			})
+			if err != nil {
 				log.Printf("notifications: create in-app for %q: %v", recipient, err)
+			} else {
+				// Stream to the recipient's open tabs. Publishing after the
+				// ACL filter means a revoked user's SSE stream never sees the
+				// event either.
+				notificationHub.publish(recipient, NotificationEvent{
+					Type:         "notification.created",
+					ID:           created.ID,
+					Notification: &created,
+				})
 			}
 		}
 
