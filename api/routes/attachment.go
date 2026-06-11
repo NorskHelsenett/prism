@@ -73,32 +73,23 @@ func canModifyAttachments(c *gin.Context, vuln database.JSONData) bool {
 	return false
 }
 
-// PostAttachment uploads an image attachment for a vulnerability.
-//
-//	POST /api/vulnerability/:findingsID/attachments  (multipart/form-data, field "file")
-func PostAttachment(c *gin.Context) {
-	vuln, vulnID, ok := loadVulnIfReadable(c)
-	if !ok {
-		return
-	}
-	if !canModifyAttachments(c, vuln) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
-		return
-	}
-
+// readAttachmentUpload pulls the multipart "file" field, resolves + verifies
+// the MIME from the bytes, and builds the attachment row (parent IDs are the
+// caller's job). Writes the error response itself when it returns !ok.
+func readAttachmentUpload(c *gin.Context) (*database.VulnerabilityAttachment, bool) {
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, database.MaxAttachmentBytes)
 
 	f, header, err := c.Request.FormFile("file")
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "missing file"})
-		return
+		return nil, false
 	}
 	defer f.Close()
 
 	data, err := io.ReadAll(f)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "could not read file"})
-		return
+		return nil, false
 	}
 
 	// Sniffed from the bytes and magic-verified; anything unrecognised is
@@ -112,28 +103,47 @@ func PostAttachment(c *gin.Context) {
 	if database.AttachmentKind(mime) == "image" {
 		proxy, proxyMime, err = database.EncodeAttachmentProxy(data, database.EffectiveAttachmentMaxEdge())
 		if err != nil {
-			log.Printf("attachment: encode proxy for vuln=%d: %v", vulnID, err)
+			log.Printf("attachment: encode proxy: %v", err)
 			// Same body as the sniff/magic failure path: do not let the
 			// uploader distinguish "rejected at sniff" from "rejected at
 			// decode" — the distinction discloses internal pipeline shape.
 			c.JSON(http.StatusUnsupportedMediaType, gin.H{"error": "unsupported file type"})
-			return
+			return nil, false
 		}
 	}
 
 	emailVal, _ := c.Get("email")
 	email, _ := emailVal.(string)
 
-	att := &database.VulnerabilityAttachment{
-		VulnerabilityID: vulnID,
-		Key:             uuid.New().String(),
-		Filename:        sanitizeAttachmentFilename(header.Filename),
-		Mime:            mime,
-		OriginalData:    data,
-		ProxyData:       proxy,
-		ProxyMime:       proxyMime,
-		UploadedBy:      email,
+	return &database.VulnerabilityAttachment{
+		Key:          uuid.New().String(),
+		Filename:     sanitizeAttachmentFilename(header.Filename),
+		Mime:         mime,
+		OriginalData: data,
+		ProxyData:    proxy,
+		ProxyMime:    proxyMime,
+		UploadedBy:   email,
+	}, true
+}
+
+// PostAttachment uploads an image attachment for a vulnerability.
+//
+//	POST /api/vulnerability/:findingsID/attachments  (multipart/form-data, field "file")
+func PostAttachment(c *gin.Context) {
+	vuln, vulnID, ok := loadVulnIfReadable(c)
+	if !ok {
+		return
 	}
+	if !canModifyAttachments(c, vuln) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
+	}
+
+	att, ok := readAttachmentUpload(c)
+	if !ok {
+		return
+	}
+	att.VulnerabilityID = vulnID
 	if err := database.CreateAttachment(att); err != nil {
 		log.Printf("attachment: persist vuln=%d: %v", vulnID, err)
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "could not save attachment"})
@@ -181,11 +191,15 @@ func GetAttachmentProxy(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
-	// Images: serve the downscaled WebP proxy. Videos: stream the original
-	// with Range support so <video> can seek. Documents (pdf, txt, json):
-	// serve the original inline — magic-byte verified on upload, MIME is on
-	// the whitelist, nosniff prevents the browser from upgrading it into a
-	// script context. Generic files: forced download, never rendered.
+	serveAttachment(c, att)
+}
+
+// serveAttachment streams an attachment by kind. Images: the downscaled WebP
+// proxy. Videos: the original with Range support so <video> can seek.
+// Documents (pdf, txt, json): the original inline — magic-byte verified on
+// upload, MIME on the whitelist, nosniff prevents the browser from upgrading
+// it into a script context. Generic files: forced download, never rendered.
+func serveAttachment(c *gin.Context, att *database.VulnerabilityAttachment) {
 	if att.IsImage() {
 		writeBytesWithETag(c, att.ProxyMime, att.ProxyData, "")
 		return

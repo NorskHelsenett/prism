@@ -8,9 +8,10 @@
  * authoritative on storage shape and generates its own proxy.
  *
  * Videos and other files are too big to round-trip as base64 through the
- * editor and the vulnerability JSON, so they upload straight to the scoped
- * attachment endpoint and the markdown references the returned URL. That
- * requires the vulnerability to already exist (have an ID).
+ * editor and the vulnerability JSON, so they upload straight to a scoped
+ * attachment endpoint (`/api/vulnerability/<id>` for saved vulnerabilities,
+ * `/api/drafts/<id>` for drafts) and the markdown references the returned
+ * URL. On publish the server rewrites draft URLs to vulnerability URLs.
  *
  * Either way the server sniffs + magic-byte verifies the bytes; nothing
  * declared here is trusted for security.
@@ -40,18 +41,19 @@ export function isVideoSource(src) {
 }
 
 /**
- * Upload a file as a scoped vulnerability attachment.
+ * Upload a file as a scoped attachment under the given owner base
+ * (`/api/vulnerability/<id>` or `/api/drafts/<id>`).
  * Uses raw fetch (not the Fetch util) on purpose: the util navigates the
  * whole page to /404 on a 404 response, which must never happen mid-edit.
- * @param {string|number} vulnId
+ * @param {string} base - e.g. `/api/drafts/7`
  * @param {Blob} file
  * @param {string} [name]
  * @returns {Promise<{key: string, url: string, filename: string, mime: string, kind: string}>}
  */
-export async function uploadVulnAttachment(vulnId, file, name) {
+export async function uploadAttachment(base, file, name) {
   const form = new FormData();
   form.append('file', file, name || file.name || 'attachment');
-  const response = await fetch(`${get(apiEndpoint)}/api/vulnerability/${vulnId}/attachments`, {
+  const response = await fetch(`${get(apiEndpoint)}${base}/attachments`, {
     method: 'POST',
     credentials: 'include',
     body: form
@@ -80,13 +82,13 @@ export function attachmentSummaryToMarkdown(summary) {
 }
 
 /**
- * Delete a scoped vulnerability attachment. Raw fetch for the same reason
- * as uploadVulnAttachment. Returns whether the server confirmed the delete.
- * @param {string|number} vulnId
+ * Delete a scoped attachment under the given owner base. Raw fetch for the
+ * same reason as uploadAttachment. Returns whether the server confirmed it.
+ * @param {string} base - e.g. `/api/drafts/7`
  * @param {string} key
  */
-export async function deleteVulnAttachment(vulnId, key) {
-  const response = await fetch(`${get(apiEndpoint)}/api/vulnerability/${vulnId}/attachments/${key}`, {
+export async function deleteAttachment(base, key) {
+  const response = await fetch(`${get(apiEndpoint)}${base}/attachments/${key}`, {
     method: 'DELETE',
     credentials: 'include'
   });
@@ -95,20 +97,20 @@ export async function deleteVulnAttachment(vulnId, key) {
 
 /**
  * Markdown for any pasted/dropped file: images inline as data URIs, videos
- * and other files upload to the scoped attachment endpoint when vulnId is
- * given. Returns null when the file needs an upload but there is no vulnId
- * yet (caller decides the messaging, e.g. "save the finding first").
+ * and other files upload to the scoped attachment endpoint when uploadBase
+ * is given. Returns null when the file needs an upload but no base could be
+ * resolved (caller decides the messaging).
  * @param {Blob} file
- * @param {{vulnId?: string|number, name?: string}} [options]
+ * @param {{uploadBase?: string|null, name?: string}} [options]
  * @returns {Promise<string|null>}
  */
-export async function fileToMarkdown(file, { vulnId, name } = {}) {
+export async function fileToMarkdown(file, { uploadBase, name } = {}) {
   const displayName = name || file.name || 'file';
   if (file.type?.startsWith('image/')) {
     return fileToMarkdownImage(file, displayName);
   }
-  if (!vulnId) return null;
-  const summary = await uploadVulnAttachment(vulnId, file, displayName);
+  if (!uploadBase) return null;
+  const summary = await uploadAttachment(uploadBase, file, displayName);
   return attachmentSummaryToMarkdown(summary);
 }
 

@@ -70,8 +70,11 @@ type VulnerabilityAttachment struct {
 	UpdatedAt time.Time
 	DeletedAt gorm.DeletedAt `gorm:"index"`
 
-	VulnerabilityID uint   `gorm:"index;not null"`
-	Key             string `gorm:"uniqueIndex;size:64;not null"`
+	VulnerabilityID uint `gorm:"index;not null"`
+	// DraftID parents the attachment to a VulnerabilityDraft instead of a
+	// vulnerability (VulnerabilityID stays 0 until publish re-parents it).
+	DraftID uint   `gorm:"index"`
+	Key     string `gorm:"uniqueIndex;size:64;not null"`
 
 	Filename string
 	Mime     string // sniffed + magic-verified; one of attachmentMimeRules
