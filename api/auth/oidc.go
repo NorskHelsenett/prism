@@ -264,8 +264,16 @@ func ExtractResourcePath(c *http.Request) string {
 	if len(nonEmptyParts) > 0 && contains(expectedPrefixes, "/"+nonEmptyParts[0]) {
 		// Sjekker om det er nok deler til å konstruere ønsket sti
 		if len(nonEmptyParts) >= 2 {
+			resource := "/" + nonEmptyParts[1]
+			// Drafts are pre-publication vulnerabilities: they share the
+			// /vulnerability permission so existing roles.yaml deployments
+			// need no new resource entry, and publishing a draft requires
+			// exactly the same grant as POST /api/vulnerability.
+			if resource == "/drafts" {
+				resource = "/vulnerability"
+			}
 			// Returnerer "/api/project" eller tilsvarende basert på den faktiske URL-en
-			return "/" + nonEmptyParts[1]
+			return resource
 		}
 	}
 
