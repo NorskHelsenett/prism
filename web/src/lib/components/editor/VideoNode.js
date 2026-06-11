@@ -1,4 +1,5 @@
 import { Node } from '@tiptap/core';
+import { videoPreviewSrc } from '$lib/utils/inlineImage';
 
 /**
  * Block-level <video> node so inline videos survive the markdown ⇄ HTML
@@ -31,7 +32,10 @@ export const Video = Node.create({
 			const video = document.createElement('video');
 			video.controls = true;
 			video.preload = 'metadata';
-			video.src = node.attrs.src || '';
+			// videoPreviewSrc adds a display-only #t fragment so the browser
+			// paints a poster frame; node attrs keep the clean src.
+			let currentSrc = node.attrs.src || '';
+			video.src = videoPreviewSrc(currentSrc);
 			if (node.attrs.title) video.title = node.attrs.title;
 
 			return {
@@ -43,8 +47,9 @@ export const Video = Node.create({
 				},
 				update(updatedNode) {
 					if (updatedNode.type.name !== 'video') return false;
-					if (updatedNode.attrs.src !== video.getAttribute('src')) {
-						video.src = updatedNode.attrs.src || '';
+					if (updatedNode.attrs.src !== currentSrc) {
+						currentSrc = updatedNode.attrs.src || '';
+						video.src = videoPreviewSrc(currentSrc);
 					}
 					return true;
 				}

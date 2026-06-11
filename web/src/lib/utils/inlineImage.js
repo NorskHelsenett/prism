@@ -41,6 +41,19 @@ export function isVideoSource(src) {
 }
 
 /**
+ * Display src for a <video> element. With preload="metadata" browsers
+ * (Safari in particular) paint no poster frame — the player sits grey until
+ * play. The #t=0.001 media fragment makes them seek and paint the first
+ * frame while still only fetching a chunk. Display-only: never write this
+ * back into markdown or node attrs.
+ * @param {string} src
+ */
+export function videoPreviewSrc(src) {
+  if (!src || src.includes('#') || src.startsWith('data:')) return src;
+  return `${src}#t=0.001`;
+}
+
+/**
  * Upload a file as a scoped attachment under the given owner base
  * (`/api/vulnerability/<id>` or `/api/drafts/<id>`).
  * Uses raw fetch (not the Fetch util) on purpose: the util navigates the

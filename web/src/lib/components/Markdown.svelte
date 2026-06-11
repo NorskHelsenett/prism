@@ -5,7 +5,7 @@ import DOMPurify from 'dompurify'
 import { marked } from 'marked';
 import { createEventDispatcher } from 'svelte';
 import { onMount } from 'svelte';
-import { isVideoSource } from '$lib/utils/inlineImage';
+import { isVideoSource, videoPreviewSrc } from '$lib/utils/inlineImage';
 
 const dispatch = createEventDispatcher();
 
@@ -70,7 +70,7 @@ renderer.image = function({ href, text }) {
   const escape = (s) => String(s ?? '')
     .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   if (isVideoSource(href)) {
-    return `<video controls preload="metadata" src="${escape(href)}" title="${escape(text)}"></video>`;
+    return `<video controls preload="metadata" src="${escape(videoPreviewSrc(href))}" title="${escape(text)}"></video>`;
   }
   return `<img src="${escape(href)}" alt="${escape(text)}">`;
 };
