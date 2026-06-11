@@ -11,6 +11,7 @@
 	import Auditlog from "$lib/components/settings/auditlog.svelte";
 	import { accessLevels } from "$lib/userStore";
 	import UserTable from "$lib/components/settings/UserTable.svelte";
+	import NotificationPrefs from "$lib/components/settings/notificationPrefs.svelte";
 
   let activeComponent = $state(Profile);
 
@@ -38,6 +39,7 @@
           <h4 class="subheader">Business settings</h4>
           <div class="list-group list-group-transparent">
             <a href="#" class:active="{activeComponent === Profile}" class="list-group-item list-group-item-action d-flex align-items-center" onclick={preventDefault(() => show(Profile))}>My Account</a>
+            <a href="#" class:active="{activeComponent === NotificationPrefs}" class="list-group-item list-group-item-action d-flex align-items-center" onclick={preventDefault(() => show(NotificationPrefs))}>Notifications</a>
             <a href="#" class:active="{activeComponent === APIKeys}" class="list-group-item list-group-item-action d-flex align-items-center" onclick={preventDefault(() => show(APIKeys))}>API keys</a>
             {#if $accessLevels["/vulnerability"].write}
             <a href="#" class:active="{activeComponent === ShareDocs}" class="list-group-item list-group-item-action" onclick={preventDefault(() => show(ShareDocs))}>Public Links</a>
