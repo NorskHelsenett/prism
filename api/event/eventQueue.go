@@ -247,6 +247,30 @@ func updateEvent(event database.EventQueue, err error) {
 	}
 }
 
+// commentForEvent picks the comment that plausibly caused this event. The
+// comments trigger fires on every UPDATE of the comments column — including
+// deletions — so an event with no comments left, or whose newest comment
+// clearly predates the event, was a deletion and must not notify anyone.
+// Comment timestamps are server-set (routes.NewComment/UpdateComment), so the
+// comparison is between two server clocks; the tolerance absorbs trigger
+// timestamp granularity. A deletion within the tolerance window of the newest
+// comment still re-notifies — accepted noise for a much rarer case.
+func commentForEvent(event database.EventQueue, comments []models.Comment) (models.Comment, bool) {
+	if len(comments) == 0 {
+		return models.Comment{}, false
+	}
+	last := comments[0]
+	for _, c := range comments {
+		if last.CreatedAt.Before(c.CreatedAt) {
+			last = c
+		}
+	}
+	if event.CreatedAt.Sub(last.CreatedAt) > 2*time.Minute {
+		return models.Comment{}, false
+	}
+	return last, true
+}
+
 func sendCommentsNotification(event database.EventQueue) {
 	if event.Kind != models.NewComment {
 		return
@@ -262,16 +286,17 @@ func sendCommentsNotification(event database.EventQueue) {
 	var comments []models.Comment
 	_ = json.Unmarshal([]byte(vulnerability.Comments), &comments)
 
-	recipients := []string{vulnerability.FoundBy}
-	var lastComment models.Comment
-	if len(comments) > 0 {
-		lastComment = comments[0]
+	lastComment, ok := commentForEvent(event, comments)
+	if !ok {
+		// The comments column changed but the newest comment predates the
+		// event — a deletion, not a new comment. Don't re-notify.
+		updateEvent(event, nil)
+		return
 	}
+
+	recipients := []string{vulnerability.FoundBy}
 	for _, comment := range comments {
 		recipients = append(recipients, comment.UserEmail)
-		if lastComment.CreatedAt.Before(comment.CreatedAt) {
-			lastComment = comment
-		}
 	}
 
 	if finding.ProjectID != nil {
