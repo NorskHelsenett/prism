@@ -33,7 +33,7 @@ prism:
     readOnly: false
     storage: 50Mi
   - name: config-slack
-    mountPath: /var/config
+    mountPath: /var/config/slack.json
     readOnly: true
     subPath: slack.json
     config:
