@@ -109,22 +109,32 @@ export async function deleteAttachment(base, key) {
 }
 
 /**
- * Markdown for any pasted/dropped file: images inline as data URIs, videos
- * and other files upload to the scoped attachment endpoint when uploadBase
- * is given. Returns null when the file needs an upload but no base could be
- * resolved (caller decides the messaging).
+ * Markdown for any pasted/dropped file. Everything uploads to the scoped
+ * attachment endpoint when uploadBase is given, so the markdown references a
+ * stable URL instead of carrying megabytes of base64. Images keep the data:
+ * URI inlining as a fallback when there is no base (notes) or the upload
+ * fails; other files have no fallback — returns null so the caller decides
+ * the messaging.
  * @param {Blob} file
  * @param {{uploadBase?: string|null, name?: string}} [options]
  * @returns {Promise<string|null>}
  */
 export async function fileToMarkdown(file, { uploadBase, name } = {}) {
   const displayName = name || file.name || 'file';
-  if (file.type?.startsWith('image/')) {
+  const isImage = file.type?.startsWith('image/');
+  if (uploadBase) {
+    try {
+      const summary = await uploadAttachment(uploadBase, file, displayName);
+      return attachmentSummaryToMarkdown(summary);
+    } catch (error) {
+      if (!isImage) throw error;
+      console.warn('Attachment upload failed, inlining image instead', error);
+    }
+  }
+  if (isImage) {
     return fileToMarkdownImage(file, displayName);
   }
-  if (!uploadBase) return null;
-  const summary = await uploadAttachment(uploadBase, file, displayName);
-  return attachmentSummaryToMarkdown(summary);
+  return null;
 }
 
 /**
