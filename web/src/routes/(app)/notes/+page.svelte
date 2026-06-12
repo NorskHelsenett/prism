@@ -19,6 +19,7 @@
     remoteUpdatedConflict,
   } from '$lib/stores/notesStore';
   import { Fetch } from '$lib/fetchUtil';
+  import { toast } from 'svelte-sonner';
   import { fileToMarkdownImage } from '$lib/utils/inlineImage';
 
   const pretitle = 'Personal';
@@ -69,13 +70,13 @@
     queueSave($selectedNoteId, md);
   }
 
-  async function handleImagePaste(event) {
+  async function handleFilePaste(event) {
     const blob = event.detail?.blob;
     if (!blob) return;
     await uploadAndInsert(blob, null);
   }
 
-  async function handleImageDrop(event) {
+  async function handleFileDrop(event) {
     const { files, pos } = event.detail || {};
     if (!files?.length) return;
     for (const file of files) {
@@ -84,13 +85,15 @@
   }
 
   async function uploadAndInsert(file, pos) {
+    // Notes have no attachment store, so only images (inlined as data URIs
+    // in the note content) are supported here.
+    if (!file.type?.startsWith('image/')) {
+      toast.error('Only images can be embedded in notes');
+      return;
+    }
     const link = await fileToMarkdownImage(file, file.name || 'image');
     await tick();
-    if (pos != null && editorRef?.insertImageAtPosition) {
-      editorRef.insertImageAtPosition(link, pos);
-    } else if (editorRef?.insertImageAtCursor) {
-      editorRef.insertImageAtCursor(link);
-    }
+    editorRef?.insertAttachment?.(link, pos ?? null);
   }
 
   async function reloadCurrentNote() {
@@ -163,8 +166,8 @@
             minHeight="100%"
             extraExtensions={[TagHighlight]}
             on:change={handleEditorChange}
-            on:imagepaste={handleImagePaste}
-            on:imagedrop={handleImageDrop}
+            on:filepaste={handleFilePaste}
+            on:filedrop={handleFileDrop}
           />
         </div>
       {:else}

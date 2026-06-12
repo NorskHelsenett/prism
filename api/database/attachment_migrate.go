@@ -64,7 +64,7 @@ var (
 // boot — and on prod-sized data that was ~1 GiB of RSS for a no-op pass.
 // SQLite executes this LIKE-scan against the JSON column without
 // deserialising into Go, so it's cheap even without an index.
-const migrationCandidatePredicate = `vulnerability LIKE '%/api/blob/%' OR vulnerability LIKE '%data:image%'`
+const migrationCandidatePredicate = `vulnerability LIKE '%/api/blob/%' OR vulnerability LIKE '%data:%'`
 
 // migrationBatchSize caps the number of JSONData rows held in memory at any
 // one time during the batched scan. Each batch runs in its own transaction
@@ -292,13 +292,14 @@ func normaliseMarkdownReferences(
 				fmt.Sprintf("vuln %d: data URI base64: %v", vulnID, err))
 			return match
 		}
+		// The declared MIME is client-controlled: it only sticks when the
+		// magic bytes confirm it. Otherwise the server re-sniffs the actual
+		// bytes; anything still unrecognised is stored as octet-stream and
+		// only ever served as a forced download.
 		if !AllowedAttachmentMime(mime) || !VerifyAttachmentMagic(mime, bytes) {
-			report.DecodeFailures++
-			report.Errors = append(report.Errors,
-				fmt.Sprintf("vuln %d: data URI MIME %q failed verification", vulnID, mime))
-			return match
+			mime = ResolveAttachmentMime(bytes)
 		}
-		url, err := persistMigrationAttachment(tx, vulnID, foundBy, "inline-image", mime, bytes, dryRun)
+		url, err := persistMigrationAttachment(tx, vulnID, foundBy, "inline-"+AttachmentKind(mime), mime, bytes, dryRun)
 		if err != nil {
 			report.DecodeFailures++
 			report.Errors = append(report.Errors,
@@ -447,7 +448,7 @@ func persistMigrationAttachment(
 		}
 	}
 	key := uuid.New().String()
-	url := "/api/vulnerability/" + strconv.FormatUint(uint64(vulnID), 10) + "/attachments/" + key
+	url := "/api/vulnerability/" + strconv.FormatUint(uint64(vulnID), 10) + "/attachments/" + key + AttachmentURLSuffix(mime)
 	if dryRun {
 		return url, nil
 	}

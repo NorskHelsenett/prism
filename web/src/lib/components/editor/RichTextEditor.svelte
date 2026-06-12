@@ -15,7 +15,9 @@
 	import TaskList from '@tiptap/extension-task-list';
 	import TaskItem from '@tiptap/extension-task-item';
 	import { ImageWithView } from './ImageNodeView.js';
+	import { Video } from './VideoNode.js';
 	import BubbleMenu from '@tiptap/extension-bubble-menu';
+	import { isVideoSource } from '$lib/utils/inlineImage';
 
 	
 	
@@ -76,50 +78,64 @@
 	}
 
 	/**
+	 * Turn a markdown attachment snippet into the matching editor node:
+	 * `![name](src)` becomes an image or video (by source type), `[name](href)`
+	 * becomes a link. Pass pos to insert at a document position (drag-and-drop),
+	 * or null to insert at the cursor.
+	 * @param {string} markdownLink
+	 * @param {number|null} pos
+	 * @returns {boolean} - whether the insertion succeeded
+	 */
+	export function insertAttachment(markdownLink, pos = null) {
+		if (!editor || !markdownLink) return false;
+
+		try {
+			const mediaMatch = markdownLink.match(/^!\[([^\]]*)\]\(([^)]+)\)/);
+			const linkMatch = markdownLink.match(/^\[([^\]]*)\]\(([^)]+)\)/);
+
+			let content;
+			if (mediaMatch) {
+				const [, alt, src] = mediaMatch;
+				content = isVideoSource(src)
+					? { type: 'video', attrs: { src, title: alt } }
+					: { type: 'image', attrs: { src, alt } };
+			} else if (linkMatch) {
+				const [, text, href] = linkMatch;
+				content = {
+					type: 'text',
+					text: text || 'attachment',
+					marks: [{ type: 'link', attrs: { href } }]
+				};
+			} else {
+				return false;
+			}
+
+			if (pos != null) {
+				editor.chain().focus().insertContentAt(pos, content).run();
+			} else {
+				editor.chain().focus().insertContent(content).run();
+			}
+			return true;
+		} catch (err) {
+			console.error('Failed to insert attachment:', err);
+			return false;
+		}
+	}
+
+	/**
 	 * Insert an image markdown at the current cursor position
 	 * @param {string} imageLink - The markdown image link (e.g., "![filename](/api/blob/file)")
 	 * @returns {boolean} - Returns true if insertion was successful
 	 */
 	export function insertImageAtCursor(imageLink) {
-		if (!editor || !imageLink) return false;
-
-		try {
-			const urlMatch = imageLink.match(/!\[([^\]]*)\]\(([^)]+)\)/);
-			if (!urlMatch) return false;
-
-			const [_, alt, src] = urlMatch;
-
-			editor.chain().focus().setImage({ src, alt }).run();
-
-			return true;
-		} catch (err) {
-			console.error('Failed to insert image at cursor:', err);
-			return false;
-		}
+		return insertAttachment(imageLink, null);
 	}
 
 	/**
 	 * Insert an image at a specific document position (for drag-and-drop)
 	 */
 	export function insertImageAtPosition(imageLink, pos) {
-		if (!editor || !imageLink) return false;
-
-		try {
-			const urlMatch = imageLink.match(/!\[([^\]]*)\]\(([^)]+)\)/);
-			if (!urlMatch) return false;
-
-			const [_, alt, src] = urlMatch;
-
-			editor.chain()
-				.focus()
-				.insertContentAt(pos, { type: 'image', attrs: { src, alt } })
-				.run();
-
-			return true;
-		} catch (err) {
-			console.error('Failed to insert image at position:', err);
-			return false;
-		}
+		return insertAttachment(imageLink, pos);
 	}
 
 	/**
@@ -194,6 +210,15 @@
 		}
 	});
 
+	turndownService.addRule('video', {
+		filter: (node) => node.nodeName === 'VIDEO',
+		replacement(content, node) {
+			const src = node.getAttribute('src') || '';
+			const title = node.getAttribute('title') || '';
+			return `![${title}](${src})`;
+		}
+	});
+
 	turndownService.addRule('fencedCodeBlock', {
 		filter: (node) =>
 			node.nodeName === 'PRE' && node.firstChild && node.firstChild.nodeName === 'CODE',
@@ -207,10 +232,25 @@
 
 	// -- Marked: Markdown -> HTML (for initial load) --------------------------
 
+	function escapeAttr(s) {
+		return String(s ?? '')
+			.replace(/&/g, '&amp;')
+			.replace(/"/g, '&quot;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;');
+	}
+
 	marked.use({
 		breaks: true,
 		gfm: true,
 		renderer: {
+			image(token) {
+				const href = token.href || '';
+				if (isVideoSource(href)) {
+					return `<video controls preload="metadata" src="${escapeAttr(href)}" title="${escapeAttr(token.text)}"></video>`;
+				}
+				return `<img src="${escapeAttr(href)}" alt="${escapeAttr(token.text)}">`;
+			},
 			list(token) {
 				let body = '';
 				for (const item of token.items) {
@@ -237,7 +277,11 @@
 	function markdownToHtml(md) {
 		if (!md) return '';
 		return DOMPurify.sanitize(marked.parse(md), {
-			ADD_ATTR: ['data-type', 'data-checked', 'data-annotations', 'data-crop', 'data-rendered-src']
+			ADD_ATTR: ['data-type', 'data-checked', 'data-annotations', 'data-crop', 'data-rendered-src'],
+			// Editor-only: keep data: hrefs on file-attachment links until the
+			// server swaps them for scoped attachment URLs on save. The
+			// read-only viewer (Markdown.svelte) does NOT allow this.
+			ADD_DATA_URI_TAGS: ['a']
 		});
 	}
 
@@ -359,13 +403,21 @@
 			element: element,
 			extensions: [
 				StarterKit.configure({
-					heading: { levels: [1, 2, 3, 4] }
+					heading: { levels: [1, 2, 3, 4] },
+					link: {
+						// Allow data: hrefs so not-yet-saved file attachments
+						// (inlined as data URIs, extracted into per-vuln
+						// attachment rows on save) survive the editor's
+						// markdown ⇄ HTML round-trip.
+						isAllowedUri: (url, ctx) => url?.startsWith('data:') || ctx.defaultValidate(url)
+					}
 				}),
 				Placeholder.configure({ placeholder }),
 				Highlight.configure({ multicolor: false }),
 				TaskList,
 				TaskItem.configure({ nested: true }),
 				ImageWithView,
+				Video,
 				LinkCursorExtension,
 				...extraExtensions,
 				...(editable
@@ -391,18 +443,15 @@
 				handleDrop: (view, event, _slice, moved) => {
 					if (moved) return false;
 
-					const files = event.dataTransfer?.files;
-					if (!files?.length) return false;
-
-					const imageFiles = [...files].filter(f => f.type.startsWith('image/'));
-					if (!imageFiles.length) return false;
+					const files = [...(event.dataTransfer?.files || [])];
+					if (!files.length) return false;
 
 					event.stopPropagation();
 
 					const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
 					const pos = coordinates?.pos ?? view.state.doc.content.size;
 
-					dispatch('imagedrop', { files: imageFiles, pos });
+					dispatch('filedrop', { files, pos });
 
 					return true;
 				},
@@ -410,12 +459,15 @@
 					const clipboardData = event.clipboardData;
 					if (!clipboardData) return false;
 
-					// Check for image file blobs (e.g. screenshot paste)
+					// Check for file blobs (e.g. screenshot paste, copied files)
 					const items = [...clipboardData.items];
 					for (const item of items) {
-						if (item.kind === 'file' && item.type.startsWith('image/')) {
-							dispatch('imagepaste', { blob: item.getAsFile() });
-							return true;
+						if (item.kind === 'file') {
+							const blob = item.getAsFile();
+							if (blob) {
+								dispatch('filepaste', { blob });
+								return true;
+							}
 						}
 					}
 
@@ -435,10 +487,11 @@
 									content: [{ type: 'text', text: textBefore }]
 								});
 							}
-							content.push({
-								type: 'image',
-								attrs: { src: match[2], alt: match[1] }
-							});
+							content.push(
+								isVideoSource(match[2])
+									? { type: 'video', attrs: { src: match[2], title: match[1] } }
+									: { type: 'image', attrs: { src: match[2], alt: match[1] } }
+							);
 							lastIndex = match.index + match[0].length;
 						}
 
@@ -855,6 +908,20 @@
 		border: none;
 		border-top: 1px solid var(--rte-border, #e6e7e9);
 		margin: 1.5rem 0;
+	}
+
+	/* Videos */
+	:global(.editor-wrapper .ProseMirror video) {
+		max-width: 100%;
+		max-height: 500px;
+		border-radius: 5px;
+		margin: 0.5rem auto 0;
+		display: block;
+	}
+
+	:global(.editor-wrapper .ProseMirror video.ProseMirror-selectednode) {
+		outline: 2px solid var(--rte-accent, #0054a6);
+		outline-offset: 2px;
 	}
 
 	/* Images */

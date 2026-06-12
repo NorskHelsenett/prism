@@ -303,6 +303,7 @@ func InitDB() {
 	db.AutoMigrate(&AuditLog{})
 	db.AutoMigrate(&ImageData{})
 	db.AutoMigrate(&VulnerabilityAttachment{})
+	db.AutoMigrate(&VulnerabilityDraft{})
 	db.AutoMigrate(&AssessmentJSON{})
 	db.AutoMigrate(&Subscriber{})
 	db.AutoMigrate(&Notification{})

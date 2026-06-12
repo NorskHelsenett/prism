@@ -236,6 +236,20 @@ func main() {
 
 		apiRoutes.POST("/vulnerability", routes.PostVulnerability)
 
+		// Server-side vulnerability drafts (owner-scoped; no ACL middleware
+		// needed — every handler checks the session email itself).
+		apiRoutes.POST("/drafts", routes.CreateDraftHandler)
+		apiRoutes.GET("/drafts", routes.ListDraftsHandler)
+		apiRoutes.GET("/drafts/:draftID", routes.GetDraftHandler)
+		apiRoutes.PUT("/drafts/:draftID", routes.UpdateDraftHandler)
+		apiRoutes.DELETE("/drafts/:draftID", routes.DeleteDraftHandler)
+		apiRoutes.POST("/drafts/:draftID/publish", routes.PublishDraftHandler)
+		apiRoutes.GET("/drafts/:draftID/attachments", routes.ListDraftAttachmentsHandler)
+		apiRoutes.POST("/drafts/:draftID/attachments", routes.PostDraftAttachment)
+		apiRoutes.GET("/drafts/:draftID/attachments/:key", routes.GetDraftAttachmentProxy)
+		apiRoutes.HEAD("/drafts/:draftID/attachments/:key", routes.GetDraftAttachmentProxy)
+		apiRoutes.DELETE("/drafts/:draftID/attachments/:key", routes.DeleteDraftAttachmentHandler)
+
 		apiRoutes.GET("/settings/teams", routes.GetTeams)
 		apiRoutes.GET("/settings/teams/:id", routes.GetTeam)
 		apiRoutes.POST("/settings/teams", routes.PostTeam)

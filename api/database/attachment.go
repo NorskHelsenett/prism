@@ -18,20 +18,23 @@ import (
 	"gorm.io/gorm"
 )
 
-// MaxAttachmentBytes caps the upload size at 25 MiB. Proxy long-edge is now
-// configurable via the admin setting Settings.AttachmentMaxEdge, with the
-// fallback in DefaultAttachmentMaxEdge.
-const MaxAttachmentBytes = 25 << 20
+// MaxAttachmentBytes caps the upload size at 512 MiB (sized for screen
+// recordings). Proxy long-edge is now configurable via the admin setting
+// Settings.AttachmentMaxEdge, with the fallback in DefaultAttachmentMaxEdge.
+const MaxAttachmentBytes = 512 << 20
 
-// attachmentKind controls whether the file gets a downscaled proxy or is
-// served as-is. Images get a proxy for inline rendering; everything else is
-// served as the original with its real MIME (with nosniff so the browser
-// cannot upgrade content-type into a script context).
+// attachmentKind controls how the bytes are served. Images get a downscaled
+// proxy for inline rendering; videos stream the original with Range support;
+// documents are served inline with their real MIME; generic files are only
+// ever served as a forced download. Everything non-image carries nosniff so
+// the browser cannot upgrade content-type into a script context.
 type attachmentKind int
 
 const (
 	kindImage attachmentKind = iota
+	kindVideo
 	kindDocument
+	kindFile
 )
 
 type mimeRule struct {
@@ -40,13 +43,21 @@ type mimeRule struct {
 }
 
 var attachmentMimeRules = map[string]mimeRule{
-	"image/png":        {kind: kindImage, verify: bytesPrefix([]byte{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A})},
-	"image/jpeg":       {kind: kindImage, verify: bytesPrefix([]byte{0xFF, 0xD8, 0xFF})},
-	"image/gif":        {kind: kindImage, verify: verifyGIF},
-	"image/webp":       {kind: kindImage, verify: verifyWebP},
-	"application/pdf":  {kind: kindDocument, verify: bytesPrefix([]byte("%PDF-"))},
-	"text/plain":       {kind: kindDocument, verify: verifyTextLike},
-	"application/json": {kind: kindDocument, verify: verifyJSON},
+	"image/png":          {kind: kindImage, verify: bytesPrefix([]byte{0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A})},
+	"image/jpeg":         {kind: kindImage, verify: bytesPrefix([]byte{0xFF, 0xD8, 0xFF})},
+	"image/gif":          {kind: kindImage, verify: verifyGIF},
+	"image/webp":         {kind: kindImage, verify: verifyWebP},
+	"video/mp4":          {kind: kindVideo, verify: verifyMP4},
+	"video/webm":         {kind: kindVideo, verify: verifyEBML},
+	"application/pdf":    {kind: kindDocument, verify: bytesPrefix([]byte("%PDF-"))},
+	"text/plain":         {kind: kindDocument, verify: verifyTextLike},
+	"application/json":   {kind: kindDocument, verify: verifyJSON},
+	"application/zip":    {kind: kindFile, verify: bytesPrefix([]byte{'P', 'K'})},
+	"application/x-gzip": {kind: kindFile, verify: bytesPrefix([]byte{0x1F, 0x8B})},
+	// Catch-all for everything the sniffer cannot positively identify. Safe
+	// because kindFile is never served inline: forced download + nosniff means
+	// there is no rendering context for the bytes to abuse.
+	"application/octet-stream": {kind: kindFile},
 }
 
 // VulnerabilityAttachment is an image or document attached to exactly one
@@ -59,8 +70,11 @@ type VulnerabilityAttachment struct {
 	UpdatedAt time.Time
 	DeletedAt gorm.DeletedAt `gorm:"index"`
 
-	VulnerabilityID uint   `gorm:"index;not null"`
-	Key             string `gorm:"uniqueIndex;size:64;not null"`
+	VulnerabilityID uint `gorm:"index;not null"`
+	// DraftID parents the attachment to a VulnerabilityDraft instead of a
+	// vulnerability (VulnerabilityID stays 0 until publish re-parents it).
+	DraftID uint   `gorm:"index"`
+	Key     string `gorm:"uniqueIndex;size:64;not null"`
 
 	Filename string
 	Mime     string // sniffed + magic-verified; one of attachmentMimeRules
@@ -102,8 +116,8 @@ func VerifyAttachmentMagic(mime string, data []byte) bool {
 	return rule.verify(data)
 }
 
-// AttachmentKind classifies the MIME. Returns "image" or "document"; empty if
-// the MIME is not allowed.
+// AttachmentKind classifies the MIME. Returns "image", "video", "document" or
+// "file"; empty if the MIME is not allowed.
 func AttachmentKind(mime string) string {
 	rule, ok := attachmentMimeRules[normaliseMime(mime)]
 	if !ok {
@@ -112,8 +126,46 @@ func AttachmentKind(mime string) string {
 	switch rule.kind {
 	case kindImage:
 		return "image"
+	case kindVideo:
+		return "video"
+	case kindFile:
+		return "file"
 	default:
 		return "document"
+	}
+}
+
+// ResolveAttachmentMime sniffs the bytes and returns the MIME to store. A
+// type only resolves to itself when the magic check confirms it; anything
+// unrecognised (or markup masquerading as text) falls back to
+// application/octet-stream, which is stored as a generic file and only ever
+// served as a forced download.
+func ResolveAttachmentMime(data []byte) string {
+	mime := SniffAttachmentMime(data)
+	if mime != "application/octet-stream" && AllowedAttachmentMime(mime) && VerifyAttachmentMagic(mime, data) {
+		return mime
+	}
+	// net/http only sniffs video/mp4 when an ftyp brand starts with "mp4";
+	// real-world recordings (brands isom/avc1/qt) sniff as octet-stream.
+	// Our own ftyp check covers those.
+	if verifyMP4(data) {
+		return "video/mp4"
+	}
+	return "application/octet-stream"
+}
+
+// AttachmentURLSuffix returns a cosmetic extension appended to scoped
+// attachment URLs so the renderer can pick the right element (<video> vs
+// <img>) without a metadata round-trip. The routes strip it before the key
+// lookup; keys are UUIDs and never contain dots.
+func AttachmentURLSuffix(mime string) string {
+	switch normaliseMime(mime) {
+	case "video/mp4":
+		return ".mp4"
+	case "video/webm":
+		return ".webm"
+	default:
+		return ""
 	}
 }
 
@@ -140,6 +192,17 @@ func verifyGIF(b []byte) bool {
 
 func verifyWebP(b []byte) bool {
 	return len(b) >= 12 && bytes.HasPrefix(b, []byte("RIFF")) && bytes.Equal(b[8:12], []byte("WEBP"))
+}
+
+// verifyMP4 checks for the ISO BMFF "ftyp" box that every MP4 starts with:
+// a 4-byte box size followed by the literal "ftyp".
+func verifyMP4(b []byte) bool {
+	return len(b) >= 12 && bytes.Equal(b[4:8], []byte("ftyp"))
+}
+
+// verifyEBML checks the EBML magic that prefixes WebM (and Matroska) files.
+func verifyEBML(b []byte) bool {
+	return bytes.HasPrefix(b, []byte{0x1A, 0x45, 0xDF, 0xA3})
 }
 
 // verifyTextLike rejects bytes containing NUL or stray control characters,
