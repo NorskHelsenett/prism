@@ -225,6 +225,27 @@ func PostDraftAttachment(c *gin.Context) {
 	c.JSON(http.StatusOK, draftAttachmentSummary(draft.ID, att))
 }
 
+// ListDraftAttachmentsHandler returns the attachment metadata for a draft.
+//
+//	GET /api/drafts/:draftID/attachments
+func ListDraftAttachmentsHandler(c *gin.Context) {
+	draft, ok := loadOwnDraft(c)
+	if !ok {
+		return
+	}
+	list, err := database.ListDraftAttachments(draft.ID)
+	if err != nil {
+		log.Printf("attachment: list draft=%d: %v", draft.ID, err)
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		return
+	}
+	out := make([]gin.H, 0, len(list))
+	for i := range list {
+		out = append(out, draftAttachmentSummary(draft.ID, &list[i]))
+	}
+	c.JSON(http.StatusOK, out)
+}
+
 // GetDraftAttachmentProxy serves a draft attachment with the same kind
 // handling as the vulnerability endpoint.
 //

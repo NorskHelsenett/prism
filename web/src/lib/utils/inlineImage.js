@@ -95,6 +95,22 @@ export function attachmentSummaryToMarkdown(summary) {
 }
 
 /**
+ * List the scoped attachments under the given owner base. Raw fetch for the
+ * same reason as uploadAttachment.
+ * @param {string} base - e.g. `/api/vulnerability/3`
+ * @returns {Promise<Array<{key: string, url: string, filename: string, mime: string, kind: string}>>}
+ */
+export async function listAttachments(base) {
+  const response = await fetch(`${get(apiEndpoint)}${base}/attachments`, {
+    credentials: 'include'
+  });
+  if (!response.ok) {
+    throw new Error(`list attachments failed (${response.status})`);
+  }
+  return await response.json();
+}
+
+/**
  * Delete a scoped attachment under the given owner base. Raw fetch for the
  * same reason as uploadAttachment. Returns whether the server confirmed it.
  * @param {string} base - e.g. `/api/drafts/7`

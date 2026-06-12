@@ -164,6 +164,17 @@ func DraftAttachmentURLPrefix(draftID uint) string {
 	return "/api/drafts/" + strconv.FormatUint(uint64(draftID), 10) + "/attachments/"
 }
 
+// ListDraftAttachments returns a draft's attachments, oldest first.
+func ListDraftAttachments(draftID uint) ([]VulnerabilityAttachment, error) {
+	var list []VulnerabilityAttachment
+	if err := db.Where("draft_id = ?", draftID).
+		Order("created_at ASC").
+		Find(&list).Error; err != nil {
+		return nil, err
+	}
+	return list, nil
+}
+
 // GetDraftAttachment fetches an attachment scoped to a draft.
 func GetDraftAttachment(draftID uint, key string) (*VulnerabilityAttachment, error) {
 	var a VulnerabilityAttachment

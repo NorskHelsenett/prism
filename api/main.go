@@ -234,6 +234,7 @@ func main() {
 		apiRoutes.PUT("/drafts/:draftID", routes.UpdateDraftHandler)
 		apiRoutes.DELETE("/drafts/:draftID", routes.DeleteDraftHandler)
 		apiRoutes.POST("/drafts/:draftID/publish", routes.PublishDraftHandler)
+		apiRoutes.GET("/drafts/:draftID/attachments", routes.ListDraftAttachmentsHandler)
 		apiRoutes.POST("/drafts/:draftID/attachments", routes.PostDraftAttachment)
 		apiRoutes.GET("/drafts/:draftID/attachments/:key", routes.GetDraftAttachmentProxy)
 		apiRoutes.HEAD("/drafts/:draftID/attachments/:key", routes.GetDraftAttachmentProxy)
