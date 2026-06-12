@@ -21,6 +21,7 @@ import (
 
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -70,6 +71,28 @@ func main() {
 	routes.InitNotification()
 	// Set up the primary Gin router for the main application
 	r := gin.Default()
+
+	// Cache policy for the SPA. Without an explicit Cache-Control, browsers
+	// heuristically cache index.html, so after a deploy clients keep loading a
+	// stale shell that references hashed chunks the server no longer has —
+	// every navigation then 404s and SvelteKit falls back to a full reload of
+	// the same stale page (the "flicker until cache is cleared" bug).
+	// Hashed files under /_app/immutable/ change name on every change, so they
+	// can be cached forever; everything else must revalidate on each load.
+	r.Use(func(c *gin.Context) {
+		path := c.Request.URL.Path
+		if strings.HasPrefix(path, "/api") {
+			c.Next()
+			return
+		}
+		if strings.HasPrefix(path, "/_app/immutable/") {
+			c.Header("Cache-Control", "public, max-age=31536000, immutable")
+		} else {
+			// Served with Last-Modified, so revalidation is a cheap 304.
+			c.Header("Cache-Control", "no-cache")
+		}
+		c.Next()
+	})
 
 	r.GET("/.well-known/config.json", routes.HandleClientConfig)
 
