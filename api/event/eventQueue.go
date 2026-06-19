@@ -99,6 +99,13 @@ func handleEvent(event database.EventQueue) error {
 		return fmt.Errorf("error vulnerability not found: %v", err)
 	}
 
+	// Never broadcast restricted-visibility (undisclosed) findings to the shared
+	// Slack channel. These are only meant for the reporter/assignee in-app.
+	if database.IsVulnerabilityRestricted(finding) {
+		log.Printf("Skipping Slack notification for restricted-visibility finding %d", finding.ID)
+		return nil
+	}
+
 	var vulnData Vulnerability
 	err = json.Unmarshal(finding.Vulnerability, &vulnData)
 	if err != nil {

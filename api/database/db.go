@@ -1754,6 +1754,18 @@ func CanViewVulnerability(vulnerability JSONData, email string, isGlobal bool) b
 	return false
 }
 
+// IsVulnerabilityRestricted reports whether a vulnerability's visibility is
+// restricted (e.g. undisclosed/hidden/private). Restricted findings must not be
+// broadcast to shared destinations such as a Slack channel. Fail-secure: a
+// payload that cannot be parsed is treated as restricted.
+func IsVulnerabilityRestricted(vulnerability JSONData) bool {
+	var envelope vulnerabilityAccessEnvelope
+	if err := json.Unmarshal(vulnerability.Vulnerability, &envelope); err != nil {
+		return true
+	}
+	return isRestrictedVisibility(envelope.Visibility)
+}
+
 // FilterJSONDataForUser returns only the vulnerabilities the user is allowed to view.
 func FilterJSONDataForUser(jsonData []JSONData, email string, isGlobal bool) []JSONData {
 	if isGlobal || len(jsonData) == 0 {
