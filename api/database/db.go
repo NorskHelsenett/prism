@@ -908,7 +908,24 @@ func CanRecipientSeeVulnerability(email string, vulnID uint) (bool, error) {
 			break
 		}
 	}
-	return CanAccessVulnerability(vulnID, email, role, globalViewer)
+
+	allowed, err := CanAccessVulnerability(vulnID, email, role, globalViewer)
+	if err != nil || !allowed {
+		return allowed, err
+	}
+
+	// Restricted-visibility vulnerabilities (undisclosed/hidden/private) must
+	// never be notified to anyone other than the reporter or an assignee — not
+	// even to other members of the project. We evaluate the recipient as a
+	// non-global user so that global view rights do not bypass this gate.
+	vuln, err := GetJSONData(vulnID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	return CanViewVulnerability(vuln, email, false), nil
 }
 
 func HasAccessToProject(email string, projectID string, role string) (bool, error) {
@@ -1683,6 +1700,10 @@ type VulnerabilitySearchParams struct {
 	HideClosed   bool
 	AssignedToMe bool
 	Year         string // e.g. "2026", or "" for all years
+	// IncludeUndisclosed reveals restricted-visibility vulnerabilities
+	// (undisclosed/hidden/private). Defaults to false so they stay hidden in
+	// the table; access is still governed by CanViewVulnerability afterwards.
+	IncludeUndisclosed bool
 }
 
 type vulnerabilityAccessEnvelope struct {
@@ -1865,6 +1886,17 @@ func SearchVulnerabilities(globalViewer bool, email string, isAdmin bool, params
 	// Filter by year (based on vulnerability date field)
 	if params.Year != "" {
 		query = query.Where("json_extract(json_data.vulnerability, '$.date') LIKE ?", params.Year+"%")
+	}
+
+	// Hide restricted-visibility (undisclosed/hidden/private) vulnerabilities by
+	// default. Only non-restricted visibilities (empty/published/public) are
+	// returned unless the caller explicitly opts in via the reveal toggle.
+	// Per-record access control (CanViewVulnerability) still applies below.
+	if !params.IncludeUndisclosed {
+		query = query.Where(`
+            json_extract(json_data.vulnerability, '$.visibility') IS NULL
+            OR LOWER(TRIM(json_extract(json_data.vulnerability, '$.visibility'))) IN ('', 'published', 'public')
+        `)
 	}
 
 	// Assigned to me: match only the assignedTo field from the vulnerability JSON
