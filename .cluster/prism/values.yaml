@@ -10,11 +10,22 @@ image:
 
 prism:
   ingress:
-    enabled: true
+    enabled: false
     host: prism.example.com
     className: ""
     annotations: {}
     tls: true
+  # Gateway API HTTPRoute. Enable this instead of ingress when your cluster
+  # uses the Gateway API. Set ingress.enabled=false when using httproute.
+  httproute:
+    enabled: false
+    host: prism.example.com
+    annotations: {}
+    # Gateways this route attaches to.
+    parentRefs:
+    - name: gateway
+      # namespace: gateway-system
+      # sectionName: https
   storageClassName: ""
   serviceType: ClusterIP
   mounts:
