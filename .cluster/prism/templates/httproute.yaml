@@ -1,0 +1,27 @@
+{{- if .Values.prism.httproute.enabled }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ .Chart.Name }}-httproute
+  {{- with .Values.prism.httproute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.prism.httproute.parentRefs }}
+  parentRefs:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .Values.prism.httproute.host }}
+  hostnames:
+  - {{ . | quote }}
+  {{- end }}
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: {{ .Chart.Name }}-service
+      port: 8080
+{{- end }}
