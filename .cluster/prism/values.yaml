@@ -16,10 +16,11 @@ prism:
     annotations: {}
     tls: true
   # Gateway API HTTPRoute. Enable this instead of ingress when your cluster
-  # uses the Gateway API. Set ingress.enabled=false when using httproute.
-  httproute:
+  # uses the Gateway API. Set ingress.enabled=false when using httpRoute.
+  httpRoute:
     enabled: false
-    host: prism.example.com
+    hostnames:
+    - prism.example.com
     annotations: {}
     # Gateways this route attaches to.
     parentRefs:

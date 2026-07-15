@@ -1,20 +1,20 @@
-{{- if .Values.prism.httproute.enabled }}
+{{- if .Values.prism.httpRoute.enabled }}
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: {{ .Chart.Name }}-httproute
-  {{- with .Values.prism.httproute.annotations }}
+  {{- with .Values.prism.httpRoute.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
   {{- end }}
 spec:
-  {{- with .Values.prism.httproute.parentRefs }}
+  {{- with .Values.prism.httpRoute.parentRefs }}
   parentRefs:
     {{- toYaml . | nindent 4 }}
   {{- end }}
-  {{- with .Values.prism.httproute.host }}
+  {{- with .Values.prism.httpRoute.hostnames }}
   hostnames:
-  - {{ . | quote }}
+    {{- toYaml . | nindent 4 }}
   {{- end }}
   rules:
   - matches:
